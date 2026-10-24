@@ -9,5 +9,25 @@
   "error": "出了点问题，请稍后再试。",
   "phase": "第 {phase, number} 阶段",
   "milestone": "里程碑 {milestone}",
-  "phaseShort": "P{phase}"
+  "phaseShort": "P{phase}",
+  "close": "关闭",
+  "delete": "删除",
+  "edit": "编辑",
+  "add": "添加",
+  "moveUp": "上移",
+  "moveDown": "下移",
+  "none": "无",
+  "colorLabel": "颜色",
+  "colors": {
+    "gray": "灰色",
+    "red": "红色",
+    "orange": "橙色",
+    "amber": "琥珀色",
+    "green": "绿色",
+    "teal": "青色",
+    "blue": "蓝色",
+    "indigo": "靛蓝",
+    "violet": "紫色",
+    "pink": "粉色"
+  }
 }

@@ -8,6 +8,20 @@
       "when": 1792881600828,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792884469023,
+      "tag": "0001_tasks_areas_tags",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792884480671,
+      "tag": "0002_backfill_default_areas_statuses",
+      "breakpoints": true
     }
   ]
 }

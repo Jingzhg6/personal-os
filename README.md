@@ -6,9 +6,10 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) by default; English and French are supported
 through the same translation system.
 
-> **Status: M0 — Foundations.** Authentication, the app shell, navigation, settings
-> (language, theme) and the full engineering setup are in place. Feature modules show a
-> “即将推出” placeholder until their milestone. See [`docs/architecture.md`](docs/architecture.md).
+> **Status: M1 — Areas & task core.** Tasks (Quick Add, detail panel, subtasks, rich-text
+> descriptions, priority, urgent/important flags, dates, estimates, tags), configurable areas
+> and statuses are in place on top of the M0 foundations. Other modules show a “即将推出”
+> placeholder until their milestone. See [`docs/architecture.md`](docs/architecture.md).
 
 ## Requirements
 
@@ -42,23 +43,23 @@ To close sign-up after creating your own account, set `AUTH_ALLOW_SIGNUP=false` 
 
 ## Commands
 
-| Command                             | What it does                                                                     |
-| ----------------------------------- | -------------------------------------------------------------------------------- |
-| `pnpm dev`                          | Start the dev server on <http://localhost:3000>                                  |
-| `pnpm build` / `pnpm start`         | Production build / serve it                                                      |
-| `pnpm db:up` / `pnpm db:down`       | Start / stop PostgreSQL in Docker                                                |
-| `pnpm db:generate`                  | Generate a SQL migration after changing a schema in `src/modules/*/db`           |
-| `pnpm db:migrate`                   | Apply migrations to the dev database (`DATABASE_URL`)                            |
-| `pnpm db:studio`                    | Browse the database with Drizzle Studio                                          |
-| `pnpm test`                         | All Vitest suites: unit, component (jsdom) and database integration              |
-| `pnpm test:unit`                    | Unit + component tests only (no database needed)                                 |
-| `pnpm test:db`                      | Database integration tests (uses `TEST_DATABASE_URL`, migrates it automatically) |
-| `pnpm test:e2e`                     | Builds the app and runs Playwright against it on port 3100 with the test DB      |
-| `pnpm lint`                         | ESLint, including module-boundary and no-hard-coded-text rules                   |
-| `pnpm typecheck`                    | TypeScript                                                                       |
-| `pnpm format` / `pnpm format:check` | Prettier                                                                         |
-| `pnpm i18n:check`                   | Translation coverage report (fails on keys unknown to zh-CN)                     |
-| `pnpm check`                        | Lint + typecheck + format + i18n + all Vitest suites                             |
+| Command                             | What it does                                                                                        |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                          | Start the dev server on <http://localhost:3000>                                                     |
+| `pnpm build` / `pnpm start`         | Production build / serve it                                                                         |
+| `pnpm db:up` / `pnpm db:down`       | Start / stop PostgreSQL in Docker                                                                   |
+| `pnpm db:generate`                  | Generate a SQL migration after changing a schema in `src/modules/*/db`                              |
+| `pnpm db:migrate`                   | Apply migrations to the dev database (`DATABASE_URL`)                                               |
+| `pnpm db:studio`                    | Browse the database with Drizzle Studio                                                             |
+| `pnpm test`                         | All Vitest suites: unit, component (jsdom) and database integration                                 |
+| `pnpm test:unit`                    | Unit + component tests only (no database needed)                                                    |
+| `pnpm test:db`                      | Database integration tests (uses `TEST_DATABASE_URL`, migrates it automatically)                    |
+| `pnpm test:e2e`                     | Builds the app and runs Playwright against it on port 3100 with the test DB                         |
+| `pnpm lint`                         | ESLint, including module-boundary and no-hard-coded-text rules                                      |
+| `pnpm typecheck`                    | TypeScript                                                                                          |
+| `pnpm format` / `pnpm format:check` | Prettier                                                                                            |
+| `pnpm i18n:check`                   | Translation coverage per namespace (fails on keys unknown to zh-CN); `--verbose` lists missing keys |
+| `pnpm check`                        | Lint + typecheck + format + i18n + all Vitest suites                                                |
 
 First time running E2E tests on a new machine: `pnpm exec playwright install chromium`.
 

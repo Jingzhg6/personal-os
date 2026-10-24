@@ -4,7 +4,8 @@
  * - Fails if a non-source locale contains keys that do not exist in zh-CN (stale or typo).
  * - Reports (without failing) keys still missing from en / fr; they fall back to zh-CN at runtime.
  *
- * Usage: pnpm i18n:check
+ * Usage: pnpm i18n:check            (summary per namespace)
+ *        pnpm i18n:check --verbose  (lists every missing key)
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -33,6 +34,7 @@ function keysOf(locale: string): Set<string> {
   );
 }
 
+const verbose = process.argv.includes("--verbose");
 const source = keysOf(defaultLocale);
 let failed = false;
 
@@ -47,7 +49,13 @@ for (const locale of locales.filter((l) => l !== defaultLocale)) {
   console.log(
     `${locale}: ${coverage}% translated, ${missing.length} missing, ${unknown.length} unknown`,
   );
-  for (const key of missing) console.log(`  missing  ${key}`);
+  if (verbose) {
+    for (const key of missing) console.log(`  missing  ${key}`);
+  } else if (missing.length > 0) {
+    const byNamespace = Map.groupBy(missing, (key) => key.split(".")[0]!);
+    const summary = [...byNamespace].map(([ns, keys]) => `${ns} ${keys.length}`).join(", ");
+    console.log(`  missing by namespace: ${summary}`);
+  }
   for (const key of unknown) console.log(`  UNKNOWN  ${key}`);
   if (unknown.length > 0) failed = true;
 }

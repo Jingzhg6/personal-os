@@ -1,4 +1,4 @@
-import { timestamp, uuid } from "drizzle-orm/pg-core";
+import { customType, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { newId } from "../lib/id";
 
@@ -19,3 +19,13 @@ export const timestamps = () => ({
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/**
+ * Fractional-index ordering key (see shared/lib/order.ts). Byte-wise "C" collation is
+ * required: keys are base-62 and case-sensitive, so locale collations would misorder them.
+ */
+const collatedText = customType<{ data: string }>({
+  dataType: () => 'text COLLATE "C"',
+});
+
+export const sortKey = () => collatedText("sort_key").notNull();

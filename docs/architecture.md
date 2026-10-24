@@ -118,7 +118,17 @@ Server Components ─ getServerApi() ─▶ same routers, no HTTP round trip
 - Phase 2 adds a **transactional outbox + pg-boss** for side effects that leave the process
   (calendar push, AI analysis), behind the same `subscribe` API.
 
-Current events: `user.registered` → settings provisions defaults.
+Current events:
+
+| Event             | Published by                                                                 | Subscribers today                                        |
+| ----------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `user.registered` | Better Auth hook                                                             | settings (defaults), areas (seed), tasks (seed statuses) |
+| `task.created`    | tasks service                                                                | — (XP, analytics later)                                  |
+| `task.completed`  | tasks service, when a task enters the _completed_ category                   | — (XP in M6)                                             |
+| `task.reopened`   | tasks service, when a completed task leaves that category (reopen or cancel) | — (XP reversal in M6)                                    |
+
+`task.completed` carries the facts XP rules need (priority, urgent/important flags, area,
+estimate, completion time), so subscribers never have to query the tasks module.
 
 ### 4.5 Internationalisation
 
@@ -133,7 +143,7 @@ Current events: `user.registered` → settings provisions defaults.
   `placeholder`, `alt`, `label` attributes in `.tsx` files.
 - Stored values are **stable identifiers** (`"in_progress"`, `"zh-CN"`); labels are resolved
   at the UI layer (`t(\`task.status.${status}\`)`). Seeded configurable rows use the
-*system-key pattern*: `system_key`set +`name`null ⇒ translated label; user-renamed ⇒`name`.
+_system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-renamed ⇒`name`.
 - History entries (e.g. XP reasons) store `reason_key` + `params`, never rendered text, so they
   re-render in whichever language is active.
 - Dates and numbers are formatted with named formats (`src/shared/i18n/formats.ts`) in the
@@ -144,8 +154,11 @@ Current events: `user.registered` → settings provisions defaults.
 - Semantic tokens defined once in `src/app/globals.css` (`--surface`, `--muted-foreground`,
   `--primary`, `--xp`, …) with light and dark values; components use only semantic utilities.
 - Dark mode: class-based via next-themes (light / dark / system), per device.
-- Primitives in `src/shared/ui` (Button, Input, Label, Card, Badge, PageHeader), styled with
-  `cva` + `cn`. New primitives are added there, not inside modules.
+- Primitives in `src/shared/ui` (Button, Input, Label, Select, Card, Badge, PageHeader,
+  ConfirmDialog, Toast, ColorPicker, RichTextEditor), styled with `cva` + `cn`. New primitives
+  are added there, not inside modules.
+- User-selectable colours are stored as palette ids (`gray`, `blue`, …, `src/shared/lib/colors.ts`)
+  and mapped to classes in `src/shared/ui/color.tsx`, so they adapt to both themes.
 
 ## 5. Data model
 
@@ -160,24 +173,43 @@ Current events: `user.registered` → settings provisions defaults.
 - Each module owns its tables in `src/modules/<m>/db`; `src/server/db-schema.ts` aggregates them
   for drizzle-kit and Better Auth.
 
-### 5.2 Implemented (M0)
+### 5.2 Implemented (M0–M1)
 
-| Table                                            | Owner       | Notes                                   |
-| ------------------------------------------------ | ----------- | --------------------------------------- |
-| `users`, `sessions`, `accounts`, `verifications` | shared/auth | Better Auth models                      |
-| `user_settings`                                  | settings    | `locale`, `time_zone`, `week_starts_on` |
+| Table                                            | Owner       | Notes                                                              |
+| ------------------------------------------------ | ----------- | ------------------------------------------------------------------ |
+| `users`, `sessions`, `accounts`, `verifications` | shared/auth | Better Auth models                                                 |
+| `user_settings`                                  | settings    | `locale`, `time_zone`, `week_starts_on`                            |
+| `areas`                                          | areas       | system-key pattern; `color`/`icon` ids; `sort_key`                 |
+| `task_statuses`                                  | tasks       | fixed `category`; system-key pattern; unique per user + system key |
+| `tags`                                           | tasks       | unique per user, case-insensitive (`lower(name)`)                  |
+| `tasks`                                          | tasks       | see below                                                          |
+| `task_tags`                                      | tasks       | composite PK; cascades from both sides                             |
 
-### 5.3 Phase 1 (planned, M1–M8)
+`tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
+parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
+is_urgent?, is_important?, start_date?, due_date?, due_time?, estimated_minutes?, sort_key,
+completed_at, cancelled_at, deleted_at, created_at, updated_at`, with check constraints for
+priority range, positive estimate, `due_time` requiring `due_date`, non-blank title and no
+self-parenting.
+
+Rules enforced in the service layer (`src/modules/tasks/server/service.ts`):
+
+- Every read and write is scoped by `user_id`; referenced areas, tags, statuses and parent tasks
+  must belong to the same user (otherwise `NOT_FOUND`).
+- `completed_at` / `cancelled_at` are derived from the status _category_
+  (`statusTransition` in the domain), never set by clients.
+- Complete → first status of the _completed_ category; reopen → first _unstarted_ status.
+- Each category keeps at least one status; deleting a status in use requires a replacement in
+  the same category.
+- Delete is soft and recursive (the task and all descendants). Restoring/Trash is M2.
+- `sort_key` columns use `COLLATE "C"` (fractional-index keys are case-sensitive).
+- New users get default areas and statuses via `user.registered`; accounts that existed before
+  M1 were backfilled by migration `0002`.
+
+### 5.3 Phase 1 (planned, M2–M8)
 
 ```
-areas              id, user_id, system_key?, name?, color, icon, sort_key, archived_at
-task_statuses      id, user_id, system_key?, name?, category(backlog|unstarted|started|completed|cancelled), color, sort_key
-tags               id, user_id, name, color
-tasks              id, user_id, title, description(jsonb), area_id?, project_id?, parent_task_id?, milestone_id?,
-                   status_id, priority(0–4), is_urgent?, is_important?, start_date?, due_date?, due_time?,
-                   estimated_minutes?, actual_minutes?, recurrence_id?, sort_key, completed_at, cancelled_at,
-                   deleted_at, created_at, updated_at
-task_tags          task_id, tag_id
+tasks (additive)   + project_id?, milestone_id? (M4), recurrence_id? (M8), actual_minutes? (Phase 2)
 task_dependencies  blocking_task_id, blocked_task_id, type(finish_to_start)   -- cycle-checked in service
 task_recurrences   id, user_id, rrule, mode(fixed|after_completion), timezone, next_due_at, ended_at
 projects           id, user_id, name, description, area_id?, status(planned|active|paused|completed|cancelled),
@@ -280,7 +312,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 **Phase 1**
 
 - **M0 Foundations** ✅: tooling, DB, auth, i18n, shell, boundaries, design tokens, event bus, tests, CI.
-- **M1 Areas & task core**: schema, CRUD, detail panel, quick add, subtasks, tags, statuses, priority.
+- **M1 Areas & task core** ✅: areas, configurable statuses, tags, task schema/API/service, Quick Add, detail panel, subtasks, rich-text descriptions, domain events.
 - **M2 Task views**: filtering, sorting, search, drag reorder, keyboard navigation, Trash, area-scoped views (Work / Business / Admin / Personal / Deadlines).
 - **M3 Eisenhower matrix.**
 - **M4 Projects**: CRUD, list, Kanban, milestones, progress.

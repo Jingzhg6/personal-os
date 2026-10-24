@@ -147,6 +147,20 @@ export default defineConfig([
         "error",
         {
           mode: "jsx-only",
+          // `t`, plus scoped translators such as `tc` (common) or `te` (errors).
+          callees: {
+            exclude: [
+              "i18n(ext)?",
+              "t[a-z]?",
+              "require",
+              "addEventListener",
+              "removeEventListener",
+              "includes",
+              "indexOf",
+              "endsWith",
+              "startsWith",
+            ],
+          },
           "jsx-attributes": {
             include: ["^(aria-label|aria-description|title|placeholder|alt|label)$"],
           },

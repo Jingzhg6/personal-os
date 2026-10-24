@@ -1,9 +1,7 @@
 import { pgTable, smallint, text, uuid } from "drizzle-orm/pg-core";
 
-import { users } from "../../../shared/auth/schema";
-import { timestamps } from "../../../shared/db/columns";
-
-// Relative imports: this file is also loaded by drizzle-kit, outside the Next.js resolver.
+import { users } from "@/shared/auth/schema";
+import { timestamps } from "@/shared/db/columns";
 
 export const userSettings = pgTable("user_settings", {
   userId: uuid("user_id")

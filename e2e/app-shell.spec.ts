@@ -10,7 +10,7 @@ test("shows the Chinese navigation and placeholder modules", async ({ page }) =>
   await expect(page.getByRole("heading", { level: 1, name: "仪表盘" })).toBeVisible();
   await expect(page.getByTestId("current-user-name")).toHaveText("晋");
 
-  await nav.getByRole("link", { name: "四象限矩阵" }).click();
+  await nav.getByRole("link", { name: "四象限矩阵" }).click(); // still a placeholder (M3)
   await expect(page).toHaveURL(/\/tasks\/matrix$/);
   await expect(page.getByRole("heading", { level: 1, name: "四象限矩阵" })).toBeVisible();
   await expect(page.getByText("第 1 阶段 · 里程碑 M3", { exact: true })).toBeVisible();
@@ -38,5 +38,6 @@ test("opens the navigation drawer on small screens", async ({ page }) => {
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("link", { name: "全部任务" }).click();
   await expect(page).toHaveURL(/\/tasks$/);
+  await expect(page.getByRole("heading", { level: 1, name: "全部任务" })).toBeVisible();
   await expect(dialog).toBeHidden();
 });

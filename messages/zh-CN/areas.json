@@ -1,0 +1,44 @@
+{
+  "defaults": {
+    "personal": "个人生活",
+    "learning": "学习",
+    "health": "健康",
+    "work": "工作",
+    "business": "业务",
+    "admin": "行政事务"
+  },
+  "none": "无领域",
+  "icons": {
+    "circle": "圆形",
+    "heart": "爱心",
+    "graduation-cap": "学士帽",
+    "dumbbell": "哑铃",
+    "briefcase": "公文包",
+    "trending-up": "增长",
+    "clipboard": "剪贴板",
+    "home": "家",
+    "users": "人群",
+    "wallet": "钱包",
+    "plane": "飞机",
+    "code": "代码",
+    "music": "音乐",
+    "palette": "调色板",
+    "leaf": "叶子",
+    "book": "书本"
+  },
+  "settings": {
+    "title": "领域",
+    "description": "领域是你给任务分类的方式。它们是你自己的数据：增删改领域不会改变应用的导航结构。",
+    "name": "名称",
+    "namePlaceholder": "新领域名称",
+    "defaultName": "默认：{name}",
+    "icon": "图标",
+    "chooseIcon": "选择图标",
+    "color": "颜色",
+    "add": "添加领域",
+    "resetName": "恢复默认名称",
+    "deleteTitle": "删除领域「{name}」？",
+    "deleteBody": "属于这个领域的任务会保留，只是不再属于任何领域。",
+    "deleted": "已删除领域"
+  }
+}

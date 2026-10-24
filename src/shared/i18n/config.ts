@@ -32,7 +32,17 @@ export const localeStatus: Record<Locale, "complete" | "partial"> = {
 };
 
 /** Translation namespaces. One JSON file per namespace per locale in /messages. */
-export const namespaces = ["common", "nav", "shell", "auth", "settings"] as const;
+export const namespaces = [
+  "common",
+  "nav",
+  "shell",
+  "auth",
+  "settings",
+  "errors",
+  "editor",
+  "areas",
+  "tasks",
+] as const;
 
 export type Namespace = (typeof namespaces)[number];
 

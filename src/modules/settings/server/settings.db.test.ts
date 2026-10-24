@@ -90,14 +90,14 @@ describe("settings event handlers", () => {
 
 describe("settings router", () => {
   it("rejects anonymous callers", async () => {
-    const caller = createCaller({ db, userId: null, resHeaders: null });
+    const caller = createCaller({ db, bus: createEventBus(), userId: null, resHeaders: null });
     await expect(caller.get()).rejects.toBeInstanceOf(TRPCError);
   });
 
   it("updates the locale and sets the locale cookie", async () => {
     const user = await createUser(db);
     const resHeaders = new Headers();
-    const caller = createCaller({ db, userId: user.id, resHeaders });
+    const caller = createCaller({ db, bus: createEventBus(), userId: user.id, resHeaders });
 
     const settings = await caller.update({ locale: "en" });
 
@@ -108,7 +108,7 @@ describe("settings router", () => {
 
   it("validates input", async () => {
     const user = await createUser(db);
-    const caller = createCaller({ db, userId: user.id, resHeaders: null });
+    const caller = createCaller({ db, bus: createEventBus(), userId: user.id, resHeaders: null });
     // @ts-expect-error: unsupported locale
     await expect(caller.update({ locale: "de" })).rejects.toBeInstanceOf(TRPCError);
   });

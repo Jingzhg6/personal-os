@@ -9,5 +9,12 @@
   "theme": {
     "title": "外观",
     "description": "选择浅色、深色，或跟随系统设置。"
-  }
+  },
+  "tabs": {
+    "general": "通用",
+    "areas": "领域",
+    "statuses": "任务状态",
+    "tags": "标签"
+  },
+  "sections": "设置分区"
 }

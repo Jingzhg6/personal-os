@@ -4,7 +4,6 @@ import { getTranslations } from "next-intl/server";
 import { LanguageSettings } from "@/modules/settings/ui";
 import { getServerApi } from "@/server/trpc/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { PageHeader } from "@/shared/ui/page-header";
 import { ThemeSelector } from "@/shell/theme-toggle";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,9 +16,7 @@ export default async function SettingsPage() {
   const settings = await (await getServerApi()).settings.get();
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <PageHeader title={t("title")} description={t("description")} />
-
+    <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle>{t("language.title")}</CardTitle>
