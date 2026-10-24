@@ -1,0 +1,15 @@
+import { users } from "@/shared/auth/schema";
+import type { DbExecutor } from "@/shared/db/types";
+import { newId } from "@/shared/lib/id";
+
+export async function createUser(
+  db: DbExecutor,
+  overrides: Partial<typeof users.$inferInsert> = {},
+) {
+  const id = overrides.id ?? newId();
+  const [user] = await db
+    .insert(users)
+    .values({ id, name: "测试用户", email: `user-${id}@example.test`, ...overrides })
+    .returning();
+  return user!;
+}

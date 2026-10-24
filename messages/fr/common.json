@@ -1,0 +1,13 @@
+{
+  "appName": "Personal OS",
+  "tagline": "Votre système d’exploitation personnel",
+  "loading": "Chargement…",
+  "save": "Enregistrer",
+  "saving": "Enregistrement…",
+  "saved": "Enregistré",
+  "cancel": "Annuler",
+  "error": "Une erreur est survenue. Veuillez réessayer.",
+  "phase": "Phase {phase, number}",
+  "milestone": "Jalon {milestone}",
+  "phaseShort": "P{phase}"
+}

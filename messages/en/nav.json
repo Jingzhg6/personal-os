@@ -1,0 +1,42 @@
+{
+  "mainNavigation": "Main navigation",
+  "sections": {
+    "overview": "Overview",
+    "tasks": "Tasks",
+    "projects": "Projects",
+    "life": "Life",
+    "work": "Work",
+    "administration": "Administration",
+    "calendar": "Calendar",
+    "character": "Character",
+    "analytics": "Analytics"
+  },
+  "items": {
+    "dashboard": "Dashboard",
+    "allTasks": "All tasks",
+    "matrix": "Eisenhower matrix",
+    "allProjects": "All projects",
+    "kanban": "Kanban",
+    "gantt": "Gantt",
+    "goals": "Goals",
+    "learning": "Learning",
+    "fitness": "Fitness",
+    "personal": "Personal life",
+    "work": "Work",
+    "business": "Business",
+    "adminTasks": "Admin tasks",
+    "documents": "Documents",
+    "deadlines": "Important deadlines",
+    "calendar": "Calendar",
+    "scheduled": "Scheduled tasks",
+    "character": "Character",
+    "skills": "Skills",
+    "xp": "XP",
+    "progression": "Progression",
+    "personalStats": "Personal statistics",
+    "productivity": "Productivity",
+    "learningStats": "Learning statistics",
+    "fitnessStats": "Fitness statistics",
+    "settings": "Settings"
+  }
+}

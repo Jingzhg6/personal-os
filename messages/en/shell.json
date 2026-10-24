@@ -1,0 +1,27 @@
+{
+  "skipToContent": "Skip to main content",
+  "openNavigation": "Open navigation",
+  "closeNavigation": "Close navigation",
+  "breadcrumb": "Breadcrumb",
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "account": {
+    "signOut": "Sign out",
+    "signingOut": "Signing out…"
+  },
+  "comingSoon": {
+    "badge": "Planned",
+    "title": "{module} is coming soon",
+    "description": "This module is already reserved in the architecture and is planned for {phase}.",
+    "principle": "Every module shares the same data: capture once, use everywhere."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist or has moved.",
+    "back": "Back to dashboard"
+  }
+}

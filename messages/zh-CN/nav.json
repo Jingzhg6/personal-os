@@ -1,0 +1,42 @@
+{
+  "mainNavigation": "主导航",
+  "sections": {
+    "overview": "概览",
+    "tasks": "任务",
+    "projects": "项目",
+    "life": "生活",
+    "work": "工作",
+    "administration": "行政事务",
+    "calendar": "日历",
+    "character": "角色",
+    "analytics": "分析"
+  },
+  "items": {
+    "dashboard": "仪表盘",
+    "allTasks": "全部任务",
+    "matrix": "四象限矩阵",
+    "allProjects": "全部项目",
+    "kanban": "看板",
+    "gantt": "甘特图",
+    "goals": "目标",
+    "learning": "学习",
+    "fitness": "健身",
+    "personal": "个人生活",
+    "work": "工作",
+    "business": "业务",
+    "adminTasks": "行政任务",
+    "documents": "文件",
+    "deadlines": "重要截止日期",
+    "calendar": "日历",
+    "scheduled": "已排程任务",
+    "character": "角色",
+    "skills": "技能",
+    "xp": "经验值",
+    "progression": "成长历程",
+    "personalStats": "个人统计",
+    "productivity": "效率",
+    "learningStats": "学习统计",
+    "fitnessStats": "健身统计",
+    "settings": "设置"
+  }
+}

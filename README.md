@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Personal OS
 
-## Getting Started
+A personal operating system: tasks, projects, calendar, learning, fitness and an RPG-style
+character, built on one shared data model — **capture once, use everywhere**.
 
-First, run the development server:
+The UI is in Simplified Chinese (简体中文) by default; English and French are supported
+through the same translation system.
+
+> **Status: M0 — Foundations.** Authentication, the app shell, navigation, settings
+> (language, theme) and the full engineering setup are in place. Feature modules show a
+> “即将推出” placeholder until their milestone. See [`docs/architecture.md`](docs/architecture.md).
+
+## Requirements
+
+- Node.js **22+**
+- pnpm **10** (`corepack enable` will pick the version pinned in `package.json`)
+- Docker (for PostgreSQL), or your own PostgreSQL 16
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# 1. Install dependencies
+pnpm install
+
+# 2. Configure environment
+cp .env.example .env.local
+#    then set BETTER_AUTH_SECRET, e.g.:  openssl rand -base64 32
+
+# 3. Start PostgreSQL (dev DB "personal_os" + test DB "personal_os_test" on port 5433)
+pnpm db:up
+
+# 4. Create the tables
+pnpm db:migrate
+
+# 5. Run the app
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>, create an account at `/register`, and you land on the dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To close sign-up after creating your own account, set `AUTH_ALLOW_SIGNUP=false` in `.env.local`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Commands
 
-## Learn More
+| Command                             | What it does                                                                     |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| `pnpm dev`                          | Start the dev server on <http://localhost:3000>                                  |
+| `pnpm build` / `pnpm start`         | Production build / serve it                                                      |
+| `pnpm db:up` / `pnpm db:down`       | Start / stop PostgreSQL in Docker                                                |
+| `pnpm db:generate`                  | Generate a SQL migration after changing a schema in `src/modules/*/db`           |
+| `pnpm db:migrate`                   | Apply migrations to the dev database (`DATABASE_URL`)                            |
+| `pnpm db:studio`                    | Browse the database with Drizzle Studio                                          |
+| `pnpm test`                         | All Vitest suites: unit, component (jsdom) and database integration              |
+| `pnpm test:unit`                    | Unit + component tests only (no database needed)                                 |
+| `pnpm test:db`                      | Database integration tests (uses `TEST_DATABASE_URL`, migrates it automatically) |
+| `pnpm test:e2e`                     | Builds the app and runs Playwright against it on port 3100 with the test DB      |
+| `pnpm lint`                         | ESLint, including module-boundary and no-hard-coded-text rules                   |
+| `pnpm typecheck`                    | TypeScript                                                                       |
+| `pnpm format` / `pnpm format:check` | Prettier                                                                         |
+| `pnpm i18n:check`                   | Translation coverage report (fails on keys unknown to zh-CN)                     |
+| `pnpm check`                        | Lint + typecheck + format + i18n + all Vitest suites                             |
 
-To learn more about Next.js, take a look at the following resources:
+First time running E2E tests on a new machine: `pnpm exec playwright install chromium`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable             | Purpose                                             |
+| -------------------- | --------------------------------------------------- |
+| `DATABASE_URL`       | Dev database connection string                      |
+| `TEST_DATABASE_URL`  | Test database (Vitest `db` project and Playwright)  |
+| `BETTER_AUTH_SECRET` | Session signing secret, at least 32 characters      |
+| `BETTER_AUTH_URL`    | Public URL of the app, e.g. `http://localhost:3000` |
+| `AUTH_ALLOW_SIGNUP`  | `true` / `false` — allow creating new accounts      |
 
-## Deploy on Vercel
+## Project layout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+docs/                 architecture.md and decision records
+drizzle/              generated SQL migrations (committed)
+messages/<locale>/    translation catalogues; zh-CN is the source of truth
+src/app/              Next.js routes only
+src/shell/            app chrome: sidebar, navigation config, auth screens, providers
+src/server/           composition root: auth, tRPC root router, event-bus wiring, i18n request config
+src/modules/<m>/      a module: domain/ (pure), db/ (tables), server/ (API), ui/ (components)
+src/shared/           db client, events, i18n, tRPC, UI primitives
+e2e/                  Playwright tests
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Adding a module (for later milestones)
+
+1. Create `src/modules/<name>/{domain,db,server,ui}/index.ts`.
+2. Tables in `db/` → export them from `src/server/db-schema.ts` → `pnpm db:generate`.
+3. Router in `server/` → add it to `src/server/trpc/root.ts`.
+4. Event handlers → register them in `src/server/event-bus.ts`.
+5. Strings → `messages/zh-CN/<namespace>.json` (add the namespace to `src/shared/i18n/config.ts`
+   and `src/shared/i18n/messages.ts`).
+6. A real route in `src/app/(app)/…` replaces the placeholder for its navigation item.

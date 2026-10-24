@@ -7,3 +7,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Project rules
+
+- Read `docs/architecture.md` before changing structure; record new decisions in `docs/decisions/`.
+- Respect module boundaries: import other modules only via `@/modules/<m>/{domain,db,server,ui}`. `pnpm lint` enforces this.
+- No hard-coded UI text: every user-facing string is a key in `messages/zh-CN/*.json` (source of truth). User content is never translated.
+- Store stable identifiers in the database, never display labels.
+- Every user-owned query is scoped by `ctx.userId`.
+- One task row powers every view (list, matrix, Kanban, Gantt, dashboard, calendar): never duplicate entities per view.
+- Before finishing: `pnpm check` and `pnpm test:e2e`.

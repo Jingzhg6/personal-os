@@ -1,0 +1,27 @@
+{
+  "skipToContent": "跳到主要内容",
+  "openNavigation": "打开导航",
+  "closeNavigation": "关闭导航",
+  "breadcrumb": "面包屑导航",
+  "theme": {
+    "label": "主题",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
+  },
+  "account": {
+    "signOut": "退出登录",
+    "signingOut": "正在退出…"
+  },
+  "comingSoon": {
+    "badge": "规划中",
+    "title": "{module} 即将推出",
+    "description": "这个模块已经预留在架构中，计划在 {phase} 实现。",
+    "principle": "所有模块共享同一份数据：一次记录，处处可用。"
+  },
+  "notFound": {
+    "title": "页面不存在",
+    "description": "你访问的页面不存在或已被移动。",
+    "back": "返回仪表盘"
+  }
+}

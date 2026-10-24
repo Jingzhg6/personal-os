@@ -1,0 +1,13 @@
+{
+  "appName": "Personal OS",
+  "tagline": "你的个人操作系统",
+  "loading": "加载中…",
+  "save": "保存",
+  "saving": "保存中…",
+  "saved": "已保存",
+  "cancel": "取消",
+  "error": "出了点问题，请稍后再试。",
+  "phase": "第 {phase, number} 阶段",
+  "milestone": "里程碑 {milestone}",
+  "phaseShort": "P{phase}"
+}
