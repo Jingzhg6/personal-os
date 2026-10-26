@@ -14,6 +14,9 @@ export interface Task {
   title: string;
   description: RichTextDoc | null;
   areaId: string | null;
+  /** Project of a top-level task (subtasks belong to their parent's project). */
+  projectId: string | null;
+  milestoneId: string | null;
   parentTaskId: string | null;
   /** Title of the parent task, for subtasks shown outside their parent (search, deadlines). */
   parentTitle: string | null;
@@ -53,6 +56,8 @@ const editableFields = z.object({
   title: z.string().trim().min(1).max(500),
   description: richTextDoc.nullable(),
   areaId: z.uuid().nullable(),
+  projectId: z.uuid().nullable(),
+  milestoneId: z.uuid().nullable(),
   priority: z.number().int().min(0).max(4),
   isUrgent: z.boolean().nullable(),
   isImportant: z.boolean().nullable(),

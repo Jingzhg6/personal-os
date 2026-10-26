@@ -4,13 +4,25 @@ import common from "../../../messages/zh-CN/common.json";
 import editor from "../../../messages/zh-CN/editor.json";
 import errors from "../../../messages/zh-CN/errors.json";
 import nav from "../../../messages/zh-CN/nav.json";
+import projects from "../../../messages/zh-CN/projects.json";
 import settings from "../../../messages/zh-CN/settings.json";
 import shell from "../../../messages/zh-CN/shell.json";
 import tasks from "../../../messages/zh-CN/tasks.json";
 import { defaultLocale, namespaces, type Locale } from "./config";
 
 /** zh-CN messages: the source of truth and the shape every locale must follow. */
-export const sourceMessages = { common, nav, shell, auth, settings, errors, editor, areas, tasks };
+export const sourceMessages = {
+  common,
+  nav,
+  shell,
+  auth,
+  settings,
+  errors,
+  editor,
+  areas,
+  tasks,
+  projects,
+};
 
 export type Messages = typeof sourceMessages;
 

@@ -5,4 +5,5 @@
 export * from "@/shared/auth/schema";
 export * from "@/modules/settings/db";
 export * from "@/modules/areas/db";
+export * from "@/modules/projects/db";
 export * from "@/modules/tasks/db";

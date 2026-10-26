@@ -1,0 +1,72 @@
+{
+  "new": "新建项目",
+  "edit": "编辑项目",
+  "delete": "删除项目",
+  "save": "保存",
+  "created": "已创建项目「{name}」",
+  "saved": "已保存项目",
+  "deleted": "已删除项目",
+  "deleteTitle": "删除项目「{name}」？",
+  "deleteBody": "项目和它的里程碑会被删除。项目里的任务会保留，只是不再属于任何项目。",
+  "fields": {
+    "name": "名称",
+    "namePlaceholder": "例如：通过 DELF B2 考试",
+    "area": "领域",
+    "noArea": "无领域",
+    "status": "状态",
+    "priority": "优先级",
+    "color": "颜色",
+    "startDate": "开始日期",
+    "targetDate": "目标日期"
+  },
+  "status": {
+    "planned": "计划中",
+    "active": "进行中",
+    "paused": "已暂停",
+    "completed": "已完成",
+    "cancelled": "已取消"
+  },
+  "filters": {
+    "open": "进行中",
+    "closed": "已结束",
+    "all": "全部",
+    "label": "项目状态"
+  },
+  "empty": {
+    "title": "还没有项目",
+    "description": "把相关的任务组织成项目，跟踪进度和里程碑。"
+  },
+  "emptyFiltered": "这里还没有项目。",
+  "progress": "{completed}/{total} 个任务",
+  "noTasks": "还没有任务",
+  "overdue": "{count, plural, other {# 个逾期}}",
+  "target": "目标 {date}",
+  "targetPassed": "已过目标日期 {date}",
+  "dates": "{start} – {end}",
+  "nextMilestone": "下一个里程碑：{name}",
+  "backToList": "全部项目",
+  "tabs": {
+    "label": "项目视图",
+    "tasks": "任务",
+    "board": "看板",
+    "milestones": "里程碑",
+    "notes": "说明"
+  },
+  "notesPlaceholder": "记录项目的目标、背景和笔记…",
+  "milestones": {
+    "empty": "还没有里程碑。用里程碑把项目分成几个阶段。",
+    "add": "添加里程碑",
+    "namePlaceholder": "里程碑名称",
+    "dueDate": "截止日期",
+    "complete": "完成里程碑「{name}」",
+    "reopen": "重新打开里程碑「{name}」",
+    "delete": "删除里程碑「{name}」",
+    "deleteTitle": "删除里程碑「{name}」？",
+    "deleteBody": "里程碑中的任务会保留在项目里。",
+    "deleted": "已删除里程碑",
+    "showTasks": "查看任务",
+    "name": "名称"
+  },
+  "none": "无项目",
+  "notFound": "项目不存在或已被删除。"
+}

@@ -3,21 +3,17 @@
 import { useDraggable } from "@dnd-kit/core";
 import { ArrowRightLeft, CornerDownRight, GripVertical, ListChecks } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 
 import { AreaBadge } from "@/modules/areas/ui";
 import { cn } from "@/shared/lib/cn";
 import { ColorDot } from "@/shared/ui/color";
 import { MenuCheckbox, Popover } from "@/shared/ui/popover";
 
-import {
-  matrixPlacement,
-  matrixPlacements,
-  type MatrixPlacement,
-  type Tag,
-  type Task,
-} from "../domain";
+import type { Tag, Task } from "../domain";
 import { useDueLabel } from "./labels";
 import { PriorityIcon } from "./priority-icon";
+import { MilestoneChip, ProjectChip } from "./project-chip";
 import { StatusToggle } from "./status-toggle";
 import type { TaskLookups } from "./task-row";
 import type { useTaskActions } from "./use-task-data";
@@ -29,18 +25,33 @@ const dueTones = {
   upcoming: "text-muted-foreground",
 } as const;
 
-interface MatrixCardProps {
+/** The card's "移到…" menu: the alternative to dragging for keyboard and touch users. */
+export interface CardMoveMenu {
+  label: string;
+  options: { id: string; label: string }[];
+  current: string;
+  onSelect: (id: string) => void;
+}
+
+export interface TaskCardProps {
   task: Task;
   lookups: TaskLookups;
   selected: boolean;
   onOpen: (id: string) => void;
-  onMove: (task: Task, placement: MatrixPlacement) => void;
   actions: ReturnType<typeof useTaskActions>;
+  moveMenu: CardMoveMenu;
+  /** Accessible name of the keyboard drag handle. */
+  dragLabel: string;
+  /** Hide the project chip inside a project's own views. */
+  showProject?: boolean;
+  testId?: string;
 }
 
-/** A task card in the matrix. Dragging it (or using its menu) only changes the task's flags. */
-export function MatrixCard(props: MatrixCardProps) {
-  const t = useTranslations("tasks.matrix");
+/**
+ * A task as a draggable card (Eisenhower matrix, Kanban board). Dragging a card or using its
+ * menu changes a field of the one task record; the card holds no state of its own.
+ */
+export function TaskCard({ testId = "task-card", ...props }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
     id: props.task.id,
   });
@@ -50,7 +61,7 @@ export function MatrixCard(props: MatrixCardProps) {
       ref={setNodeRef}
       // Pointer drag from anywhere on the card; keyboard drag from the handle.
       onPointerDown={listeners?.onPointerDown as React.PointerEventHandler | undefined}
-      data-testid="matrix-card"
+      data-testid={testId}
       data-task-id={props.task.id}
       className={cn("touch-manipulation", isDragging && "opacity-40")}
     >
@@ -62,8 +73,8 @@ export function MatrixCard(props: MatrixCardProps) {
             ref={setActivatorNodeRef}
             {...attributes}
             onKeyDown={listeners?.onKeyDown as React.KeyboardEventHandler | undefined}
-            aria-label={t("drag.handle", { title: props.task.title })}
-            title={t("drag.handle", { title: props.task.title })}
+            aria-label={props.dragLabel}
+            title={props.dragLabel}
             className="-ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded text-muted-foreground/50 hover:text-foreground"
           >
             <GripVertical className="size-4" aria-hidden />
@@ -75,10 +86,12 @@ export function MatrixCard(props: MatrixCardProps) {
 }
 
 /** Static rendering used for the floating drag preview. */
-export function MatrixCardPreview(props: Omit<MatrixCardProps, "onMove" | "onOpen" | "selected">) {
+export function TaskCardPreview(
+  props: Pick<TaskCardProps, "task" | "lookups" | "actions" | "showProject">,
+) {
   return (
     <div className="rotate-1 shadow-md">
-      <CardBody {...props} selected={false} onOpen={() => {}} onMove={() => {}} preview />
+      <CardBody {...props} selected={false} onOpen={() => {}} dragLabel="" />
     </div>
   );
 }
@@ -88,11 +101,11 @@ function CardBody({
   lookups,
   selected,
   onOpen,
-  onMove,
   actions,
+  moveMenu,
+  showProject = true,
   handle,
-  preview = false,
-}: MatrixCardProps & { handle?: React.ReactNode; preview?: boolean }) {
+}: Omit<TaskCardProps, "moveMenu" | "testId"> & { moveMenu?: CardMoveMenu; handle?: ReactNode }) {
   const t = useTranslations("tasks");
   const dueLabel = useDueLabel();
   const status = lookups.statuses.get(task.statusId);
@@ -101,7 +114,7 @@ function CardBody({
     .map((id) => lookups.tags.get(id))
     .filter((tag): tag is Tag => Boolean(tag));
   const due = task.dueDate ? dueLabel(task.dueDate, task.dueTime) : null;
-  const current = matrixPlacement(task);
+  const preview = !moveMenu;
 
   return (
     <div
@@ -130,15 +143,15 @@ function CardBody({
             </span>
           ) : null}
         </button>
-        {preview ? null : (
+        {moveMenu ? (
           <Popover
             align="end"
             trigger={(props) => (
               <button
                 type="button"
                 {...props}
-                aria-label={t("matrix.moveMenu", { title: task.title })}
-                title={t("matrix.moveMenu", { title: task.title })}
+                aria-label={moveMenu.label}
+                title={moveMenu.label}
                 className="flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-surface-muted hover:text-foreground"
               >
                 <ArrowRightLeft className="size-3.5" aria-hidden />
@@ -148,30 +161,40 @@ function CardBody({
             {(close) => (
               <div
                 role="menu"
-                aria-label={t("matrix.moveMenu", { title: task.title })}
-                className="flex w-44 flex-col"
+                aria-label={moveMenu.label}
+                className="flex max-h-72 w-48 flex-col overflow-y-auto"
               >
-                {matrixPlacements.map((placement) => (
+                {moveMenu.options.map((option) => (
                   <MenuCheckbox
-                    key={placement}
+                    key={option.id}
                     type="radio"
-                    checked={current === placement}
+                    checked={moveMenu.current === option.id}
                     onChange={() => {
                       close();
-                      if (placement !== current) onMove(task, placement);
+                      if (option.id !== moveMenu.current) moveMenu.onSelect(option.id);
                     }}
                   >
-                    {t(`matrix.placements.${placement}.title`)}
+                    {option.label}
                   </MenuCheckbox>
                 ))}
               </div>
             )}
           </Popover>
-        )}
+        ) : null}
       </div>
 
-      {area || due || task.priority || tags.length > 0 || task.subtaskCount > 0 ? (
+      {(showProject && task.projectId) ||
+      (task.milestoneId && lookups.milestones?.has(task.milestoneId)) ||
+      area ||
+      due ||
+      task.priority ||
+      tags.length > 0 ||
+      task.subtaskCount > 0 ? (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pl-14 text-xs text-muted-foreground">
+          {showProject && task.projectId ? <ProjectChip projectId={task.projectId} /> : null}
+          {task.milestoneId && lookups.milestones?.get(task.milestoneId) ? (
+            <MilestoneChip name={lookups.milestones.get(task.milestoneId)!} />
+          ) : null}
           {area ? <AreaBadge area={area} /> : null}
           {due ? <span className={cn("tabular-nums", dueTones[due.state])}>{due.text}</span> : null}
           {task.subtaskCount > 0 ? (

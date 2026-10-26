@@ -18,6 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { areas } from "@/modules/areas/db";
+import { milestones, projects } from "@/modules/projects/db";
 import { users } from "@/shared/auth/schema";
 import { primaryId, sortKey, timestamps } from "@/shared/db/columns";
 
@@ -75,6 +76,9 @@ export const tasks = pgTable(
     /** Plain text of `description`, maintained by the service for search. */
     descriptionText: text("description_text"),
     areaId: uuid("area_id").references(() => areas.id, { onDelete: "set null" }),
+    /** Top-level tasks only; subtasks belong to their parent's project. */
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    milestoneId: uuid("milestone_id").references(() => milestones.id, { onDelete: "set null" }),
     parentTaskId: uuid("parent_task_id").references((): AnyPgColumn => tasks.id, {
       onDelete: "cascade",
     }),
@@ -102,6 +106,16 @@ export const tasks = pgTable(
     index("tasks_parent_task_id_idx").on(t.parentTaskId),
     index("tasks_status_id_idx").on(t.statusId),
     index("tasks_area_id_idx").on(t.areaId),
+    index("tasks_project_id_idx").on(t.projectId),
+    index("tasks_milestone_id_idx").on(t.milestoneId),
+    check(
+      "tasks_subtasks_have_no_project",
+      sql`${t.parentTaskId} is null or (${t.projectId} is null and ${t.milestoneId} is null)`,
+    ),
+    check(
+      "tasks_milestone_needs_project",
+      sql`${t.milestoneId} is null or ${t.projectId} is not null`,
+    ),
     index("tasks_user_deleted_idx")
       .on(t.userId, t.deletedAt)
       .where(sql`${t.deletedAt} is not null`),

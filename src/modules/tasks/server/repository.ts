@@ -49,6 +49,8 @@ function toTask(
     title: row.title,
     description: row.description ?? null,
     areaId: row.areaId,
+    projectId: row.projectId,
+    milestoneId: row.milestoneId,
     parentTaskId: row.parentTaskId,
     parentTitle,
     statusId: row.statusId,
@@ -186,6 +188,17 @@ export function listTasks(db: DbExecutor, userId: string, query: TaskListQuery):
       ),
     );
   }
+  if (filter.projectIds?.length || filter.noProject) {
+    // A subtask belongs to its parent's project (first level of nesting).
+    conditions.push(
+      or(
+        filter.projectIds?.length ? inArray(tasks.projectId, filter.projectIds) : undefined,
+        filter.projectIds?.length ? inArray(parent.projectId, filter.projectIds) : undefined,
+        filter.noProject ? and(isNull(tasks.projectId), isNull(parent.projectId)) : undefined,
+      ),
+    );
+  }
+  if (filter.milestoneIds?.length) conditions.push(inArray(tasks.milestoneId, filter.milestoneIds));
   if (filter.tagIds?.length) {
     conditions.push(
       exists(

@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { areaBelongsToUser } from "@/modules/areas/server";
+import { milestones, projects } from "@/modules/projects/db";
 import type { Database, DbExecutor } from "@/shared/db/types";
 import type { EventBus } from "@/shared/events/bus";
 import { DomainError } from "@/shared/lib/errors";
@@ -36,6 +37,59 @@ async function assertAreaOwned(db: DbExecutor, userId: string, areaId: string | 
   if (areaId && !(await areaBelongsToUser(db, userId, areaId))) {
     throw new DomainError("not_found", "area.not_found");
   }
+}
+
+/**
+ * Validates project / milestone references for a task and returns the values to store.
+ * Subtasks have no project of their own; a milestone must belong to the task's project.
+ */
+async function resolveProjectRefs(
+  db: DbExecutor,
+  userId: string,
+  input: { projectId: string | null; milestoneId: string | null; isSubtask: boolean },
+): Promise<{ projectId: string | null; milestoneId: string | null }> {
+  if (input.isSubtask) {
+    if (input.projectId || input.milestoneId)
+      throw new DomainError("invalid", "task.subtask_project");
+    return { projectId: null, milestoneId: null };
+  }
+  let { projectId } = input;
+  if (input.milestoneId) {
+    const [milestone] = await db
+      .select({ projectId: milestones.projectId })
+      .from(milestones)
+      .where(and(eq(milestones.id, input.milestoneId), eq(milestones.userId, userId)));
+    if (!milestone) throw new DomainError("not_found", "milestone.not_found");
+    if (projectId && projectId !== milestone.projectId) {
+      throw new DomainError("invalid", "milestone.project_mismatch");
+    }
+    projectId = milestone.projectId;
+  }
+  if (projectId) {
+    const [project] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(and(eq(projects.id, projectId), eq(projects.userId, userId)));
+    if (!project) throw new DomainError("not_found", "project.not_found");
+  }
+  return { projectId, milestoneId: input.milestoneId };
+}
+
+/** Project of the top-level ancestor of a task. */
+async function rootProjectId(
+  db: DbExecutor,
+  userId: string,
+  taskId: string,
+): Promise<string | null> {
+  const result = await db.execute<{ project_id: string | null }>(sql`
+    with recursive up as (
+      select id, parent_task_id, project_id from tasks where id = ${taskId} and user_id = ${userId}
+      union all
+      select t.id, t.parent_task_id, t.project_id from tasks t join up on t.id = up.parent_task_id
+    )
+    select project_id from up where parent_task_id is null limit 1
+  `);
+  return result.rows[0]?.project_id ?? null;
 }
 
 function assertSchedule(schedule: Pick<Task, "startDate" | "dueDate" | "dueTime">) {
@@ -119,6 +173,11 @@ export function createTask(
     if (parentTaskId) await getTask(tx, userId, parentTaskId);
     await assertAreaOwned(tx, userId, input.areaId);
     await assertTagsOwned(tx, userId, input.tagIds ?? []);
+    const refs = await resolveProjectRefs(tx, userId, {
+      projectId: input.projectId ?? null,
+      milestoneId: input.milestoneId ?? null,
+      isSubtask: parentTaskId !== null,
+    });
 
     const status = input.statusId
       ? await getOwnedStatus(tx, userId, input.statusId)
@@ -147,6 +206,7 @@ export function createTask(
         description: input.description ?? null,
         descriptionText: richTextToPlainText(input.description),
         areaId: input.areaId ?? null,
+        ...refs,
         parentTaskId,
         statusId: status.id,
         priority: input.priority ?? 0,
@@ -178,7 +238,27 @@ export function updateTask(
 ): Promise<Task> {
   return db.transaction(async (tx) => {
     const current = await getTask(tx, userId, input.id);
-    const { tagIds, ...fields } = input.patch;
+    const { tagIds, ...rest } = input.patch;
+    const fields: typeof rest = { ...rest };
+    if (rest.projectId !== undefined || rest.milestoneId !== undefined) {
+      const projectId = rest.projectId !== undefined ? rest.projectId : current.projectId;
+      const projectChanged = projectId !== current.projectId;
+      // Changing the project drops a milestone that belonged to the old one.
+      const milestoneId =
+        rest.milestoneId !== undefined
+          ? rest.milestoneId
+          : projectChanged
+            ? null
+            : current.milestoneId;
+      Object.assign(
+        fields,
+        await resolveProjectRefs(tx, userId, {
+          projectId: rest.milestoneId && rest.projectId === undefined ? null : projectId,
+          milestoneId,
+          isSubtask: current.parentTaskId !== null,
+        }),
+      );
+    }
 
     await assertAreaOwned(tx, userId, fields.areaId);
     if (tagIds) await assertTagsOwned(tx, userId, tagIds);
@@ -310,10 +390,15 @@ export function setTaskParent(
         throw new DomainError("invalid", "task.parent_cycle");
       }
     }
+    // Subtasks belong to their parent's project; a task moved to the top level stays in the
+    // project it was part of.
+    const projectId = input.parentTaskId ? null : await rootProjectId(tx, userId, task.id);
     await tx
       .update(tasks)
       .set({
         parentTaskId: input.parentTaskId,
+        projectId,
+        milestoneId: input.parentTaskId ? null : task.milestoneId,
         sortKey: await lastSiblingKey(tx, userId, input.parentTaskId),
       })
       .where(and(eq(tasks.id, task.id), eq(tasks.userId, userId)));

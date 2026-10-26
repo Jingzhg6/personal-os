@@ -59,7 +59,9 @@
     "tags": "标签",
     "description": "描述",
     "subtasks": "子任务",
-    "parent": "上级任务"
+    "parent": "上级任务",
+    "project": "项目",
+    "milestone": "里程碑"
   },
   "due": {
     "overdue": "已逾期",
@@ -100,7 +102,9 @@
     "parentEmpty": "没有找到任务",
     "parentChanged": "已移动任务",
     "subtaskDrag": "拖动「{title}」调整子任务顺序",
-    "parentResults": "可选的上级任务"
+    "parentResults": "可选的上级任务",
+    "inheritedProject": "随上级任务",
+    "noMilestone": "无里程碑"
   },
   "tagPicker": {
     "add": "添加标签",
@@ -165,7 +169,10 @@
       "any": "有截止日期"
     },
     "selected": "{label}：{count, plural, other {# 项}}",
-    "label": "筛选条件"
+    "label": "筛选条件",
+    "project": "项目",
+    "noProject": "无项目",
+    "milestone": "里程碑"
   },
   "sort": {
     "label": "排序",
@@ -293,6 +300,23 @@
     "emptyAll": {
       "title": "没有待处理的任务",
       "description": "添加任务后，可以在这里按紧急和重要程度分类。"
+    }
+  },
+  "kanban": {
+    "description": "按状态查看任务。把卡片拖到其他列，就会修改这个任务的状态。",
+    "moveMenu": "修改「{title}」的状态",
+    "more": "还有 {count} 个",
+    "addTo": "添加到「{status}」",
+    "dropHere": "拖动任务到这里",
+    "board": "任务看板",
+    "drag": {
+      "handle": "拖动「{title}」到其他状态",
+      "instructions": "按空格键拿起任务，用方向键移到其他列，再按空格键放下；按 Esc 取消。",
+      "start": "已拿起「{title}」。",
+      "over": "「{title}」位于「{status}」上方。",
+      "end": "已将「{title}」移到「{status}」。",
+      "noMove": "「{title}」没有移动。",
+      "cancel": "已取消移动「{title}」。"
     }
   }
 }

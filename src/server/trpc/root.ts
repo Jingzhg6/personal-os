@@ -1,4 +1,5 @@
 import { areasRouter } from "@/modules/areas/server";
+import { projectsRouter } from "@/modules/projects/server";
 import { settingsRouter } from "@/modules/settings/server";
 import { tasksRouter } from "@/modules/tasks/server";
 import { router } from "@/shared/trpc/init";
@@ -8,6 +9,7 @@ export const appRouter = router({
   settings: settingsRouter,
   areas: areasRouter,
   tasks: tasksRouter,
+  projects: projectsRouter,
 });
 
 export type AppRouter = typeof appRouter;

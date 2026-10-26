@@ -17,6 +17,8 @@ const baseTask: Task = {
   title: "完成法语听力练习",
   description: null,
   areaId: "a1",
+  projectId: null,
+  milestoneId: null,
   parentTaskId: null,
   parentTitle: null,
   statusId: "s1",

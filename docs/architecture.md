@@ -175,7 +175,7 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 - Each module owns its tables in `src/modules/<m>/db`; `src/server/db-schema.ts` aggregates them
   for drizzle-kit and Better Auth.
 
-### 5.2 Implemented (M0–M2)
+### 5.2 Implemented (M0–M4)
 
 | Table                                            | Owner       | Notes                                                              |
 | ------------------------------------------------ | ----------- | ------------------------------------------------------------------ |
@@ -187,6 +187,8 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 | `tasks`                                          | tasks       | see below                                                          |
 | `task_tags`                                      | tasks       | composite PK; cascades from both sides                             |
 | `task_views`                                     | tasks       | (M2) area scope of the 工作 / 业务 / 行政任务 / 个人生活 views     |
+| `projects`                                       | projects    | (M4) see below                                                     |
+| `milestones`                                     | projects    | (M4) belong to one project; cascade with it                        |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
@@ -195,6 +197,17 @@ completed_at, cancelled_at, deleted_at, created_at, updated_at` plus (M2) `descr
 (plain text of the description, maintained by the service, for search), with check constraints for
 priority range, positive estimate, `due_time` requiring `due_date`, non-blank title and no
 self-parenting.
+
+`projects` (M4): `id, user_id, name, description (jsonb, Tiptap), area_id → areas (set null),
+status (planned|active|paused|completed|cancelled), priority 0–4, color, start_date?,
+target_date?, completed_at, sort_key, created_at, updated_at`. `milestones` (M4): `id, user_id,
+project_id → projects (cascade), name, due_date?, completed_at, sort_key`. `tasks` gained
+`project_id → projects (set null)` and `milestone_id → milestones (set null)`, with checks
+`tasks_subtasks_have_no_project` (only top-level tasks carry a project; subtasks belong to their
+root's project) and `tasks_milestone_needs_project`. Progress (total / completed / overdue) is
+counted from the top-level, non-deleted, non-cancelled tasks at read time — never stored.
+Deleting a project hard-deletes it and its milestones; its tasks stay and simply lose the
+reference (cleared explicitly in the same transaction). See ADR 0009.
 
 Rules enforced in the service layer (`src/modules/tasks/server/service.ts`):
 
@@ -226,6 +239,8 @@ Every task screen is a query over the same `tasks` table (`listTasks`, `src/modu
 | 重要截止日期 `/admin/deadlines`   | open tasks **and subtasks** with a due date, sorted and grouped by due date                                         |
 | Search (any screen)               | title or description substring at any level (`pg_trgm` GIN indexes), shows the parent                               |
 | 回收站 `/tasks/trash`             | roots of each deletion batch                                                                                        |
+| 看板 `/projects/kanban`           | (M4) top-level tasks, one column per task status; moving a card sets the status                                     |
+| 项目 `/projects/[id]` 任务 / 看板 | (M4) the list and the board above, filtered to `project_id` (a first-level subtask matches through its parent)      |
 
 Filters, sort and search live in the URL (`?q=&status=&priority=&area=&tag=&urgent=&important=&due=&sort=`),
 parsed by `readListParams` / `writeListParams` in the domain, so every view is shareable.
@@ -235,15 +250,12 @@ The Eisenhower placement is derived in the domain (`src/modules/tasks/domain/eis
 both flags set ⇒ one of four quadrants, any flag `null` ⇒ 未分类. No matrix-specific column or
 table exists.
 
-### 5.3 Phase 1 (planned, M4–M8)
+### 5.3 Phase 1 (planned, M5–M8)
 
 ```
-tasks (additive)   + project_id?, milestone_id? (M4), recurrence_id? (M8), actual_minutes? (Phase 2)
+tasks (additive)   + recurrence_id? (M8), actual_minutes? (Phase 2)
 task_dependencies  blocking_task_id, blocked_task_id, type(finish_to_start)   -- cycle-checked in service
 task_recurrences   id, user_id, rrule, mode(fixed|after_completion), timezone, next_due_at, ended_at
-projects           id, user_id, name, description, area_id?, status(planned|active|paused|completed|cancelled),
-                   priority, start_date, target_date, completed_at, color, icon, sort_key, deleted_at
-milestones         id, project_id, name, date, completed_at, sort_key
 characters         user_id, name, avatar
 attributes         id, user_id, system_key?, name?, color, icon, sort_key
 xp_rules           id, user_id, event_type, conditions(jsonb), target_type, target_id, amount(jsonb), daily_cap?, enabled
@@ -344,7 +356,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M1 Areas & task core** ✅: areas, configurable statuses, tags, task schema/API/service, Quick Add, detail panel, subtasks, rich-text descriptions, domain events.
 - **M2 Task views** ✅: filtering, sorting, search, drag reorder (pointer + keyboard), keyboard navigation, Trash, re-parenting, area-scoped views (工作 / 业务 / 行政任务 / 个人生活) and 重要截止日期.
 - **M3 Eisenhower matrix** ✅: quadrants + 未分类 tray derived from the flags, drag-and-drop and a 「移到」 menu, quick add per quadrant, shared detail panel, filters.
-- **M4 Projects**: CRUD, list, Kanban, milestones, progress.
+- **M4 Projects** ✅: project CRUD and list, project page (任务 / 看板 / 里程碑 / 说明), status Kanban (global and per project), milestones, computed progress, project filter and fields on tasks.
 - **M5 Dependencies & basic Gantt.**
 - **M6 Character & XP**: attributes, rules, ledger with reversals, levels, radar, history.
 - **M7 Dashboard.**

@@ -11,6 +11,7 @@ import { ColorDot } from "@/shared/ui/color";
 import { isClosedCategory, type Tag, type Task, type TaskStatus } from "../domain";
 import { useDueLabel, usePriorityLabel } from "./labels";
 import { PriorityIcon } from "./priority-icon";
+import { MilestoneChip, ProjectChip } from "./project-chip";
 import type { SortableRender } from "./sortable-list";
 import { StatusToggle } from "./status-toggle";
 import type { useTaskActions } from "./use-task-data";
@@ -19,6 +20,8 @@ export interface TaskLookups {
   statuses: Map<string, TaskStatus>;
   areas: Map<string, Area>;
   tags: Map<string, Tag>;
+  /** Milestone names, inside a project's views. */
+  milestones?: Map<string, string>;
 }
 
 const dueTones = {
@@ -36,6 +39,7 @@ export function TaskRow({
   actions,
   sortable,
   showParent = false,
+  showProject = true,
 }: {
   task: Task;
   lookups: TaskLookups;
@@ -46,6 +50,8 @@ export function TaskRow({
   sortable?: SortableRender;
   /** Show "属于「父任务」" for subtasks listed outside their parent. */
   showParent?: boolean;
+  /** Hide the project chip inside a project's own views. */
+  showProject?: boolean;
 }) {
   const t = useTranslations("tasks");
   const dueLabel = useDueLabel();
@@ -127,6 +133,10 @@ export function TaskRow({
               {tag.name}
             </span>
           ))}
+          {showProject && task.projectId ? <ProjectChip projectId={task.projectId} /> : null}
+          {task.milestoneId && lookups.milestones?.get(task.milestoneId) ? (
+            <MilestoneChip name={lookups.milestones.get(task.milestoneId)!} />
+          ) : null}
           {area ? <AreaBadge area={area} /> : null}
           {due ? (
             <span

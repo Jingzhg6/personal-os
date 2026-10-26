@@ -21,6 +21,10 @@ export interface QuickAddDefaults {
   /** Set by the matrix quadrant the task is added to. */
   isUrgent?: boolean | null;
   isImportant?: boolean | null;
+  /** Inside a project's views. */
+  projectId?: string | null;
+  /** Inside a Kanban column. */
+  statusId?: string;
 }
 
 /**
@@ -75,6 +79,8 @@ export function QuickAdd({
         areaId: parsed.areaId ?? defaults.areaId ?? null,
         isUrgent: defaults.isUrgent ?? undefined,
         isImportant: defaults.isImportant ?? undefined,
+        projectId: defaults.projectId ?? undefined,
+        statusId: defaults.statusId,
         tagIds: [...parsed.tagIds, ...created],
       });
       setValue("");

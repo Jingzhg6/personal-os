@@ -22,6 +22,7 @@ import {
 } from "../domain";
 import { FilterBar } from "./filter-bar";
 import { useToday } from "./labels";
+import { useMilestoneLookup } from "./project-chip";
 import { QuickAdd } from "./quick-add";
 import { ShortcutsDialog } from "./shortcuts-dialog";
 import { SortableList } from "./sortable-list";
@@ -38,18 +39,25 @@ import { ViewScopeBar, ViewScopeEditor } from "./view-scope";
  *  - all:       every top-level task
  *  - scoped:    tasks in the areas assigned to a navigation view (工作, 业务, 行政任务, 个人生活)
  *  - deadlines: open tasks and subtasks with a due date, grouped by when they are due
+ *  - project:   the top-level tasks of one project (embedded in the project page)
  */
 export type TaskListVariant =
-  { kind: "all" } | { kind: "scoped"; view: ScopedViewKey } | { kind: "deadlines" };
+  | { kind: "all" }
+  | { kind: "scoped"; view: ScopedViewKey }
+  | { kind: "deadlines" }
+  | { kind: "project"; projectId: string };
 
 const OPEN_CATEGORIES = ["backlog", "unstarted", "started"] as const;
 
 export function TaskListView({
   title,
   variant = { kind: "all" },
+  embedded = false,
 }: {
   title: string;
   variant?: TaskListVariant;
+  /** Inside another page (e.g. a project): no page header, the host page provides it. */
+  embedded?: boolean;
 }) {
   const t = useTranslations("tasks");
   const trpc = useTRPC();
@@ -91,9 +99,11 @@ export function TaskListView({
       filter:
         variant.kind === "scoped"
           ? { ...state.filter, areaIds: scope?.areaIds ?? [], noArea: undefined }
-          : state.filter,
+          : variant.kind === "project"
+            ? { ...state.filter, projectIds: [variant.projectId], noProject: undefined }
+            : state.filter,
     };
-  }, [today, searching, state, variant.kind, scope?.areaIds]);
+  }, [today, searching, state, variant, scope?.areaIds]);
 
   const listEnabled = variant.kind !== "scoped" || (scope !== undefined && !scopeEmpty);
   const { data: tasks = [], isPending } = useTaskList(query, { enabled: listEnabled });
@@ -101,14 +111,16 @@ export function TaskListView({
   const { data: tags = [] } = useTags();
   const { data: areas = [] } = useAreas();
   const actions = useTaskActions();
+  const milestones = useMilestoneLookup(variant.kind === "project" ? variant.projectId : undefined);
 
   const lookups: TaskLookups = useMemo(
     () => ({
       statuses: new Map(statuses.map((s) => [s.id, s])),
       areas: new Map(areas.map((a) => [a.id, a])),
       tags: new Map(tags.map((tag) => [tag.id, tag])),
+      milestones,
     }),
-    [statuses, areas, tags],
+    [statuses, areas, tags, milestones],
   );
 
   useListKeyboard(listRef, { onHelp: () => setHelpOpen(true) });
@@ -129,6 +141,7 @@ export function TaskListView({
       actions={actions}
       sortable={sortable}
       showParent={flat}
+      showProject={variant.kind !== "project"}
     />
   );
 
@@ -238,28 +251,35 @@ export function TaskListView({
 
   return (
     // On wide screens the list makes room for the detail panel instead of hiding under it.
-    <div className={cn("transition-[padding]", openTaskId && "lg:pr-[480px]")}>
-      <div className="mx-auto flex max-w-4xl flex-col gap-5">
-        <PageHeader
-          title={title}
-          description={listEnabled ? description : null}
-          actions={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setHelpOpen(true)}
-              aria-label={t("shortcuts.open")}
-              title={t("shortcuts.open")}
-            >
-              <Keyboard />
-            </Button>
-          }
-        />
+    <div className={cn("transition-[padding]", openTaskId && !embedded && "lg:pr-[480px]")}>
+      <div className={cn("flex flex-col gap-5", !embedded && "mx-auto max-w-4xl")}>
+        {embedded ? null : (
+          <PageHeader
+            title={title}
+            description={listEnabled ? description : null}
+            actions={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setHelpOpen(true)}
+                aria-label={t("shortcuts.open")}
+                title={t("shortcuts.open")}
+              >
+                <Keyboard />
+              </Button>
+            }
+          />
+        )}
 
         {scope && !scopeEmpty ? <ViewScopeBar scope={scope} /> : null}
 
         {variant.kind !== "deadlines" && !scopeEmpty ? (
-          <QuickAdd defaults={{ areaId: scope?.areaIds[0] ?? null }} />
+          <QuickAdd
+            defaults={{
+              areaId: scope?.areaIds[0] ?? null,
+              projectId: variant.kind === "project" ? variant.projectId : null,
+            }}
+          />
         ) : null}
 
         {!scopeEmpty ? (
@@ -270,6 +290,7 @@ export function TaskListView({
             tags={tags}
             hide={{
               area: variant.kind === "scoped",
+              project: variant.kind === "project",
               due: variant.kind === "deadlines",
               sort: variant.kind === "deadlines",
             }}

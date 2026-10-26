@@ -6,7 +6,8 @@
     "start_after_due": "开始日期不能晚于截止日期。",
     "order_conflict": "顺序已在别处被修改，列表已刷新，请再试一次。",
     "parent_cycle": "不能把任务移到它自己或它的子任务下面。",
-    "not_in_trash": "这个任务不在回收站中。"
+    "not_in_trash": "这个任务不在回收站中。",
+    "subtask_project": "子任务属于上级任务的项目，不能单独设置项目。"
   },
   "status": {
     "not_found": "状态不存在。",
@@ -23,5 +24,13 @@
   "tag": {
     "not_found": "标签不存在。",
     "duplicate_name": "已存在同名标签。"
+  },
+  "project": {
+    "not_found": "项目不存在。",
+    "start_after_target": "开始日期不能晚于目标日期。"
+  },
+  "milestone": {
+    "not_found": "里程碑不存在。",
+    "project_mismatch": "里程碑必须属于任务所在的项目。"
   }
 }

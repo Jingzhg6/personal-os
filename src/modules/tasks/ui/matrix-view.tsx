@@ -26,6 +26,7 @@ import { PageHeader } from "@/shared/ui/page-header";
 import {
   flagsForPlacement,
   matrixPlacement,
+  matrixPlacements,
   quadrants,
   type MatrixPlacement,
   type Task,
@@ -39,7 +40,7 @@ import type { TaskLookups } from "./task-row";
 import { useListUrlState } from "./use-list-state";
 import { useTaskPanel } from "./use-task-panel";
 import { useStatuses, useTags, useTaskActions, useTaskList } from "./use-task-data";
-import { MatrixCard, MatrixCardPreview } from "./matrix-card";
+import { TaskCard, TaskCardPreview } from "./task-card";
 
 const OPEN_CATEGORIES = ["backlog", "unstarted", "started"] as const;
 
@@ -147,15 +148,27 @@ export function MatrixView({ title }: { title: string }) {
     if (matrixPlacement(task) !== target) move(task, target);
   }
 
+  const placementOptions = matrixPlacements.map((placement) => ({
+    id: placement,
+    label: t(`placements.${placement}.title`),
+  }));
+
   const renderCard = (task: Task) => (
-    <MatrixCard
+    <TaskCard
       key={task.id}
+      testId="matrix-card"
       task={task}
       lookups={lookups}
       selected={task.id === openTaskId}
       onOpen={openTask}
-      onMove={move}
       actions={actions}
+      dragLabel={t("drag.handle", { title: task.title })}
+      moveMenu={{
+        label: t("moveMenu", { title: task.title }),
+        options: placementOptions,
+        current: matrixPlacement(task),
+        onSelect: (placement) => move(task, placement as MatrixPlacement),
+      }}
     />
   );
 
@@ -233,7 +246,7 @@ export function MatrixView({ title }: { title: string }) {
 
           <DragOverlay dropAnimation={null}>
             {dragging ? (
-              <MatrixCardPreview task={dragging} lookups={lookups} actions={actions} />
+              <TaskCardPreview task={dragging} lookups={lookups} actions={actions} />
             ) : null}
           </DragOverlay>
         </DndContext>

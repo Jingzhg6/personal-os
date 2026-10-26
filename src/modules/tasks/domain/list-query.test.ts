@@ -28,6 +28,14 @@ describe("list URL state", () => {
     expect(readListParams(params)).toEqual(state);
   });
 
+  it("round-trips project and milestone filters", () => {
+    const filter = { projectIds: [AREA], noProject: true, milestoneIds: [TAG] };
+    const params = writeListParams({ search: "", sort: "manual", filter });
+    expect(params.get("project")).toBe(`${AREA},none`);
+    expect(readListParams(params).filter).toMatchObject(filter);
+    expect(countActiveFilters(filter)).toBe(2);
+  });
+
   it("omits defaults and keeps unrelated params such as the open task", () => {
     const params = writeListParams(
       { search: "  ", sort: "manual", filter: {} },

@@ -24,6 +24,11 @@ export const taskFilter = z.object({
   areaIds: z.array(z.uuid()).max(100).optional(),
   /** …or without an area. */
   noArea: z.boolean().optional(),
+  /** Tasks in any of these projects… */
+  projectIds: z.array(z.uuid()).max(100).optional(),
+  /** …or in no project. */
+  noProject: z.boolean().optional(),
+  milestoneIds: z.array(z.uuid()).max(100).optional(),
   /** Tasks having any of these tags. */
   tagIds: z.array(z.uuid()).max(100).optional(),
   urgent: z.enum(flagFilters).optional(),
@@ -49,6 +54,8 @@ export function countActiveFilters(filter: TaskFilter): number {
     filter.categories?.length,
     filter.priorities?.length,
     filter.areaIds?.length || filter.noArea,
+    filter.projectIds?.length || filter.noProject,
+    filter.milestoneIds?.length,
     filter.tagIds?.length,
     filter.urgent,
     filter.important,
@@ -75,6 +82,7 @@ const oneOf = <T extends string>(options: readonly T[], value: string | null) =>
 /** Reads list state from URL search params, silently dropping anything invalid. */
 export function readListParams(params: URLSearchParams): ListUrlState {
   const areaTokens = csv(params.get("area"));
+  const projectTokens = csv(params.get("project"));
   return {
     search: (params.get("q") ?? "").slice(0, 200),
     sort: oneOf(taskSorts, params.get("sort")) ?? "manual",
@@ -91,6 +99,11 @@ export function readListParams(params: URLSearchParams): ListUrlState {
       ),
       areaIds: nonEmpty(areaTokens.filter((id) => uuid.safeParse(id).success)),
       noArea: areaTokens.includes(NO_AREA_TOKEN) || undefined,
+      projectIds: nonEmpty(projectTokens.filter((id) => uuid.safeParse(id).success)),
+      noProject: projectTokens.includes(NO_AREA_TOKEN) || undefined,
+      milestoneIds: nonEmpty(
+        csv(params.get("milestone")).filter((id) => uuid.safeParse(id).success),
+      ),
       tagIds: nonEmpty(csv(params.get("tag")).filter((id) => uuid.safeParse(id).success)),
       urgent: oneOf(flagFilters, params.get("urgent")),
       important: oneOf(flagFilters, params.get("important")),
@@ -113,6 +126,12 @@ export function writeListParams(state: ListUrlState, base?: URLSearchParams): UR
     "area",
     [...(filter.areaIds ?? []), ...(filter.noArea ? [NO_AREA_TOKEN] : [])].join(",") || undefined,
   );
+  set(
+    "project",
+    [...(filter.projectIds ?? []), ...(filter.noProject ? [NO_AREA_TOKEN] : [])].join(",") ||
+      undefined,
+  );
+  set("milestone", filter.milestoneIds?.join(","));
   set("tag", filter.tagIds?.join(","));
   set("urgent", filter.urgent);
   set("important", filter.important);

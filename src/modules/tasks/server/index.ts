@@ -3,6 +3,7 @@ import "server-only";
 import "../domain/events";
 
 export { registerTasksEventHandlers } from "./events";
+export { milestoneProgress, projectProgress } from "./progress";
 export { getTask, getTaskDetail, listTasks, listTopLevelTasks, loadTasks } from "./repository";
 export {
   completeTask,

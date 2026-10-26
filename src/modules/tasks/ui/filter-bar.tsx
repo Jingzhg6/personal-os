@@ -24,6 +24,7 @@ import {
   type Tag,
   type TaskFilter,
 } from "../domain";
+import { useProjectOptions } from "./project-chip";
 import type { ListStateUpdate } from "./use-list-state";
 
 export const SEARCH_INPUT_ID = "task-search";
@@ -34,7 +35,7 @@ export interface FilterBarProps {
   areas: Area[];
   tags: Tag[];
   /** Controls fixed by the current view are hidden. */
-  hide?: { area?: boolean; due?: boolean; sort?: boolean };
+  hide?: { area?: boolean; due?: boolean; sort?: boolean; project?: boolean };
 }
 
 function toggle<T>(values: T[] | undefined, value: T): T[] | undefined {
@@ -47,6 +48,7 @@ function toggle<T>(values: T[] | undefined, value: T): T[] | undefined {
 export function FilterBar({ state, onChange, areas, tags, hide = {} }: FilterBarProps) {
   const t = useTranslations("tasks");
   const areaLabel = useAreaLabel();
+  const { data: projects = [] } = useProjectOptions();
   const [searchVersion, setSearchVersion] = useState(0);
   const { filter } = state;
   /** Applies a change computed from the latest filter (safe for rapid successive clicks). */
@@ -109,6 +111,32 @@ export function FilterBar({ state, onChange, areas, tags, hide = {} }: FilterBar
             </MenuCheckbox>
           ))}
         </FilterMenu>
+
+        {!hide.project ? (
+          <FilterMenu
+            label={t("filters.project")}
+            count={(filter.projectIds?.length ?? 0) + (filter.noProject ? 1 : 0)}
+          >
+            {projects.map((project) => (
+              <MenuCheckbox
+                key={project.id}
+                checked={filter.projectIds?.includes(project.id) ?? false}
+                onChange={() =>
+                  setFilter((f) => ({ projectIds: toggle(f.projectIds, project.id) }))
+                }
+              >
+                <ColorDot color={project.color} />
+                <span className="truncate">{project.name}</span>
+              </MenuCheckbox>
+            ))}
+            <MenuCheckbox
+              checked={filter.noProject ?? false}
+              onChange={() => setFilter((f) => ({ noProject: f.noProject ? undefined : true }))}
+            >
+              {t("filters.noProject")}
+            </MenuCheckbox>
+          </FilterMenu>
+        ) : null}
 
         {!hide.area ? (
           <FilterMenu

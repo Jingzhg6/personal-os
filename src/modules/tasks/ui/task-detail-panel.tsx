@@ -1,11 +1,13 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import type { JSONContent } from "@tiptap/react";
 import { ChevronLeft, Trash2, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 
 import { useAreaLabel, useAreas } from "@/modules/areas/ui";
+import { useTRPC } from "@/shared/trpc/react";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { Input } from "@/shared/ui/input";
@@ -23,8 +25,9 @@ import {
   type TaskDetail,
   type UpdateTaskInput,
 } from "../domain";
-import { useDurationLabel, useStatusLabel } from "./labels";
+import { useDurationLabel, useStatusLabel, useToday } from "./labels";
 import { ParentField } from "./parent-field";
+import { useProjectOptions } from "./project-chip";
 import { SortableList } from "./sortable-list";
 import { StatusToggle } from "./status-toggle";
 import { TagPicker } from "./tag-picker";
@@ -89,6 +92,8 @@ function TaskDetailContent({
   const t = useTranslations("tasks");
   const tc = useTranslations("common");
   const ta = useTranslations("areas");
+  const tp = useTranslations("projects");
+  const { data: projects = [] } = useProjectOptions();
   const format = useFormatter();
   const toast = useToast();
   const actions = useTaskActions();
@@ -257,6 +262,37 @@ function TaskDetailContent({
                 ))}
               </Select>
             </Property>
+
+            <Property label={t("fields.project")}>
+              {task.parentTaskId ? (
+                <span className="text-sm text-muted-foreground">
+                  {t("detail.inheritedProject")}
+                </span>
+              ) : (
+                <Select
+                  aria-label={t("fields.project")}
+                  value={task.projectId ?? ""}
+                  onChange={(event) => update({ projectId: event.target.value || null })}
+                >
+                  <option value="">{tp("none")}</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Property>
+
+            {task.projectId ? (
+              <Property label={t("fields.milestone")}>
+                <MilestoneSelect
+                  projectId={task.projectId}
+                  value={task.milestoneId}
+                  onChange={(milestoneId) => update({ milestoneId })}
+                />
+              </Property>
+            ) : null}
 
             <Property label={t("fields.area")}>
               <Select
@@ -493,5 +529,34 @@ function Property({
       </dt>
       <dd className="min-w-0">{children}</dd>
     </>
+  );
+}
+
+function MilestoneSelect({
+  projectId,
+  value,
+  onChange,
+}: {
+  projectId: string;
+  value: string | null;
+  onChange: (milestoneId: string | null) => void;
+}) {
+  const t = useTranslations("tasks");
+  const trpc = useTRPC();
+  const today = useToday();
+  const { data: project } = useQuery(trpc.projects.byId.queryOptions({ id: projectId, today }));
+  return (
+    <Select
+      aria-label={t("fields.milestone")}
+      value={value ?? ""}
+      onChange={(event) => onChange(event.target.value || null)}
+    >
+      <option value="">{t("detail.noMilestone")}</option>
+      {(project?.milestones ?? []).map((milestone) => (
+        <option key={milestone.id} value={milestone.id}>
+          {milestone.name}
+        </option>
+      ))}
+    </Select>
   );
 }

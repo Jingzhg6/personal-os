@@ -6,7 +6,14 @@ import { useTRPC } from "@/shared/trpc/react";
 import { useToast } from "@/shared/ui/toast";
 import { useErrorMessage } from "@/shared/ui/use-error-message";
 
-import type { StatusCategory, Task, TaskDetail, TaskListQuery, UpdateTaskInput } from "../domain";
+import type {
+  StatusCategory,
+  Task,
+  TaskDetail,
+  TaskListQuery,
+  TaskStatus,
+  UpdateTaskInput,
+} from "../domain";
 
 /*
  * Client data access for tasks. All views share one TanStack Query cache keyed by tRPC
@@ -82,7 +89,12 @@ export function useTaskActions() {
   const detailQueries = () =>
     queryClient.getQueriesData<TaskDetail>({ queryKey: trpc.tasks.byId.pathKey() });
 
-  const invalidate = () => queryClient.invalidateQueries(trpc.tasks.pathFilter());
+  // Project progress is computed from tasks, so task changes refresh project queries too.
+  const invalidate = () =>
+    Promise.all([
+      queryClient.invalidateQueries(trpc.tasks.pathFilter()),
+      queryClient.invalidateQueries(trpc.projects.pathFilter()),
+    ]);
   const onError = (error: unknown) => toast.show(errorMessage(error), "error");
 
   /** Optimistically rewrites cached lists and details; returns a rollback function. */
@@ -133,7 +145,17 @@ export function useTaskActions() {
       }),
     ),
     setStatus: useMutation(
-      trpc.tasks.setStatus.mutationOptions({ onSettled: invalidate, onError }),
+      trpc.tasks.setStatus.mutationOptions({
+        ...rollbackOnError,
+        onMutate: ({ id, statusId }) => {
+          const status = queryClient
+            .getQueryData<TaskStatus[]>(trpc.tasks.statuses.list.queryKey())
+            ?.find((s) => s.id === statusId);
+          return forTask(id, (task) =>
+            status ? { ...withCategory(status.category)(task), statusId } : { ...task, statusId },
+          );
+        },
+      }),
     ),
     complete: useMutation(
       trpc.tasks.complete.mutationOptions({

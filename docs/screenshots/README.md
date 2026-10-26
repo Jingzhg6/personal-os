@@ -29,3 +29,15 @@ Desktop shots are 1440 × 900; phone shots use the Pixel 7 profile (touch, no ho
 | `04-detail-panel.png`  | `/tasks/matrix?task=…`  | The shared task detail panel opened from a card; matrix reflows beside it                                                                                            |
 | `05-filtered-dark.png` | `/tasks/matrix?area=…`  | Matrix filtered to one area in dark mode; empty quadrants show drop hints                                                                                            |
 | `06-mobile.png`        | `/tasks/matrix` (phone) | Stacked layout on a phone with 未分类 first                                                                                                                          |
+
+## M4 — Projects (`m4/`)
+
+| File                       | Page                                      | Shows                                                                                                             |
+| -------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `01-projects.png`          | `/projects`                               | Project cards: status, area, progress bar and counts, target date (overdue in red), overdue tasks, next milestone |
+| `02-new-project.png`       | `/projects`                               | 新建项目 dialog: name, area, status, start / target dates, priority, colour                                       |
+| `03-project-tasks.png`     | `/projects/[id]`                          | Project header with progress; 任务 tab = the shared task list filtered to the project, with milestone chips       |
+| `04-project-board.png`     | `/projects/[id]?view=board`               | The project's Kanban board: one column per status, per-column Quick Add, horizontally scrollable                  |
+| `05-milestones.png`        | `/projects/[id]?view=milestones`          | Milestones with due dates, completion, per-milestone progress and 查看任务 links                                  |
+| `06-kanban-panel.png`      | `/projects/kanban?task=…`                 | Global board with project chips; the shared detail panel showing the 项目 and 里程碑 fields                       |
+| `07-mobile-board-dark.png` | `/projects/[id]?view=board` (phone, dark) | Project page on a phone in dark mode; board columns snap horizontally                                             |
