@@ -1,6 +1,7 @@
 import "./events";
 
 export * from "./dates";
+export * from "./eisenhower";
 export * from "./list-query";
 export * from "./priority";
 export * from "./quick-add";

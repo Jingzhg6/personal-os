@@ -12,3 +12,4 @@ changes; never rewrite history — supersede instead.
 | [0005](./0005-auth.md)                               | Better Auth with email + password                             | Accepted |
 | [0006](./0006-task-model.md)                         | Task model: one entity, status categories, derived completion | Accepted |
 | [0007](./0007-task-views-and-search.md)              | Task views, search and Trash                                  | Accepted |
+| [0008](./0008-eisenhower-matrix.md)                  | Eisenhower matrix is a view of the urgent / important flags   | Accepted |

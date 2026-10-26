@@ -10,11 +10,11 @@ test("shows the Chinese navigation and placeholder modules", async ({ page }) =>
   await expect(page.getByRole("heading", { level: 1, name: "仪表盘" })).toBeVisible();
   await expect(page.getByTestId("current-user-name")).toHaveText("晋");
 
-  await nav.getByRole("link", { name: "四象限矩阵" }).click(); // still a placeholder (M3)
-  await expect(page).toHaveURL(/\/tasks\/matrix$/);
-  await expect(page.getByRole("heading", { level: 1, name: "四象限矩阵" })).toBeVisible();
-  await expect(page.getByText("第 1 阶段 · 里程碑 M3", { exact: true })).toBeVisible();
-  await expect(page).toHaveTitle("四象限矩阵 · Personal OS");
+  await nav.getByRole("link", { name: "看板" }).click(); // still a placeholder (M4)
+  await expect(page).toHaveURL(/\/projects\/kanban$/);
+  await expect(page.getByRole("heading", { level: 1, name: "看板" })).toBeVisible();
+  await expect(page.getByText("第 1 阶段 · 里程碑 M4", { exact: true })).toBeVisible();
+  await expect(page).toHaveTitle("看板 · Personal OS");
 });
 
 test("renders a translated 404 for unknown routes", async ({ page }) => {

@@ -2,9 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Keyboard, ListTodo, SearchX } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useAreas } from "@/modules/areas/ui";
 import { cn } from "@/shared/lib/cn";
@@ -30,11 +29,9 @@ import { TaskDetailPanel } from "./task-detail-panel";
 import { TaskRow, type TaskLookups } from "./task-row";
 import { useListKeyboard } from "./use-list-keyboard";
 import { useListUrlState } from "./use-list-state";
+import { useTaskPanel } from "./use-task-panel";
 import { useStatuses, useTags, useTaskActions, useTaskList } from "./use-task-data";
 import { ViewScopeBar, ViewScopeEditor } from "./view-scope";
-
-/** Search parameter holding the task open in the detail panel (shareable, back-button friendly). */
-export const TASK_PARAM = "task";
 
 /**
  * Which slice of the one tasks table this screen shows:
@@ -56,10 +53,7 @@ export function TaskListView({
 }) {
   const t = useTranslations("tasks");
   const trpc = useTRPC();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const openTaskId = searchParams.get(TASK_PARAM);
+  const { openTaskId, openTask, closeTask } = useTaskPanel();
   const today = useToday();
   const [state, setState] = useListUrlState();
   const listRef = useRef<HTMLDivElement>(null);
@@ -116,21 +110,6 @@ export function TaskListView({
     }),
     [statuses, areas, tags],
   );
-
-  const openTask = useCallback(
-    (id: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set(TASK_PARAM, id);
-      router.push(`${pathname}?${params}`, { scroll: false });
-    },
-    [pathname, router, searchParams],
-  );
-  const closeTask = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete(TASK_PARAM);
-    const rest = params.toString();
-    router.push(rest ? `${pathname}?${rest}` : pathname, { scroll: false });
-  }, [pathname, router, searchParams]);
 
   useListKeyboard(listRef, { onHelp: () => setHelpOpen(true) });
 
@@ -280,7 +259,7 @@ export function TaskListView({
         {scope && !scopeEmpty ? <ViewScopeBar scope={scope} /> : null}
 
         {variant.kind !== "deadlines" && !scopeEmpty ? (
-          <QuickAdd defaultAreaId={scope?.areaIds[0] ?? null} />
+          <QuickAdd defaults={{ areaId: scope?.areaIds[0] ?? null }} />
         ) : null}
 
         {!scopeEmpty ? (

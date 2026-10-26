@@ -218,19 +218,24 @@ Rules enforced in the service layer (`src/modules/tasks/server/service.ts`):
 
 Every task screen is a query over the same `tasks` table (`listTasks`, `src/modules/tasks/server/repository.ts`):
 
-| Screen                            | Query                                                                                         |
-| --------------------------------- | --------------------------------------------------------------------------------------------- |
-| 全部任务 `/tasks`                 | top-level tasks, user filters/sort/search                                                     |
-| 工作 / 业务 / 行政任务 / 个人生活 | top-level tasks in the view's areas (`task_views`, default: the seeded area of the same name) |
-| 重要截止日期 `/admin/deadlines`   | open tasks **and subtasks** with a due date, sorted and grouped by due date                   |
-| Search (any screen)               | title or description substring at any level (`pg_trgm` GIN indexes), shows the parent         |
-| 回收站 `/tasks/trash`             | roots of each deletion batch                                                                  |
+| Screen                            | Query                                                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 四象限矩阵 `/tasks/matrix`        | open tasks **and subtasks**, placed by `matrixPlacement(isUrgent, isImportant)`; moving a card writes the two flags |
+| 全部任务 `/tasks`                 | top-level tasks, user filters/sort/search                                                                           |
+| 工作 / 业务 / 行政任务 / 个人生活 | top-level tasks in the view's areas (`task_views`, default: the seeded area of the same name)                       |
+| 重要截止日期 `/admin/deadlines`   | open tasks **and subtasks** with a due date, sorted and grouped by due date                                         |
+| Search (any screen)               | title or description substring at any level (`pg_trgm` GIN indexes), shows the parent                               |
+| 回收站 `/tasks/trash`             | roots of each deletion batch                                                                                        |
 
 Filters, sort and search live in the URL (`?q=&status=&priority=&area=&tag=&urgent=&important=&due=&sort=`),
 parsed by `readListParams` / `writeListParams` in the domain, so every view is shareable.
 "Today" for due-date filters is sent by the client in the user's timezone.
 
-### 5.3 Phase 1 (planned, M3–M8)
+The Eisenhower placement is derived in the domain (`src/modules/tasks/domain/eisenhower.ts`):
+both flags set ⇒ one of four quadrants, any flag `null` ⇒ 未分类. No matrix-specific column or
+table exists.
+
+### 5.3 Phase 1 (planned, M4–M8)
 
 ```
 tasks (additive)   + project_id?, milestone_id? (M4), recurrence_id? (M8), actual_minutes? (Phase 2)
@@ -338,7 +343,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M0 Foundations** ✅: tooling, DB, auth, i18n, shell, boundaries, design tokens, event bus, tests, CI.
 - **M1 Areas & task core** ✅: areas, configurable statuses, tags, task schema/API/service, Quick Add, detail panel, subtasks, rich-text descriptions, domain events.
 - **M2 Task views** ✅: filtering, sorting, search, drag reorder (pointer + keyboard), keyboard navigation, Trash, re-parenting, area-scoped views (工作 / 业务 / 行政任务 / 个人生活) and 重要截止日期.
-- **M3 Eisenhower matrix.**
+- **M3 Eisenhower matrix** ✅: quadrants + 未分类 tray derived from the flags, drag-and-drop and a 「移到」 menu, quick add per quadrant, shared detail panel, filters.
 - **M4 Projects**: CRUD, list, Kanban, milestones, progress.
 - **M5 Dependencies & basic Gantt.**
 - **M6 Character & XP**: attributes, rules, ledger with reversals, levels, radar, history.

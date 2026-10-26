@@ -248,5 +248,51 @@
     "deletedAt": "删除于 {date}",
     "withSubtasks": "{count, plural, other {含 # 个子任务}}",
     "inParent": "原属于「{title}」"
+  },
+  "matrix": {
+    "description": "按紧急和重要程度安排任务。拖动卡片，或用卡片上的「移到」菜单调整。",
+    "summary": "{unsorted, plural, =0 {所有待办任务都已分类} other {# 个任务待分类}}",
+    "placements": {
+      "do": {
+        "title": "重要且紧急",
+        "hint": "立即处理"
+      },
+      "schedule": {
+        "title": "重要不紧急",
+        "hint": "计划安排"
+      },
+      "delegate": {
+        "title": "紧急不重要",
+        "hint": "委托或尽快处理"
+      },
+      "eliminate": {
+        "title": "不紧急不重要",
+        "hint": "减少或放弃"
+      },
+      "unsorted": {
+        "title": "未分类",
+        "hint": "还没有设置紧急或重要"
+      }
+    },
+    "axis": {
+      "urgent": "紧急",
+      "notUrgent": "不紧急"
+    },
+    "dropHere": "拖动任务到这里",
+    "addTo": "添加到「{placement}」",
+    "moveMenu": "移动「{title}」到其他象限",
+    "drag": {
+      "handle": "拖动「{title}」到其他象限",
+      "instructions": "按空格键拿起任务，用方向键移到其他象限，再按空格键放下；按 Esc 取消。",
+      "start": "已拿起「{title}」。",
+      "over": "「{title}」位于「{placement}」上方。",
+      "end": "已将「{title}」移到「{placement}」。",
+      "noMove": "「{title}」没有移动。",
+      "cancel": "已取消移动「{title}」。"
+    },
+    "emptyAll": {
+      "title": "没有待处理的任务",
+      "description": "添加任务后，可以在这里按紧急和重要程度分类。"
+    }
   }
 }
