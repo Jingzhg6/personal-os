@@ -9,10 +9,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("allTasks") };
 }
 
-export default function TasksPage() {
+export default async function Page() {
+  const t = await getTranslations("nav.items");
   return (
     <Suspense>
-      <TaskListView />
+      <TaskListView title={t("allTasks")} />
     </Suspense>
   );
 }

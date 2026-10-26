@@ -58,7 +58,7 @@ test("adds a custom status that tasks can use", async ({ page }) => {
   await page
     .getByTestId("task-row")
     .filter({ hasText: "审核合同" })
-    .getByRole("button", { name: /审核合同/ })
+    .locator("[data-row-main]")
     .click();
   const panel = page.getByRole("complementary", { name: "任务详情" });
   await panel.getByLabel("状态").selectOption({ label: "待审核" });

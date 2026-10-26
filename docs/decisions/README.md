@@ -11,3 +11,4 @@ changes; never rewrite history — supersede instead.
 | [0004](./0004-ids-and-time.md)                       | UUIDv7 ids, timestamptz everywhere                            | Accepted |
 | [0005](./0005-auth.md)                               | Better Auth with email + password                             | Accepted |
 | [0006](./0006-task-model.md)                         | Task model: one entity, status categories, derived completion | Accepted |
+| [0007](./0007-task-views-and-search.md)              | Task views, search and Trash                                  | Accepted |

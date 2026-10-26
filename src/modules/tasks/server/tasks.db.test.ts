@@ -13,6 +13,7 @@ import { registerTasksEventHandlers } from "./events";
 import { tasksRouter } from "./router";
 
 const { db, close } = createTestDb();
+const TODAY = "2026-10-25";
 
 function setup(userId: string | null) {
   const bus = createEventBus();
@@ -278,14 +279,14 @@ describe("tasks", () => {
     });
 
     // Subtasks are not listed at the top level.
-    expect((await api.list()).map((t) => t.title)).toEqual(["准备 DELF 考试"]);
+    expect((await api.list({ today: TODAY })).map((t) => t.title)).toEqual(["准备 DELF 考试"]);
   });
 
   it("lists tasks in creation order", async () => {
     const user = await createSeededUser(db);
     const { api } = setup(user.id);
     for (const title of ["一", "二", "三"]) await api.create({ title });
-    expect((await api.list()).map((t) => t.title)).toEqual(["一", "二", "三"]);
+    expect((await api.list({ today: TODAY })).map((t) => t.title)).toEqual(["一", "二", "三"]);
   });
 
   it("soft-deletes a task together with its subtasks", async () => {
@@ -298,7 +299,7 @@ describe("tasks", () => {
 
     await api.delete({ id: parent.id });
 
-    expect((await api.list()).map((t) => t.title)).toEqual(["keep"]);
+    expect((await api.list({ today: TODAY })).map((t) => t.title)).toEqual(["keep"]);
     await expect(api.byId({ id: child.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
     const rows = await db.select().from(tasks).where(eq(tasks.userId, user.id));
     expect(rows.filter((r) => r.deletedAt).length).toBe(3); // still stored, only hidden
@@ -349,7 +350,7 @@ describe("authorization", () => {
     const ownerStatus = (await ownerApi.statuses.list())[0]!;
     const task = await ownerApi.create({ title: "私人任务" });
 
-    expect(await api.list()).toEqual([]);
+    expect(await api.list({ today: TODAY })).toEqual([]);
     for (const attempt of [
       () => api.byId({ id: task.id }),
       () => api.update({ id: task.id, patch: { title: "hacked" } }),
@@ -370,6 +371,8 @@ describe("authorization", () => {
   });
 
   it("requires authentication", async () => {
-    await expect(setup(null).api.list()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(setup(null).api.list({ today: TODAY })).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
   });
 });

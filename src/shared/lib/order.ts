@@ -33,3 +33,8 @@ export function keyForMove(
   if (index === keys.length - 1) return null;
   return generateKeyBetween(keys[index + 1]!, keys[index + 2] ?? null);
 }
+
+/** Key strictly between two neighbours (either may be null at the list edges). */
+export function keyBetween(before: string | null, after: string | null): string {
+  return generateKeyBetween(before, after);
+}

@@ -1,15 +1,16 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { areaBelongsToUser } from "@/modules/areas/server";
 import type { Database, DbExecutor } from "@/shared/db/types";
 import type { EventBus } from "@/shared/events/bus";
 import { DomainError } from "@/shared/lib/errors";
-import { keyAfter } from "@/shared/lib/order";
+import { keyAfter, keyBetween } from "@/shared/lib/order";
 
 import { tasks, taskTags } from "../db";
 import {
   defaultStatusFor,
   isClosedCategory,
+  richTextToPlainText,
   statusTransition,
   validateSchedule,
   type CreateTaskInput,
@@ -40,6 +41,35 @@ async function assertAreaOwned(db: DbExecutor, userId: string, areaId: string | 
 function assertSchedule(schedule: Pick<Task, "startDate" | "dueDate" | "dueTime">) {
   const error = validateSchedule(schedule);
   if (error) throw new DomainError("invalid", error);
+}
+
+/** Sort key placing a task last among the children of `parentTaskId` (or the top level). */
+async function lastSiblingKey(db: DbExecutor, userId: string, parentTaskId: string | null) {
+  const [last] = await db
+    .select({ sortKey: tasks.sortKey })
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.userId, userId),
+        parentTaskId ? eq(tasks.parentTaskId, parentTaskId) : isNull(tasks.parentTaskId),
+      ),
+    )
+    .orderBy(desc(tasks.sortKey))
+    .limit(1);
+  return keyAfter(last?.sortKey ?? null);
+}
+
+/** Ids of the task and all its descendants (any deletion state). */
+async function subtreeIds(db: DbExecutor, userId: string, id: string): Promise<string[]> {
+  const result = await db.execute<{ id: string }>(sql`
+    with recursive tree as (
+      select id from tasks where id = ${id} and user_id = ${userId}
+      union all
+      select t.id from tasks t join tree on t.parent_task_id = tree.id
+    )
+    select id from tree
+  `);
+  return result.rows.map((row) => row.id);
 }
 
 async function replaceTags(db: DbExecutor, taskId: string, tagIds: string[]) {
@@ -102,18 +132,6 @@ export function createTask(
     };
     assertSchedule(schedule);
 
-    const [last] = await tx
-      .select({ sortKey: tasks.sortKey })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.userId, userId),
-          parentTaskId ? eq(tasks.parentTaskId, parentTaskId) : isNull(tasks.parentTaskId),
-        ),
-      )
-      .orderBy(desc(tasks.sortKey))
-      .limit(1);
-
     const now = new Date();
     const transition = statusTransition(
       { category: "unstarted", completedAt: null, cancelledAt: null },
@@ -127,6 +145,7 @@ export function createTask(
         userId,
         title: input.title,
         description: input.description ?? null,
+        descriptionText: richTextToPlainText(input.description),
         areaId: input.areaId ?? null,
         parentTaskId,
         statusId: status.id,
@@ -135,7 +154,7 @@ export function createTask(
         isImportant: input.isImportant ?? null,
         ...schedule,
         estimatedMinutes: input.estimatedMinutes ?? null,
-        sortKey: keyAfter(last?.sortKey ?? null),
+        sortKey: await lastSiblingKey(tx, userId, parentTaskId),
         completedAt: transition.completedAt,
         cancelledAt: transition.cancelledAt,
       })
@@ -172,7 +191,11 @@ export function updateTask(
     if (Object.keys(fields).length > 0) {
       await tx
         .update(tasks)
-        .set(fields)
+        .set(
+          fields.description !== undefined
+            ? { ...fields, descriptionText: richTextToPlainText(fields.description) }
+            : fields,
+        )
         .where(and(eq(tasks.id, current.id), eq(tasks.userId, userId)));
     } else {
       await tx.update(tasks).set({ updatedAt: new Date() }).where(eq(tasks.id, current.id));
@@ -240,18 +263,148 @@ export function reopenTask(deps: TaskDeps, userId: string, id: string): Promise<
   return moveToCategory(deps, userId, id, "unstarted", (t) => isClosedCategory(t.statusCategory));
 }
 
-/** Soft-deletes the task and all of its subtasks. */
-export function deleteTask({ db }: TaskDeps, userId: string, id: string): Promise<void> {
+/**
+ * Moves a task between two siblings (same parent). Used by drag-and-drop; the neighbours are
+ * the items around the drop position in the list the user sees.
+ */
+export function moveTask(
+  { db }: TaskDeps,
+  userId: string,
+  input: { id: string; afterId: string | null; beforeId: string | null },
+): Promise<Task> {
+  return db.transaction(async (tx) => {
+    const task = await getTask(tx, userId, input.id);
+    const neighbour = async (id: string | null) => {
+      if (!id) return null;
+      if (id === task.id) throw new DomainError("invalid", "task.order_conflict");
+      const other = await getTask(tx, userId, id);
+      if (other.parentTaskId !== task.parentTaskId)
+        throw new DomainError("invalid", "task.order_conflict");
+      return other.sortKey;
+    };
+    const after = await neighbour(input.afterId);
+    const before = await neighbour(input.beforeId);
+    if (after !== null && before !== null && !(after < before)) {
+      throw new DomainError("conflict", "task.order_conflict");
+    }
+    await tx
+      .update(tasks)
+      .set({ sortKey: keyBetween(after, before) })
+      .where(and(eq(tasks.id, task.id), eq(tasks.userId, userId)));
+    return getTask(tx, userId, task.id);
+  });
+}
+
+/** Makes the task a subtask of another task, or a top-level task (null). Prevents cycles. */
+export function setTaskParent(
+  { db }: TaskDeps,
+  userId: string,
+  input: { id: string; parentTaskId: string | null },
+): Promise<Task> {
+  return db.transaction(async (tx) => {
+    const task = await getTask(tx, userId, input.id);
+    if (task.parentTaskId === input.parentTaskId) return task;
+    if (input.parentTaskId) {
+      await getTask(tx, userId, input.parentTaskId);
+      if ((await subtreeIds(tx, userId, task.id)).includes(input.parentTaskId)) {
+        throw new DomainError("invalid", "task.parent_cycle");
+      }
+    }
+    await tx
+      .update(tasks)
+      .set({
+        parentTaskId: input.parentTaskId,
+        sortKey: await lastSiblingKey(tx, userId, input.parentTaskId),
+      })
+      .where(and(eq(tasks.id, task.id), eq(tasks.userId, userId)));
+    return getTask(tx, userId, task.id);
+  });
+}
+
+/** Moves the task and all of its subtasks to the Trash (one shared `deleted_at`). */
+export function deleteTask({ db, bus }: TaskDeps, userId: string, id: string): Promise<void> {
   return db.transaction(async (tx) => {
     await getTask(tx, userId, id);
-    await tx.execute(sql`
-      with recursive tree as (
-        select id from tasks where id = ${id} and user_id = ${userId}
-        union all
-        select t.id from tasks t join tree on t.parent_task_id = tree.id
-      )
-      update tasks set deleted_at = now(), updated_at = now()
-      where id in (select id from tree) and user_id = ${userId} and deleted_at is null
-    `);
+    const ids = await subtreeIds(tx, userId, id);
+    const deleted = await tx
+      .update(tasks)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(tasks.userId, userId), inArray(tasks.id, ids), isNull(tasks.deletedAt)))
+      .returning({ id: tasks.id });
+    await bus.publish(
+      { type: "task.deleted", userId, payload: { taskId: id, taskIds: deleted.map((r) => r.id) } },
+      { db: tx },
+    );
   });
+}
+
+async function getTrashed(db: DbExecutor, userId: string, id: string) {
+  const [row] = await db
+    .select({ id: tasks.id, parentTaskId: tasks.parentTaskId, deletedAt: tasks.deletedAt })
+    .from(tasks)
+    .where(and(eq(tasks.id, id), eq(tasks.userId, userId), isNotNull(tasks.deletedAt)));
+  if (!row) throw new DomainError("not_found", "task.not_in_trash");
+  return row as typeof row & { deletedAt: Date };
+}
+
+/**
+ * Restores a task and the subtasks deleted together with it. If its parent is still in the
+ * Trash, the task comes back as a top-level task.
+ */
+export function restoreTask({ db, bus }: TaskDeps, userId: string, id: string): Promise<Task> {
+  return db.transaction(async (tx) => {
+    const trashed = await getTrashed(tx, userId, id);
+    const batch = await subtreeIds(tx, userId, id);
+    const restored = await tx
+      .update(tasks)
+      .set({ deletedAt: null })
+      .where(
+        and(
+          eq(tasks.userId, userId),
+          inArray(tasks.id, batch),
+          eq(tasks.deletedAt, trashed.deletedAt),
+        ),
+      )
+      .returning({ id: tasks.id });
+
+    if (trashed.parentTaskId) {
+      const [parentRow] = await tx
+        .select({ deletedAt: tasks.deletedAt })
+        .from(tasks)
+        .where(eq(tasks.id, trashed.parentTaskId));
+      if (!parentRow || parentRow.deletedAt) {
+        await tx
+          .update(tasks)
+          .set({ parentTaskId: null, sortKey: await lastSiblingKey(tx, userId, null) })
+          .where(eq(tasks.id, id));
+      }
+    }
+
+    await bus.publish(
+      {
+        type: "task.restored",
+        userId,
+        payload: { taskId: id, taskIds: restored.map((r) => r.id) },
+      },
+      { db: tx },
+    );
+    return getTask(tx, userId, id);
+  });
+}
+
+/** Permanently deletes a task from the Trash (subtasks cascade). */
+export function purgeTask({ db }: TaskDeps, userId: string, id: string): Promise<void> {
+  return db.transaction(async (tx) => {
+    await getTrashed(tx, userId, id);
+    await tx.delete(tasks).where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
+  });
+}
+
+/** Permanently deletes everything in the user's Trash. Returns the number of tasks removed. */
+export async function emptyTrash({ db }: TaskDeps, userId: string): Promise<number> {
+  const removed = await db
+    .delete(tasks)
+    .where(and(eq(tasks.userId, userId), isNotNull(tasks.deletedAt)))
+    .returning({ id: tasks.id });
+  return removed.length;
 }

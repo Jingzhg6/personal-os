@@ -32,3 +32,19 @@ export function isRichTextEmpty(doc: RichTextDoc | null | undefined): boolean {
   };
   return !doc.content.some(hasText);
 }
+
+/** Plain text of a document, used for search (`tasks.description_text`). */
+export function richTextToPlainText(doc: RichTextDoc | null | undefined): string | null {
+  if (!doc) return null;
+  const parts: string[] = [];
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object") return;
+    const record = node as { type?: string; text?: string; content?: unknown[] };
+    if (record.type === "text" && record.text) parts.push(record.text);
+    for (const child of record.content ?? []) walk(child);
+    if (record.type && record.type !== "text" && record.type !== "doc") parts.push(" ");
+  };
+  walk(doc);
+  const text = parts.join("").replace(/\s+/g, " ").trim();
+  return text === "" ? null : text;
+}

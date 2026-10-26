@@ -15,6 +15,8 @@ export interface Task {
   description: RichTextDoc | null;
   areaId: string | null;
   parentTaskId: string | null;
+  /** Title of the parent task, for subtasks shown outside their parent (search, deadlines). */
+  parentTitle: string | null;
   statusId: string;
   statusCategory: StatusCategory;
   priority: number;
@@ -82,6 +84,26 @@ export const updateTaskInput = z.object({
   id: z.uuid(),
   patch: editableFields.partial(),
 });
+
+/** Places the task between two siblings (either may be null at the list edges). */
+export const moveTaskInput = z.object({
+  id: z.uuid(),
+  afterId: z.uuid().nullable(),
+  beforeId: z.uuid().nullable(),
+});
+
+/** Moves a task under another task, or to the top level (null). */
+export const setTaskParentInput = z.object({ id: z.uuid(), parentTaskId: z.uuid().nullable() });
+
+/** A deleted task as shown in the Trash: the root of one deletion. */
+export interface TrashedTask {
+  id: string;
+  title: string;
+  parentTitle: string | null;
+  deletedAt: Date;
+  /** Subtasks deleted together with it. */
+  subtaskCount: number;
+}
 
 export const setTaskStatusInput = z.object({ id: z.uuid(), statusId: z.uuid() });
 export const taskIdInput = z.object({ id: z.uuid() });

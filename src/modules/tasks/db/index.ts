@@ -72,6 +72,8 @@ export const tasks = pgTable(
     userId: userId(),
     title: text("title").notNull(),
     description: jsonb("description").$type<RichTextDoc>(),
+    /** Plain text of `description`, maintained by the service for search. */
+    descriptionText: text("description_text"),
     areaId: uuid("area_id").references(() => areas.id, { onDelete: "set null" }),
     parentTaskId: uuid("parent_task_id").references((): AnyPgColumn => tasks.id, {
       onDelete: "cascade",
@@ -100,6 +102,12 @@ export const tasks = pgTable(
     index("tasks_parent_task_id_idx").on(t.parentTaskId),
     index("tasks_status_id_idx").on(t.statusId),
     index("tasks_area_id_idx").on(t.areaId),
+    index("tasks_user_deleted_idx")
+      .on(t.userId, t.deletedAt)
+      .where(sql`${t.deletedAt} is not null`),
+    // Substring search (works for Chinese, which has no word boundaries) via pg_trgm.
+    index("tasks_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
+    index("tasks_description_text_trgm_idx").using("gin", t.descriptionText.op("gin_trgm_ops")),
     check("tasks_title_not_blank", sql`length(btrim(${t.title})) > 0`),
     check("tasks_priority_range", sql`${t.priority} between 0 and 4`),
     check(
@@ -109,6 +117,18 @@ export const tasks = pgTable(
     check("tasks_due_time_needs_date", sql`${t.dueTime} is null or ${t.dueDate} is not null`),
     check("tasks_not_own_parent", sql`${t.parentTaskId} is null or ${t.parentTaskId} <> ${t.id}`),
   ],
+);
+
+/** Area scope of the task views behind navigation items (工作, 业务, …). */
+export const taskViews = pgTable(
+  "task_views",
+  {
+    userId: userId(),
+    viewKey: text("view_key").notNull(),
+    areaIds: uuid("area_ids").array().notNull(),
+    ...timestamps(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.viewKey] })],
 );
 
 export const taskTags = pgTable(

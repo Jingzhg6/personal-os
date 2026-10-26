@@ -13,6 +13,10 @@ declare module "@/shared/events/types" {
     };
     /** A completed task left the "completed" category (reopened or cancelled). */
     "task.reopened": { taskId: string };
+    /** A task (and its subtasks, listed in taskIds) moved to the Trash. */
+    "task.deleted": { taskId: string; taskIds: string[] };
+    /** Tasks restored from the Trash. */
+    "task.restored": { taskId: string; taskIds: string[] };
   }
 }
 

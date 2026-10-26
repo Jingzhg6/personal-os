@@ -3,7 +3,10 @@
   "task": {
     "not_found": "任务不存在或已被删除。",
     "due_time_without_date": "设置截止时间前，请先设置截止日期。",
-    "start_after_due": "开始日期不能晚于截止日期。"
+    "start_after_due": "开始日期不能晚于截止日期。",
+    "order_conflict": "顺序已在别处被修改，列表已刷新，请再试一次。",
+    "parent_cycle": "不能把任务移到它自己或它的子任务下面。",
+    "not_in_trash": "这个任务不在回收站中。"
   },
   "status": {
     "not_found": "状态不存在。",

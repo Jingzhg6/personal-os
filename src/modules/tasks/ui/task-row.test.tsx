@@ -18,6 +18,7 @@ const baseTask: Task = {
   description: null,
   areaId: "a1",
   parentTaskId: null,
+  parentTitle: null,
   statusId: "s1",
   statusCategory: "unstarted",
   priority: 3,

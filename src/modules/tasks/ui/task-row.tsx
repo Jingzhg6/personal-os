@@ -1,6 +1,6 @@
 "use client";
 
-import { ListChecks } from "lucide-react";
+import { CornerDownRight, ListChecks } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { AreaBadge } from "@/modules/areas/ui";
@@ -11,6 +11,7 @@ import { ColorDot } from "@/shared/ui/color";
 import { isClosedCategory, type Tag, type Task, type TaskStatus } from "../domain";
 import { useDueLabel, usePriorityLabel } from "./labels";
 import { PriorityIcon } from "./priority-icon";
+import type { SortableRender } from "./sortable-list";
 import { StatusToggle } from "./status-toggle";
 import type { useTaskActions } from "./use-task-data";
 
@@ -33,12 +34,18 @@ export function TaskRow({
   selected,
   onOpen,
   actions,
+  sortable,
+  showParent = false,
 }: {
   task: Task;
   lookups: TaskLookups;
   selected: boolean;
   onOpen: (id: string) => void;
   actions: ReturnType<typeof useTaskActions>;
+  /** Drag-and-drop wiring when the row is inside a SortableList. */
+  sortable?: SortableRender;
+  /** Show "属于「父任务」" for subtasks listed outside their parent. */
+  showParent?: boolean;
 }) {
   const t = useTranslations("tasks");
   const dueLabel = useDueLabel();
@@ -53,28 +60,42 @@ export function TaskRow({
 
   return (
     <li
+      ref={sortable?.ref}
+      style={sortable?.style}
       data-testid="task-row"
+      data-task-id={task.id}
       className={cn(
         "group flex items-center gap-3 rounded-md px-3 py-2 transition-colors",
         selected ? "bg-accent/70" : "hover:bg-surface-muted",
+        sortable?.isDragging && "bg-surface-raised shadow-md",
       )}
     >
+      {sortable?.handle}
       <StatusToggle task={task} color={status?.color} actions={actions} />
       <button
         type="button"
         onClick={() => onOpen(task.id)}
         aria-current={selected ? "true" : undefined}
-        className="flex min-w-0 flex-1 flex-col gap-1 text-left sm:flex-row sm:items-center sm:gap-3"
+        data-row-main
+        className="flex min-w-0 flex-1 flex-col gap-1 rounded-sm text-left sm:flex-row sm:items-center sm:gap-3"
       >
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate text-sm",
-            closed
-              ? "text-muted-foreground line-through decoration-muted-foreground/50"
-              : "text-foreground",
-          )}
-        >
-          {task.title}
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span
+            className={cn(
+              "truncate text-sm",
+              closed
+                ? "text-muted-foreground line-through decoration-muted-foreground/50"
+                : "text-foreground",
+            )}
+          >
+            {task.title}
+          </span>
+          {showParent && task.parentTitle ? (
+            <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+              <CornerDownRight className="size-3 shrink-0" aria-hidden />
+              {t("parentHint", { title: task.parentTitle })}
+            </span>
+          ) : null}
         </span>
 
         <span className="flex shrink-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">

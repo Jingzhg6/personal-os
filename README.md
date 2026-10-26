@@ -6,10 +6,10 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) by default; English and French are supported
 through the same translation system.
 
-> **Status: M1 — Areas & task core.** Tasks (Quick Add, detail panel, subtasks, rich-text
-> descriptions, priority, urgent/important flags, dates, estimates, tags), configurable areas
-> and statuses are in place on top of the M0 foundations. Other modules show a “即将推出”
-> placeholder until their milestone. See [`docs/architecture.md`](docs/architecture.md).
+> **Status: M2 — Task views.** On top of M0–M1 (tasks, areas, statuses, tags): search,
+> filters and sorting (shareable via the URL), drag-to-reorder, keyboard shortcuts (press `?`),
+> a Trash, re-parenting, the 工作 / 业务 / 行政任务 / 个人生活 views and 重要截止日期. Other
+> modules show a “即将推出” placeholder until their milestone. See [`docs/architecture.md`](docs/architecture.md).
 
 ## Requirements
 

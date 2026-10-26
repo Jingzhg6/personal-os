@@ -27,6 +27,7 @@ export function StatusToggle({
     <button
       type="button"
       role="checkbox"
+      data-row-toggle
       aria-checked={task.statusCategory === "completed"}
       aria-label={label}
       title={label}

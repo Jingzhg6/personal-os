@@ -12,9 +12,7 @@ async function quickAdd(page: Page, text: string) {
 const row = (page: Page, title: string) => page.getByTestId("task-row").filter({ hasText: title });
 
 async function openTask(page: Page, title: string) {
-  await row(page, title)
-    .getByRole("button", { name: new RegExp(title) })
-    .click();
+  await row(page, title).locator("[data-row-main]").click();
   await expect(page.getByRole("complementary", { name: "任务详情" })).toBeVisible();
   return page.getByRole("complementary", { name: "任务详情" });
 }
@@ -118,7 +116,7 @@ test("manages subtasks", async ({ page }) => {
   for (const sub of ["打包书籍", "预约搬家公司"]) {
     await addSubtask.fill(sub);
     await addSubtask.press("Enter");
-    await expect(panel.getByRole("button", { name: sub })).toBeVisible();
+    await expect(panel.getByRole("button", { name: sub, exact: true })).toBeVisible();
   }
 
   await panel.getByRole("checkbox", { name: "完成「打包书籍」" }).click();
@@ -126,9 +124,9 @@ test("manages subtasks", async ({ page }) => {
   await expect(row(page, title)).toContainText("1/2");
 
   // Subtasks open in the same panel, with a link back to the parent.
-  await panel.getByRole("button", { name: "预约搬家公司" }).click();
+  await panel.getByRole("button", { name: "预约搬家公司", exact: true }).click();
   await expect(panel.getByRole("textbox", { name: "标题" })).toHaveValue("预约搬家公司");
-  await panel.getByRole("button", { name: title }).click();
+  await panel.getByRole("button", { name: title, exact: true }).first().click();
   await expect(panel.getByRole("textbox", { name: "标题" })).toHaveValue(title);
 
   // Subtasks are not listed at the top level.
@@ -154,7 +152,7 @@ test("completes and reopens a task from the list", async ({ page }) => {
   ).not.toBeChecked();
 });
 
-test("deletes a task and its subtasks", async ({ page }) => {
+test("moves a task and its subtasks to the Trash", async ({ page }) => {
   const title = unique("要删除的任务");
   await quickAdd(page, title);
   const panel = await openTask(page, title);
@@ -171,6 +169,11 @@ test("deletes a task and its subtasks", async ({ page }) => {
   await expect(row(page, title)).toHaveCount(0);
   await page.reload();
   await expect(row(page, title)).toHaveCount(0);
+
+  await page.goto("/tasks/trash");
+  await expect(page.getByTestId("trash-row").filter({ hasText: title })).toContainText(
+    "含 1 个子任务",
+  );
 });
 
 test("closes the detail panel with Escape and the close button", async ({ page }) => {

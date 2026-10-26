@@ -126,6 +126,8 @@ Current events:
 | `task.created`    | tasks service                                                                | — (XP, analytics later)                                  |
 | `task.completed`  | tasks service, when a task enters the _completed_ category                   | — (XP in M6)                                             |
 | `task.reopened`   | tasks service, when a completed task leaves that category (reopen or cancel) | — (XP reversal in M6)                                    |
+| `task.deleted`    | tasks service, when a task (and its subtree, `taskIds`) moves to the Trash   | — (analytics / XP reversal later)                        |
+| `task.restored`   | tasks service, when tasks come back from the Trash                           | —                                                        |
 
 `task.completed` carries the facts XP rules need (priority, urgent/important flags, area,
 estimate, completion time), so subscribers never have to query the tasks module.
@@ -155,7 +157,7 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
   `--primary`, `--xp`, …) with light and dark values; components use only semantic utilities.
 - Dark mode: class-based via next-themes (light / dark / system), per device.
 - Primitives in `src/shared/ui` (Button, Input, Label, Select, Card, Badge, PageHeader,
-  ConfirmDialog, Toast, ColorPicker, RichTextEditor), styled with `cva` + `cn`. New primitives
+  ConfirmDialog, Dialog, Popover, Toast, ColorPicker, RichTextEditor), styled with `cva` + `cn`. New primitives
   are added there, not inside modules.
 - User-selectable colours are stored as palette ids (`gray`, `blue`, …, `src/shared/lib/colors.ts`)
   and mapped to classes in `src/shared/ui/color.tsx`, so they adapt to both themes.
@@ -173,7 +175,7 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 - Each module owns its tables in `src/modules/<m>/db`; `src/server/db-schema.ts` aggregates them
   for drizzle-kit and Better Auth.
 
-### 5.2 Implemented (M0–M1)
+### 5.2 Implemented (M0–M2)
 
 | Table                                            | Owner       | Notes                                                              |
 | ------------------------------------------------ | ----------- | ------------------------------------------------------------------ |
@@ -184,11 +186,13 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 | `tags`                                           | tasks       | unique per user, case-insensitive (`lower(name)`)                  |
 | `tasks`                                          | tasks       | see below                                                          |
 | `task_tags`                                      | tasks       | composite PK; cascades from both sides                             |
+| `task_views`                                     | tasks       | (M2) area scope of the 工作 / 业务 / 行政任务 / 个人生活 views     |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
 is_urgent?, is_important?, start_date?, due_date?, due_time?, estimated_minutes?, sort_key,
-completed_at, cancelled_at, deleted_at, created_at, updated_at`, with check constraints for
+completed_at, cancelled_at, deleted_at, created_at, updated_at` plus (M2) `description_text`
+(plain text of the description, maintained by the service, for search), with check constraints for
 priority range, positive estimate, `due_time` requiring `due_date`, non-blank title and no
 self-parenting.
 
@@ -201,12 +205,32 @@ Rules enforced in the service layer (`src/modules/tasks/server/service.ts`):
 - Complete → first status of the _completed_ category; reopen → first _unstarted_ status.
 - Each category keeps at least one status; deleting a status in use requires a replacement in
   the same category.
-- Delete is soft and recursive (the task and all descendants). Restoring/Trash is M2.
+- Delete is soft and recursive: the task and its subtree share one `deleted_at`, which is how the
+  Trash knows what was deleted together. Restore brings back that batch; a task whose parent is
+  still deleted comes back at the top level. Purge / empty Trash are hard deletes.
+- Reordering (`moveTask`) takes the two neighbours around the drop position and computes a key
+  between them; neighbours must share the task's parent. `setTaskParent` rejects cycles.
 - `sort_key` columns use `COLLATE "C"` (fractional-index keys are case-sensitive).
 - New users get default areas and statuses via `user.registered`; accounts that existed before
   M1 were backfilled by migration `0002`.
 
-### 5.3 Phase 1 (planned, M2–M8)
+### 5.2.1 Task views (M2)
+
+Every task screen is a query over the same `tasks` table (`listTasks`, `src/modules/tasks/server/repository.ts`):
+
+| Screen                            | Query                                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| 全部任务 `/tasks`                 | top-level tasks, user filters/sort/search                                                     |
+| 工作 / 业务 / 行政任务 / 个人生活 | top-level tasks in the view's areas (`task_views`, default: the seeded area of the same name) |
+| 重要截止日期 `/admin/deadlines`   | open tasks **and subtasks** with a due date, sorted and grouped by due date                   |
+| Search (any screen)               | title or description substring at any level (`pg_trgm` GIN indexes), shows the parent         |
+| 回收站 `/tasks/trash`             | roots of each deletion batch                                                                  |
+
+Filters, sort and search live in the URL (`?q=&status=&priority=&area=&tag=&urgent=&important=&due=&sort=`),
+parsed by `readListParams` / `writeListParams` in the domain, so every view is shareable.
+"Today" for due-date filters is sent by the client in the user's timezone.
+
+### 5.3 Phase 1 (planned, M3–M8)
 
 ```
 tasks (additive)   + project_id?, milestone_id? (M4), recurrence_id? (M8), actual_minutes? (Phase 2)
@@ -313,7 +337,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 
 - **M0 Foundations** ✅: tooling, DB, auth, i18n, shell, boundaries, design tokens, event bus, tests, CI.
 - **M1 Areas & task core** ✅: areas, configurable statuses, tags, task schema/API/service, Quick Add, detail panel, subtasks, rich-text descriptions, domain events.
-- **M2 Task views**: filtering, sorting, search, drag reorder, keyboard navigation, Trash, area-scoped views (Work / Business / Admin / Personal / Deadlines).
+- **M2 Task views** ✅: filtering, sorting, search, drag reorder (pointer + keyboard), keyboard navigation, Trash, re-parenting, area-scoped views (工作 / 业务 / 行政任务 / 个人生活) and 重要截止日期.
 - **M3 Eisenhower matrix.**
 - **M4 Projects**: CRUD, list, Kanban, milestones, progress.
 - **M5 Dependencies & basic Gantt.**

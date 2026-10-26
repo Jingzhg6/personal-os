@@ -12,7 +12,12 @@ import { useToast } from "@/shared/ui/toast";
 import { parseQuickAdd } from "../domain";
 import { useTaskActions } from "./use-task-data";
 
-export function QuickAdd() {
+export const QUICK_ADD_INPUT_ID = "quick-add";
+
+/**
+ * @param defaultAreaId Area applied when the text has no `@area` (e.g. inside the 工作 view).
+ */
+export function QuickAdd({ defaultAreaId = null }: { defaultAreaId?: string | null }) {
   const t = useTranslations("tasks.quickAdd");
   const toast = useToast();
   const actions = useTaskActions();
@@ -47,7 +52,7 @@ export function QuickAdd() {
       const task = await actions.create.mutateAsync({
         title: parsed.title,
         priority: parsed.priority ?? undefined,
-        areaId: parsed.areaId,
+        areaId: parsed.areaId ?? defaultAreaId,
         tagIds: [...parsed.tagIds, ...created],
       });
       setValue("");
@@ -65,6 +70,7 @@ export function QuickAdd() {
       <div className="flex h-11 items-center gap-2 rounded-lg border border-input bg-surface px-3 shadow-xs transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/20">
         <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <input
+          id={QUICK_ADD_INPUT_ID}
           ref={inputRef}
           value={value}
           onChange={(event) => setValue(event.target.value)}

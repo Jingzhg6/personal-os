@@ -24,6 +24,7 @@ import {
   Shield,
   Sparkles,
   Target,
+  Trash2,
   TrendingUp,
   Zap,
 } from "lucide-react";
@@ -107,6 +108,14 @@ export const navigation: NavSection[] = [
         module: "tasks",
         phase: 1,
         milestone: "M3",
+      },
+      {
+        id: "trash",
+        href: "/tasks/trash",
+        icon: Trash2,
+        module: "tasks",
+        phase: 1,
+        milestone: "M2",
       },
     ],
   },

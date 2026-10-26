@@ -24,6 +24,8 @@ import {
   type UpdateTaskInput,
 } from "../domain";
 import { useDurationLabel, useStatusLabel } from "./labels";
+import { ParentField } from "./parent-field";
+import { SortableList } from "./sortable-list";
 import { StatusToggle } from "./status-toggle";
 import { TagPicker } from "./tag-picker";
 import { useStatuses, useTags, useTaskActions, useTaskDetail } from "./use-task-data";
@@ -216,6 +218,10 @@ function TaskDetailContent({
           </div>
 
           <dl className="grid grid-cols-[7rem_1fr] items-center gap-x-3 gap-y-2.5 text-sm">
+            <Property label={t("fields.parent")}>
+              <ParentField task={task} onOpenTask={onOpenTask} />
+            </Property>
+
             <Property label={t("fields.status")}>
               <Select
                 aria-label={t("fields.status")}
@@ -389,12 +395,22 @@ function TaskDetailContent({
                 </span>
               ) : null}
             </h3>
-            <ul className="flex flex-col" aria-label={t("fields.subtasks")}>
-              {task.subtasks.map((subtask) => (
+            <SortableList
+              items={task.subtasks}
+              enabled
+              className="flex flex-col"
+              label={t("fields.subtasks")}
+              handleLabel={(subtask) => t("detail.subtaskDrag", { title: subtask.title })}
+              onMove={(id, afterId, beforeId) => actions.move.mutate({ id, afterId, beforeId })}
+              renderItem={(subtask, sortable) => (
                 <li
                   key={subtask.id}
-                  className="flex items-center gap-2.5 rounded-md px-1 py-1.5 hover:bg-surface-muted"
+                  ref={sortable.ref}
+                  style={sortable.style}
+                  data-testid="subtask-row"
+                  className="group flex items-center gap-2.5 rounded-md px-1 py-1.5 hover:bg-surface-muted"
                 >
+                  {sortable.handle}
                   <StatusToggle
                     task={subtask}
                     color={statuses.find((s) => s.id === subtask.statusId)?.color}
@@ -412,8 +428,8 @@ function TaskDetailContent({
                     {subtask.title}
                   </button>
                 </li>
-              ))}
-            </ul>
+              )}
+            />
             <form onSubmit={addSubtask}>
               <Input
                 value={subtaskTitle}

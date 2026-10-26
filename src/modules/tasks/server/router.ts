@@ -6,21 +6,33 @@ import {
   createTaskInput,
   deleteStatusInput,
   moveStatusInput,
+  moveTaskInput,
+  setTaskParentInput,
   setTaskStatusInput,
+  taskListQuery,
+  taskViewKeyInput,
   taskIdInput,
   updateStatusInput,
   updateTagInput,
   updateTaskInput,
+  updateTaskViewInput,
 } from "../domain";
-import { getTaskDetail, listTopLevelTasks } from "./repository";
+import { getTaskDetail, listTasks } from "./repository";
 import {
   completeTask,
   createTask,
   deleteTask,
+  emptyTrash,
+  moveTask,
+  purgeTask,
   reopenTask,
+  restoreTask,
+  setTaskParent,
   setTaskStatus,
   updateTask,
 } from "./service";
+import { listTrash } from "./trash";
+import { getTaskViewScope, updateTaskViewScope } from "./views";
 import { createStatus, deleteStatus, listStatuses, moveStatus, updateStatus } from "./statuses";
 import { createTag, deleteTag, listTags, updateTag } from "./tags";
 
@@ -53,8 +65,30 @@ const tagsRouter = router({
     .mutation(({ ctx, input }) => deleteTag(ctx.db, ctx.userId, input.id)),
 });
 
+const trashRouter = router({
+  list: protectedProcedure.query(({ ctx }) => listTrash(ctx.db, ctx.userId)),
+  restore: protectedProcedure
+    .input(taskIdInput)
+    .mutation(({ ctx, input }) => restoreTask(ctx, ctx.userId, input.id)),
+  purge: protectedProcedure
+    .input(taskIdInput)
+    .mutation(({ ctx, input }) => purgeTask(ctx, ctx.userId, input.id)),
+  empty: protectedProcedure.mutation(({ ctx }) => emptyTrash(ctx, ctx.userId)),
+});
+
+const viewsRouter = router({
+  get: protectedProcedure
+    .input(taskViewKeyInput)
+    .query(({ ctx, input }) => getTaskViewScope(ctx.db, ctx.userId, input.key)),
+  update: protectedProcedure
+    .input(updateTaskViewInput)
+    .mutation(({ ctx, input }) => updateTaskViewScope(ctx.db, ctx.userId, input)),
+});
+
 export const tasksRouter = router({
-  list: protectedProcedure.query(({ ctx }) => listTopLevelTasks(ctx.db, ctx.userId)),
+  list: protectedProcedure
+    .input(taskListQuery)
+    .query(({ ctx, input }) => listTasks(ctx.db, ctx.userId, input)),
   byId: protectedProcedure
     .input(taskIdInput)
     .query(({ ctx, input }) => getTaskDetail(ctx.db, ctx.userId, input.id)),
@@ -76,6 +110,14 @@ export const tasksRouter = router({
   delete: protectedProcedure
     .input(taskIdInput)
     .mutation(({ ctx, input }) => deleteTask(ctx, ctx.userId, input.id)),
+  move: protectedProcedure
+    .input(moveTaskInput)
+    .mutation(({ ctx, input }) => moveTask(ctx, ctx.userId, input)),
+  setParent: protectedProcedure
+    .input(setTaskParentInput)
+    .mutation(({ ctx, input }) => setTaskParent(ctx, ctx.userId, input)),
+  trash: trashRouter,
+  views: viewsRouter,
   statuses: statusesRouter,
   tags: tagsRouter,
 });
