@@ -30,6 +30,13 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"], storageState: "e2e/.auth/user.json" },
       dependencies: ["setup"],
     },
+    // Milestone visual checks (pnpm screenshots): real UI captured into docs/screenshots/.
+    // Not part of `pnpm test:e2e`.
+    {
+      name: "screenshots",
+      testMatch: /.*\.shots\.ts/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
+    },
   ],
   webServer: {
     command: `pnpm build && pnpm start --port ${PORT}`,

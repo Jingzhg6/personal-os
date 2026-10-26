@@ -17,3 +17,22 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Every user-owned query is scoped by `ctx.userId`.
 - One task row powers every view (list, matrix, Kanban, Gantt, dashboard, calendar): never duplicate entities per view.
 - Before finishing: `pnpm check` and `pnpm test:e2e`.
+
+## Milestone process
+
+Work one roadmap milestone (M1, M2, …) at a time, on its own branch. Never merge to `main`,
+deploy, or start the next milestone without the owner's explicit approval.
+
+At the end of every milestone:
+
+1. Run the full suite: `pnpm check`, `pnpm test:e2e`, `pnpm build`.
+2. Visual check: add `e2e/screenshots/<milestone>.shots.ts` and run `pnpm screenshots`. It starts
+   the real app, registers a demo account, seeds data through the app's own API and saves
+   3–8 real browser screenshots of the milestone's key pages to `docs/screenshots/<milestone>/`
+   (include at least one phone-sized shot, using a mobile device profile). No mockups, and no
+   product features added only for screenshots.
+3. Review every screenshot; fix layout, overflow, Chinese text, responsive or interaction
+   problems before finishing, then re-capture.
+4. List the screenshots in `docs/screenshots/README.md`.
+5. Report: what was done, new pages, core user flows, key design/architecture decisions, test
+   results, screenshot list, known limitations, next milestone. Then stop and wait.

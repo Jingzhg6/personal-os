@@ -139,7 +139,8 @@ function SortableItem<T extends { id: string; title: string }>({
       title={label}
       data-drag-handle
       className={cn(
-        "-ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 active:cursor-grabbing",
+        // Revealed on hover/focus; always visible on touch screens, which have no hover.
+        "-ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100",
         isDragging && "opacity-100",
       )}
     >
