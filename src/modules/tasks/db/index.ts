@@ -157,3 +157,26 @@ export const taskTags = pgTable(
   },
   (t) => [primaryKey({ columns: [t.taskId, t.tagId] }), index("task_tags_tag_id_idx").on(t.tagId)],
 );
+
+/**
+ * Finish-to-start dependencies: `blocked_task_id` should not start before `blocking_task_id`
+ * finishes. Cycles are rejected by the service; the edge disappears with either task.
+ */
+export const taskDependencies = pgTable(
+  "task_dependencies",
+  {
+    userId: userId(),
+    blockingTaskId: uuid("blocking_task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    blockedTaskId: uuid("blocked_task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.blockingTaskId, t.blockedTaskId] }),
+    index("task_dependencies_blocked_idx").on(t.blockedTaskId),
+    check("task_dependencies_not_self", sql`${t.blockingTaskId} <> ${t.blockedTaskId}`),
+  ],
+);

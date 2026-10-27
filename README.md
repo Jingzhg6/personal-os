@@ -6,11 +6,12 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) by default; English and French are supported
 through the same translation system.
 
-> **Status: M4 — Projects.** On top of M0–M3 (tasks, areas, statuses, tags, search, filters,
-> drag-to-reorder, Trash, scoped views, Eisenhower matrix): projects with milestones and computed
-> progress, and a Kanban board by task status — all over the same task records. Other modules
-> show a “即将推出” placeholder until their milestone. See [`docs/architecture.md`](docs/architecture.md)
-> and the milestone screenshots in [`docs/screenshots/`](docs/screenshots/README.md).
+> **Status: M5 — Dependencies & Gantt.** On top of M0–M4 (tasks, areas, statuses, tags, search,
+> filters, Trash, scoped views, Eisenhower matrix, projects, milestones, Kanban): finish-to-start
+> task dependencies and a Gantt chart that reschedules the same tasks by drag or keyboard. Other
+> modules show a “即将推出” placeholder until their milestone. See
+> [`docs/architecture.md`](docs/architecture.md) and the milestone screenshots in
+> [`docs/screenshots/`](docs/screenshots/README.md).
 
 ## Requirements
 

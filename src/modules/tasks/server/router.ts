@@ -5,6 +5,7 @@ import {
   createTagInput,
   createTaskInput,
   deleteStatusInput,
+  dependencyInput,
   moveStatusInput,
   moveTaskInput,
   setTaskParentInput,
@@ -17,7 +18,8 @@ import {
   updateTaskInput,
   updateTaskViewInput,
 } from "../domain";
-import { getTaskDetail, listTasks } from "./repository";
+import { addDependency, removeDependency } from "./dependencies";
+import { getTaskDetail, listTasks, listTimeline } from "./repository";
 import {
   completeTask,
   createTask,
@@ -85,10 +87,23 @@ const viewsRouter = router({
     .mutation(({ ctx, input }) => updateTaskViewScope(ctx.db, ctx.userId, input)),
 });
 
+const dependenciesRouter = router({
+  add: protectedProcedure
+    .input(dependencyInput)
+    .mutation(({ ctx, input }) => addDependency(ctx, ctx.userId, input)),
+  remove: protectedProcedure
+    .input(dependencyInput)
+    .mutation(({ ctx, input }) => removeDependency(ctx, ctx.userId, input)),
+});
+
 export const tasksRouter = router({
   list: protectedProcedure
     .input(taskListQuery)
     .query(({ ctx, input }) => listTasks(ctx.db, ctx.userId, input)),
+  /** Tasks plus the dependencies between them, for the Gantt chart. */
+  timeline: protectedProcedure
+    .input(taskListQuery)
+    .query(({ ctx, input }) => listTimeline(ctx.db, ctx.userId, input)),
   byId: protectedProcedure
     .input(taskIdInput)
     .query(({ ctx, input }) => getTaskDetail(ctx.db, ctx.userId, input.id)),
@@ -116,6 +131,7 @@ export const tasksRouter = router({
   setParent: protectedProcedure
     .input(setTaskParentInput)
     .mutation(({ ctx, input }) => setTaskParent(ctx, ctx.userId, input)),
+  dependencies: dependenciesRouter,
   trash: trashRouter,
   views: viewsRouter,
   statuses: statusesRouter,

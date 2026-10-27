@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 
-import { ComingSoon } from "@/shell/coming-soon";
-import { findNavItem } from "@/shell/navigation";
+import { GanttChart } from "@/modules/tasks/ui";
 
-// Static route so this placeholder is not captured by /projects/[id].
+// Static route, so it is not captured by /projects/[id].
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("nav.items");
   return { title: t("gantt") };
 }
 
-export default function Page() {
-  return <ComingSoon item={findNavItem("/projects/gantt")!} />;
+export default async function Page() {
+  const t = await getTranslations("nav.items");
+  return (
+    <Suspense>
+      <GanttChart title={t("gantt")} />
+    </Suspense>
+  );
 }

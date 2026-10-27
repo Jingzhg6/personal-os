@@ -50,7 +50,8 @@
     "tasks": "任务",
     "board": "看板",
     "milestones": "里程碑",
-    "notes": "说明"
+    "notes": "说明",
+    "gantt": "甘特图"
   },
   "notesPlaceholder": "记录项目的目标、背景和笔记…",
   "milestones": {

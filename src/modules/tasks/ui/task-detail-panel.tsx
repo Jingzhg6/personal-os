@@ -26,6 +26,7 @@ import {
   type UpdateTaskInput,
 } from "../domain";
 import { useDurationLabel, useStatusLabel, useToday } from "./labels";
+import { DependenciesField } from "./dependencies-field";
 import { ParentField } from "./parent-field";
 import { useProjectOptions } from "./project-chip";
 import { SortableList } from "./sortable-list";
@@ -476,6 +477,8 @@ function TaskDetailContent({
               />
             </form>
           </section>
+
+          <DependenciesField task={task} onOpenTask={onOpenTask} />
 
           <footer className="flex flex-col gap-1 border-t border-border pt-4 text-xs text-muted-foreground">
             <span>{t("detail.created", { date: format.dateTime(task.createdAt, "long") })}</span>

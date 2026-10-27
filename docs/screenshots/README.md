@@ -41,3 +41,15 @@ Desktop shots are 1440 × 900; phone shots use the Pixel 7 profile (touch, no ho
 | `05-milestones.png`        | `/projects/[id]?view=milestones`          | Milestones with due dates, completion, per-milestone progress and 查看任务 links                                  |
 | `06-kanban-panel.png`      | `/projects/kanban?task=…`                 | Global board with project chips; the shared detail panel showing the 项目 and 里程碑 fields                       |
 | `07-mobile-board-dark.png` | `/projects/[id]?view=board` (phone, dark) | Project page on a phone in dark mode; board columns snap horizontally                                             |
+
+## M5 — Dependencies & Gantt (`m5/`)
+
+| File                        | Page                                      | Shows                                                                                                                                                   |
+| --------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `01-gantt.png`              | `/projects/gantt`                         | Week scale: project groups with date spans and milestone diamonds, bars by status, today line, dependency arrows (red = conflict), overdue bar outlined |
+| `02-gantt-dependencies.png` | `/projects/gantt?task=…`                  | Bar clicked: shared detail panel with 依赖 — 前置任务 (with a date-conflict warning) and 后续任务                                                       |
+| `03-add-dependency.png`     | `/projects/gantt?task=…`                  | Adding a prerequisite: task search picker                                                                                                               |
+| `04-project-gantt-day.png`  | `/projects/[id]?view=gantt&zoom=day`      | The project page's 甘特图 tab at day scale                                                                                                              |
+| `05-gantt-month.png`        | `/projects/gantt?zoom=month` (full page)  | Month scale; short bars labelled beside them; 未排期 list expanded                                                                                      |
+| `06-tasks-blocked.png`      | `/tasks`                                  | Task list with 受阻 markers on tasks waiting for open prerequisites                                                                                     |
+| `07-mobile-gantt-dark.png`  | `/projects/[id]?view=gantt` (phone, dark) | Phone layout: task names pinned, timeline scrolled to today                                                                                             |

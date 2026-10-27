@@ -175,7 +175,7 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 - Each module owns its tables in `src/modules/<m>/db`; `src/server/db-schema.ts` aggregates them
   for drizzle-kit and Better Auth.
 
-### 5.2 Implemented (M0–M4)
+### 5.2 Implemented (M0–M5)
 
 | Table                                            | Owner       | Notes                                                              |
 | ------------------------------------------------ | ----------- | ------------------------------------------------------------------ |
@@ -189,6 +189,7 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 | `task_views`                                     | tasks       | (M2) area scope of the 工作 / 业务 / 行政任务 / 个人生活 views     |
 | `projects`                                       | projects    | (M4) see below                                                     |
 | `milestones`                                     | projects    | (M4) belong to one project; cascade with it                        |
+| `task_dependencies`                              | tasks       | (M5) finish-to-start edges; see below                              |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
@@ -208,6 +209,13 @@ root's project) and `tasks_milestone_needs_project`. Progress (total / completed
 counted from the top-level, non-deleted, non-cancelled tasks at read time — never stored.
 Deleting a project hard-deletes it and its milestones; its tasks stay and simply lose the
 reference (cleared explicitly in the same transaction). See ADR 0009.
+
+`task_dependencies` (M5): `user_id, blocking_task_id → tasks (cascade), blocked_task_id → tasks
+(cascade), created_at`, primary key on the pair, check against self-edges. Finish-to-start only:
+the blocked task should not start before the blocking task is done. The service rejects cycles
+(recursive CTE under a per-user advisory lock); edges to tasks in the Trash are hidden, not
+deleted, and come back with a restore. `openBlockerCount` on every task and the 前置 / 后续 lists
+in the detail panel are read from this one table. See ADR 0010.
 
 Rules enforced in the service layer (`src/modules/tasks/server/service.ts`):
 
@@ -240,6 +248,7 @@ Every task screen is a query over the same `tasks` table (`listTasks`, `src/modu
 | Search (any screen)               | title or description substring at any level (`pg_trgm` GIN indexes), shows the parent                               |
 | 回收站 `/tasks/trash`             | roots of each deletion batch                                                                                        |
 | 看板 `/projects/kanban`           | (M4) top-level tasks, one column per task status; moving a card sets the status                                     |
+| 甘特图 `/projects/gantt`          | (M5) top-level tasks with a start or due date, grouped by project, plus milestones and dependencies among them      |
 | 项目 `/projects/[id]` 任务 / 看板 | (M4) the list and the board above, filtered to `project_id` (a first-level subtask matches through its parent)      |
 
 Filters, sort and search live in the URL (`?q=&status=&priority=&area=&tag=&urgent=&important=&due=&sort=`),
@@ -250,11 +259,10 @@ The Eisenhower placement is derived in the domain (`src/modules/tasks/domain/eis
 both flags set ⇒ one of four quadrants, any flag `null` ⇒ 未分类. No matrix-specific column or
 table exists.
 
-### 5.3 Phase 1 (planned, M5–M8)
+### 5.3 Phase 1 (planned, M6–M8)
 
 ```
 tasks (additive)   + recurrence_id? (M8), actual_minutes? (Phase 2)
-task_dependencies  blocking_task_id, blocked_task_id, type(finish_to_start)   -- cycle-checked in service
 task_recurrences   id, user_id, rrule, mode(fixed|after_completion), timezone, next_due_at, ended_at
 characters         user_id, name, avatar
 attributes         id, user_id, system_key?, name?, color, icon, sort_key
@@ -357,7 +365,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M2 Task views** ✅: filtering, sorting, search, drag reorder (pointer + keyboard), keyboard navigation, Trash, re-parenting, area-scoped views (工作 / 业务 / 行政任务 / 个人生活) and 重要截止日期.
 - **M3 Eisenhower matrix** ✅: quadrants + 未分类 tray derived from the flags, drag-and-drop and a 「移到」 menu, quick add per quadrant, shared detail panel, filters.
 - **M4 Projects** ✅: project CRUD and list, project page (任务 / 看板 / 里程碑 / 说明), status Kanban (global and per project), milestones, computed progress, project filter and fields on tasks.
-- **M5 Dependencies & basic Gantt.**
+- **M5 Dependencies & basic Gantt** ✅: finish-to-start dependencies with cycle checks, 前置 / 后续 lists and 受阻 markers, Gantt chart (global and per project) with day / week / month scales, milestones, dependency arrows with date-conflict highlighting, drag / keyboard rescheduling.
 - **M6 Character & XP**: attributes, rules, ledger with reversals, levels, radar, history.
 - **M7 Dashboard.**
 - **M8 Recurring tasks, settings polish, JSON export, deployment (Dockerfile), E2E sweep, polish.**

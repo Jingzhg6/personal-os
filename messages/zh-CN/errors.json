@@ -32,5 +32,9 @@
   "milestone": {
     "not_found": "里程碑不存在。",
     "project_mismatch": "里程碑必须属于任务所在的项目。"
+  },
+  "dependency": {
+    "self": "任务不能依赖自己",
+    "cycle": "不能添加：这会形成循环依赖"
   }
 }

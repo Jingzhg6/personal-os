@@ -5,5 +5,6 @@ export { TaskListView, type TaskListVariant } from "./task-list-view";
 export { TrashView } from "./trash-view";
 export { MatrixView } from "./matrix-view";
 export { KanbanBoard } from "./kanban-board";
+export { GanttChart } from "./gantt-chart";
 export { useTaskPanel } from "./use-task-panel";
 export { useToday } from "./labels";

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { DependencyRef } from "./dependencies";
 import type { RichTextDoc } from "./rich-text";
 import { richTextDoc } from "./rich-text";
 import type { StatusCategory } from "./statuses";
@@ -35,6 +36,8 @@ export interface Task {
   tagIds: string[];
   subtaskCount: number;
   completedSubtaskCount: number;
+  /** Open (not completed / cancelled) tasks this one is waiting for. */
+  openBlockerCount: number;
   completedAt: Date | null;
   cancelledAt: Date | null;
   createdAt: Date;
@@ -44,6 +47,10 @@ export interface Task {
 export interface TaskDetail extends Task {
   parent: { id: string; title: string } | null;
   subtasks: Task[];
+  /** Tasks that must finish first. */
+  blockedBy: DependencyRef[];
+  /** Tasks waiting for this one. */
+  blocking: DependencyRef[];
 }
 
 export const MAX_ESTIMATE_MINUTES = 7 * 24 * 60;

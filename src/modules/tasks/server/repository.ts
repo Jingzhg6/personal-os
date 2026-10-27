@@ -19,13 +19,15 @@ import { alias } from "drizzle-orm/pg-core";
 import type { DbExecutor } from "@/shared/db/types";
 import { DomainError } from "@/shared/lib/errors";
 
-import { tasks, taskStatuses, taskTags } from "../db";
+import { taskDependencies, tasks, taskStatuses, taskTags } from "../db";
 import {
   addDays,
+  type DependencyRef,
   type FlagFilter,
   type StatusCategory,
   type Task,
   type TaskDetail,
+  type TaskDependency,
   type TaskListQuery,
 } from "../domain";
 
@@ -43,6 +45,7 @@ function toTask(
   parentTitle: string | null,
   tagIds: string[],
   counts: { total: number; done: number } | undefined,
+  openBlockerCount: number,
 ): Task {
   return {
     id: row.id,
@@ -66,6 +69,7 @@ function toTask(
     tagIds,
     subtaskCount: counts?.total ?? 0,
     completedSubtaskCount: counts?.done ?? 0,
+    openBlockerCount,
     completedAt: row.completedAt,
     cancelledAt: row.cancelledAt,
     createdAt: row.createdAt,
@@ -74,6 +78,9 @@ function toTask(
 }
 
 const active = (userId: string) => and(eq(tasks.userId, userId), isNull(tasks.deletedAt));
+
+const blocker = alias(tasks, "blocker");
+const blockerStatus = alias(taskStatuses, "blocker_status");
 
 /** Loads tasks with their status category, parent title, tag ids and subtask progress. */
 export async function loadTasks(
@@ -92,7 +99,7 @@ export async function loadTasks(
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.task.id);
-  const [tagRows, countRows] = await Promise.all([
+  const [tagRows, countRows, blockerRows] = await Promise.all([
     db
       .select({ taskId: taskTags.taskId, tagId: taskTags.tagId })
       .from(taskTags)
@@ -107,6 +114,19 @@ export async function loadTasks(
       .innerJoin(taskStatuses, eq(tasks.statusId, taskStatuses.id))
       .where(and(active(userId), inArray(tasks.parentTaskId, ids)))
       .groupBy(tasks.parentTaskId),
+    db
+      .select({ taskId: taskDependencies.blockedTaskId, open: sql<number>`count(*)::int` })
+      .from(taskDependencies)
+      .innerJoin(blocker, eq(blocker.id, taskDependencies.blockingTaskId))
+      .innerJoin(blockerStatus, eq(blockerStatus.id, blocker.statusId))
+      .where(
+        and(
+          inArray(taskDependencies.blockedTaskId, ids),
+          isNull(blocker.deletedAt),
+          inArray(blockerStatus.category, ["backlog", "unstarted", "started"]),
+        ),
+      )
+      .groupBy(taskDependencies.blockedTaskId),
   ]);
 
   const tagsByTask = new Map<string, string[]>();
@@ -117,8 +137,17 @@ export async function loadTasks(
     countRows.map((c) => [c.parentId!, { total: c.total, done: c.done }]),
   );
 
+  const blockersByTask = new Map(blockerRows.map((b) => [b.taskId, b.open]));
+
   return rows.map(({ task, category, parentTitle }) =>
-    toTask(task, category, parentTitle, tagsByTask.get(task.id) ?? [], countsByTask.get(task.id)),
+    toTask(
+      task,
+      category,
+      parentTitle,
+      tagsByTask.get(task.id) ?? [],
+      countsByTask.get(task.id),
+      blockersByTask.get(task.id) ?? 0,
+    ),
   );
 }
 
@@ -233,7 +262,7 @@ export async function getTaskDetail(
   id: string,
 ): Promise<TaskDetail> {
   const task = await getTask(db, userId, id);
-  const [subtasks, parentRows] = await Promise.all([
+  const [subtasks, parentRows, blockedBy, blocking] = await Promise.all([
     loadTasks(db, userId, eq(tasks.parentTaskId, id)),
     task.parentTaskId
       ? db
@@ -241,6 +270,68 @@ export async function getTaskDetail(
           .from(tasks)
           .where(and(active(userId), eq(tasks.id, task.parentTaskId)))
       : Promise.resolve([]),
+    dependencyRefs(db, userId, id, "blockedBy"),
+    dependencyRefs(db, userId, id, "blocking"),
   ]);
-  return { ...task, parent: parentRows[0] ?? null, subtasks };
+  return { ...task, parent: parentRows[0] ?? null, subtasks, blockedBy, blocking };
+}
+
+/** The tasks on the other side of a task's dependencies (deleted ones are hidden). */
+async function dependencyRefs(
+  db: DbExecutor,
+  userId: string,
+  id: string,
+  direction: "blockedBy" | "blocking",
+): Promise<DependencyRef[]> {
+  const [self, other] =
+    direction === "blockedBy"
+      ? [taskDependencies.blockedTaskId, taskDependencies.blockingTaskId]
+      : [taskDependencies.blockingTaskId, taskDependencies.blockedTaskId];
+  const rows = await db
+    .select({
+      id: tasks.id,
+      title: tasks.title,
+      statusCategory: taskStatuses.category,
+      startDate: tasks.startDate,
+      dueDate: tasks.dueDate,
+    })
+    .from(taskDependencies)
+    .innerJoin(tasks, eq(tasks.id, other))
+    .innerJoin(taskStatuses, eq(taskStatuses.id, tasks.statusId))
+    .where(and(eq(self, id), eq(taskDependencies.userId, userId), isNull(tasks.deletedAt)))
+    .orderBy(sql`${tasks.dueDate} asc nulls last`, asc(tasks.title));
+  return rows.map((row) => ({ ...row, statusCategory: row.statusCategory as StatusCategory }));
+}
+
+/** Dependencies whose two ends are both in `taskIds`. */
+export async function dependenciesAmong(
+  db: DbExecutor,
+  userId: string,
+  taskIds: string[],
+): Promise<TaskDependency[]> {
+  if (taskIds.length === 0) return [];
+  return db
+    .select({
+      blockingTaskId: taskDependencies.blockingTaskId,
+      blockedTaskId: taskDependencies.blockedTaskId,
+    })
+    .from(taskDependencies)
+    .where(
+      and(
+        eq(taskDependencies.userId, userId),
+        inArray(taskDependencies.blockingTaskId, taskIds),
+        inArray(taskDependencies.blockedTaskId, taskIds),
+      ),
+    );
+}
+
+/** Tasks of a list query plus the dependencies between them (the Gantt chart). */
+export async function listTimeline(db: DbExecutor, userId: string, query: TaskListQuery) {
+  const list = await listTasks(db, userId, query);
+  const dependencies = await dependenciesAmong(
+    db,
+    userId,
+    list.map((task) => task.id),
+  );
+  return { tasks: list, dependencies };
 }

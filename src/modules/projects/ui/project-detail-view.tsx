@@ -9,7 +9,7 @@ import { useState } from "react";
 
 import { AreaBadge, useAreas } from "@/modules/areas/ui";
 import { isRichTextEmpty, type RichTextDoc } from "@/modules/tasks/domain";
-import { KanbanBoard, TaskListView, useTaskPanel } from "@/modules/tasks/ui";
+import { GanttChart, KanbanBoard, TaskListView, useTaskPanel } from "@/modules/tasks/ui";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { colorClasses } from "@/shared/ui/color";
@@ -23,7 +23,7 @@ import { ProjectProgress, ProjectStatusBadge, useDateOnly } from "./project-bits
 import { ProjectFormDialog } from "./project-form-dialog";
 import { useProject, useProjectActions } from "./use-projects";
 
-const views = ["tasks", "board", "milestones", "notes"] as const;
+const views = ["tasks", "board", "gantt", "milestones", "notes"] as const;
 type View = (typeof views)[number];
 
 /**
@@ -138,6 +138,8 @@ function ProjectDetailContent({ project }: { project: ProjectDetail }) {
           />
         ) : view === "board" ? (
           <KanbanBoard projectId={project.id} embedded />
+        ) : view === "gantt" ? (
+          <GanttChart projectId={project.id} embedded />
         ) : view === "milestones" ? (
           <MilestonesPanel project={project} />
         ) : (

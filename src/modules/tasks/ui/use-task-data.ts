@@ -30,6 +30,15 @@ export function useTaskList(query: TaskListQuery, options: { enabled?: boolean }
   });
 }
 
+/** Tasks of a list query plus the dependencies between them (Gantt chart). */
+export function useTimeline(query: TaskListQuery) {
+  const trpc = useTRPC();
+  return useQuery({
+    ...trpc.tasks.timeline.queryOptions(query),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useTaskDetail(id: string | null) {
   const trpc = useTRPC();
   return useQuery({
@@ -189,6 +198,12 @@ export function useTaskActions() {
     purge: useMutation(trpc.tasks.trash.purge.mutationOptions({ onSettled: invalidate, onError })),
     emptyTrash: useMutation(
       trpc.tasks.trash.empty.mutationOptions({ onSettled: invalidate, onError }),
+    ),
+    addDependency: useMutation(
+      trpc.tasks.dependencies.add.mutationOptions({ onSettled: invalidate, onError }),
+    ),
+    removeDependency: useMutation(
+      trpc.tasks.dependencies.remove.mutationOptions({ onSettled: invalidate, onError }),
     ),
     createTag: useMutation(
       trpc.tasks.tags.create.mutationOptions({ onSettled: invalidate, onError }),

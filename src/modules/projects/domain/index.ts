@@ -44,6 +44,9 @@ export interface Milestone {
   progress: Progress;
 }
 
+/** A milestone as a date marker (Gantt chart); no progress. */
+export type MilestoneMarker = Omit<Milestone, "progress">;
+
 export interface Project {
   id: string;
   name: string;

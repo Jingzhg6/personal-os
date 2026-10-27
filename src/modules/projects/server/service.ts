@@ -15,6 +15,7 @@ import {
   type CreateMilestoneInput,
   type CreateProjectInput,
   type Milestone,
+  type MilestoneMarker,
   type Project,
   type ProjectDetail,
   type ProjectStatus,
@@ -257,6 +258,21 @@ export function deleteProject({ db }: ProjectDeps, userId: string, id: string): 
 }
 
 /* ------------------------------------------------------------------ milestones */
+
+/** Every milestone of the user's projects, as timeline markers. */
+export function listMilestoneMarkers(db: DbExecutor, userId: string): Promise<MilestoneMarker[]> {
+  return db
+    .select({
+      id: milestones.id,
+      projectId: milestones.projectId,
+      name: milestones.name,
+      dueDate: milestones.dueDate,
+      completedAt: milestones.completedAt,
+    })
+    .from(milestones)
+    .where(eq(milestones.userId, userId))
+    .orderBy(...milestoneOrder);
+}
 
 async function getOwnedMilestone(db: DbExecutor, userId: string, id: string) {
   const [row] = await db

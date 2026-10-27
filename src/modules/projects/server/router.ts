@@ -16,6 +16,7 @@ import {
   deleteMilestone,
   deleteProject,
   getProjectDetail,
+  listMilestoneMarkers,
   listProjects,
   setMilestoneCompleted,
   updateMilestone,
@@ -25,6 +26,7 @@ import {
 const today = z.iso.date();
 
 const milestonesRouter = router({
+  list: protectedProcedure.query(({ ctx }) => listMilestoneMarkers(ctx.db, ctx.userId)),
   create: protectedProcedure
     .input(createMilestoneInput)
     .mutation(({ ctx, input }) => createMilestone(ctx.db, ctx.userId, input)),

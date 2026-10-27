@@ -11,6 +11,7 @@ import { ColorDot } from "@/shared/ui/color";
 import { isClosedCategory, type Tag, type Task, type TaskStatus } from "../domain";
 import { useDueLabel, usePriorityLabel } from "./labels";
 import { PriorityIcon } from "./priority-icon";
+import { BlockedChip } from "./blocked-chip";
 import { MilestoneChip, ProjectChip } from "./project-chip";
 import type { SortableRender } from "./sortable-list";
 import { StatusToggle } from "./status-toggle";
@@ -105,6 +106,7 @@ export function TaskRow({
         </span>
 
         <span className="flex shrink-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <BlockedChip task={task} />
           {task.isUrgent ? (
             <span className="rounded bg-red-500/10 px-1.5 py-0.5 font-medium text-red-600 dark:text-red-300">
               {t("flags.urgent")}

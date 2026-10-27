@@ -318,5 +318,48 @@
       "noMove": "「{title}」没有移动。",
       "cancel": "已取消移动「{title}」。"
     }
+  },
+  "dependencies": {
+    "title": "依赖",
+    "blockedBy": "前置任务（先完成）",
+    "blocking": "后续任务（等待本任务）",
+    "addBlockedBy": "添加前置",
+    "addBlocking": "添加后续",
+    "search": "搜索任务",
+    "results": "可选任务",
+    "empty": "没有找到任务",
+    "none": "无",
+    "remove": "移除与「{title}」的依赖",
+    "added": "已添加依赖",
+    "removed": "已移除依赖",
+    "openBlockers": "{count} 个前置任务未完成",
+    "conflict": "日期冲突：后续任务在前置任务截止前开始",
+    "blocked": "受阻",
+    "blockedLabel": "等待 {count} 个前置任务"
+  },
+  "gantt": {
+    "description": "按开始和截止日期排布任务，箭头表示依赖关系。拖动条形即可改期。",
+    "chart": "甘特图",
+    "zoom": {
+      "label": "时间尺度",
+      "day": "日",
+      "week": "周",
+      "month": "月"
+    },
+    "today": "回到今天",
+    "noProject": "无项目",
+    "range": "{start} 至 {end}",
+    "bar": "{title}，{dates}。按 ← → 移动一天，Shift + ← → 调整截止日期，回车打开详情",
+    "moved": "「{title}」已改为 {start} 至 {end}",
+    "blocked": "受阻：有未完成的前置任务",
+    "milestone": "里程碑「{name}」：{date}",
+    "projectSpan": "项目周期",
+    "hint": "拖动条形移动日期，拖动两端调整开始或截止日期，点击打开详情。依赖在任务详情中设置；红色箭头表示日期冲突。",
+    "unscheduled": "未排期（{count}）",
+    "unscheduledHint": "这些任务没有开始或截止日期。打开任务设置日期后，它们会出现在图中。",
+    "empty": {
+      "title": "还没有已排期的任务",
+      "description": "给任务设置开始或截止日期后，它们就会出现在甘特图中。"
+    }
   }
 }
