@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   FolderKanban,
   ListChecks,
+  PieChart,
   Pause,
   Pencil,
   Play,
@@ -22,10 +23,10 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
 
 import {
-  TaskCompletionToggle,
+  GoalAttributionDialog,
   TaskDetailPanel,
   TaskPicker,
   useTaskPanel,
@@ -46,11 +47,13 @@ import { useToast } from "@/shared/ui/toast";
 import { RECENT_WINDOW_DAYS, type GoalDetail, type GoalStatus } from "../domain";
 import { AttributeName, attributeHref, EmptyState, SectionCard } from "./bits";
 import { GoalFormDialog } from "./goal-form-dialog";
+import { GoalTaskRow } from "./goal-task-row";
+import { PlansSection } from "./plans-section";
 import { ActionProgress, PriorityBadge } from "./goals-section";
 import { useDevelopmentActions, useGoalDetail, useGoalStatusLabel } from "./use-development";
 
 const DATE = { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" } as const;
-const SHORT = { month: "short", day: "numeric", timeZone: "UTC" } as const;
+const SIGNED = { signDisplay: "exceptZero" } as const;
 
 const statusTone: Record<GoalStatus, string> = {
   active: "bg-primary/12 text-primary",
@@ -63,6 +66,7 @@ export function GoalDetailView({ id }: { id: string }) {
   const t = useTranslations("development.goalDetail");
   const { data, isError } = useGoalDetail(id);
   const { openTaskId, openTask, closeTask } = useTaskPanel();
+  const [attributing, setAttributing] = useState<string | null>(null);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6" data-testid="goal-detail">
@@ -83,10 +87,11 @@ export function GoalDetailView({ id }: { id: string }) {
               {t("archivedNotice")}
             </p>
           ) : null}
+          <EvidenceGrid detail={data} />
           <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <div className="flex min-w-0 flex-col gap-6">
-              <ProgressCard detail={data} />
-              <TasksCard detail={data} onOpenTask={openTask} />
+              <PlansSection detail={data} onOpenTask={openTask} onAttribute={setAttributing} />
+              <TasksCard detail={data} onOpenTask={openTask} onAttribute={setAttributing} />
             </div>
             <div className="flex min-w-0 flex-col gap-6">
               <AttributesCard detail={data} />
@@ -99,6 +104,9 @@ export function GoalDetailView({ id }: { id: string }) {
       )}
       {openTaskId ? (
         <TaskDetailPanel taskId={openTaskId} onClose={closeTask} onOpenTask={openTask} />
+      ) : null}
+      {attributing ? (
+        <GoalAttributionDialog taskId={attributing} onClose={() => setAttributing(null)} />
       ) : null}
     </div>
   );
@@ -199,6 +207,17 @@ function GoalHeader({ detail }: { detail: GoalDetail }) {
             </Button>
           </div>
         </div>
+        <ul
+          className="flex flex-wrap gap-x-4 gap-y-1 text-sm"
+          aria-label={t("attributes")}
+          data-testid="goal-attribute-chips"
+        >
+          {detail.attributes.map((link) => (
+            <li key={link.attributeId}>
+              <AttributeName attribute={link.attribute} href={attributeHref(link.attributeId)} />
+            </li>
+          ))}
+        </ul>
         <section aria-label={t("description")}>
           {goal.description ? (
             <p
@@ -241,55 +260,141 @@ function GoalHeader({ detail }: { detail: GoalDetail }) {
   );
 }
 
-function ProgressCard({ detail }: { detail: GoalDetail }) {
-  const t = useTranslations("development.goalDetail");
-  const { actions } = detail;
-  const stats = [
-    { key: "linked" as const, value: actions.linked },
-    { key: "completed" as const, value: actions.completed },
-    { key: "open" as const, value: actions.open },
-    { key: "cancelled" as const, value: actions.cancelled },
-  ];
+/** Goal evidence: separate figures, each with its source — never one invented percentage. */
+function EvidenceGrid({ detail }: { detail: GoalDetail }) {
+  const t = useTranslations("development.evidence");
+  const format = useFormatter();
+  const { actions, evidence } = detail;
+  const attributeOf = new Map(detail.attributes.map((a) => [a.attributeId, a.attribute]));
+  const needs = Object.values(detail.taskAttribution).filter((a) => a.needsAllocation).length;
   return (
-    <SectionCard
-      icon={<ListChecks className="size-4" aria-hidden />}
-      title={t("progress")}
-      testId="goal-progress"
-    >
-      <ActionProgress actions={actions} />
-      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {stats.map(({ key, value }) => (
-          <div key={key} className="rounded-md bg-surface-muted/60 px-3 py-2">
-            <dt className="text-xs text-muted-foreground">{t(key)}</dt>
-            <dd className="text-lg font-semibold" data-testid={`goal-stat-${key}`}>
-              {value}
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-testid="goal-evidence">
+      <EvidenceCard
+        icon={<ListChecks className="size-4" aria-hidden />}
+        title={t("actions")}
+        testId="evidence-actions"
+      >
+        <ActionProgress actions={actions} />
+        <p className="text-xs text-muted-foreground">{t("actionsHint")}</p>
+      </EvidenceCard>
+      <EvidenceCard
+        icon={<Sprout className="size-4" aria-hidden />}
+        title={t("growth")}
+        testId="evidence-growth"
+      >
+        <span className="text-2xl font-semibold" data-testid="goal-attributed-xp">
+          {format.number(evidence.lifetimeXp)}
+        </span>
+        {evidence.byAttribute.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("growthEmpty")}</p>
+        ) : (
+          <ul className="flex flex-col gap-1 text-sm">
+            {evidence.byAttribute.map((row) => {
+              const attribute = attributeOf.get(row.attributeId);
+              return (
+                <li
+                  key={row.attributeId}
+                  className="flex items-center justify-between gap-2"
+                  data-testid="evidence-attribute"
+                >
+                  {attribute ? <AttributeName attribute={attribute} /> : <span />}
+                  <span className="font-medium tabular-nums">
+                    {t("xp", { xp: format.number(row.lifetimeXp) })}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <p className="mt-auto text-xs text-muted-foreground">{t("growthHint")}</p>
+      </EvidenceCard>
+      <EvidenceCard
+        icon={<CalendarDays className="size-4" aria-hidden />}
+        title={t("recent", { days: RECENT_WINDOW_DAYS })}
+        testId="evidence-recent"
+      >
+        <dl className="grid grid-cols-2 gap-2">
+          <div>
+            <dt className="text-xs text-muted-foreground">{t("recentActions")}</dt>
+            <dd className="text-2xl font-semibold" data-testid="recent-completed">
+              {evidence.recentCompleted}
             </dd>
           </div>
-        ))}
-      </dl>
-      <p className="text-xs text-muted-foreground">{t("progressHint")}</p>
-    </SectionCard>
+          <div>
+            <dt className="text-xs text-muted-foreground">{t("recentGrowth")}</dt>
+            <dd className="text-2xl font-semibold text-primary" data-testid="recent-attributed">
+              {format.number(evidence.recentXp, SIGNED)}
+            </dd>
+          </div>
+        </dl>
+      </EvidenceCard>
+      <EvidenceCard
+        icon={<PieChart className="size-4" aria-hidden />}
+        title={t("unattributed")}
+        testId="evidence-unattributed"
+      >
+        <span className="text-2xl font-semibold" data-testid="unattributed-xp">
+          {t("unattributedValue", { xp: format.number(evidence.unattributedXp) })}
+        </span>
+        {needs > 0 ? (
+          <span className="w-fit rounded bg-warning/15 px-1.5 py-0.5 text-xs font-medium">
+            {t("needs", { count: needs })}
+          </span>
+        ) : null}
+        <p className="mt-auto text-xs text-muted-foreground">
+          {evidence.unattributedXp > 0 || needs > 0 ? t("unattributedHint") : t("allAttributed")}
+        </p>
+      </EvidenceCard>
+    </div>
   );
 }
 
+function EvidenceCard({
+  icon,
+  title,
+  testId,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  testId: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card data-testid={testId}>
+      <CardContent className="flex h-full flex-col gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <span className="text-primary">{icon}</span>
+          {title}
+        </h2>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** 其他关联行动: linked tasks that are in no plan, plus linking and creating tasks for the goal. */
 function TasksCard({
   detail,
   onOpenTask,
+  onAttribute,
 }: {
   detail: GoalDetail;
   onOpenTask: (id: string) => void;
+  onAttribute: (taskId: string) => void;
 }) {
   const t = useTranslations("development.goalDetail");
-  const format = useFormatter();
   const toast = useToast();
   const actions = useDevelopmentActions();
   const archived = detail.goal.status === "archived";
   const linked = new Set<string | null>(detail.tasks.map((task) => task.id));
+  const unplanned = new Set(detail.unplannedTaskIds);
+  const tasks = detail.tasks.filter((task) => unplanned.has(task.id));
 
   return (
     <SectionCard
       icon={<CheckCircle2 className="size-4" aria-hidden />}
-      title={t("tasks")}
+      title={t("otherTasks")}
       testId="goal-tasks"
       action={
         archived ? null : (
@@ -319,52 +424,25 @@ function TasksCard({
         )
       }
     >
+      <p className="-mt-2 text-xs text-muted-foreground">{t("otherTasksHint")}</p>
       {detail.tasks.length === 0 ? (
         <EmptyState testId="goal-tasks-empty" title={t("noTasks")} hint={t("noTasksHint")} />
+      ) : tasks.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("noOtherTasks")}</p>
       ) : (
         <ul className="-mx-2 flex flex-col">
-          {detail.tasks.map((task) => (
-            <li
+          {tasks.map((task) => (
+            <GoalTaskRow
               key={task.id}
-              className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-surface-muted/60"
-              data-testid="goal-task"
-              data-category={task.statusCategory}
-            >
-              <TaskCompletionToggle task={task} />
-              <button
-                type="button"
-                onClick={() => onOpenTask(task.id)}
-                aria-label={t("openTask", { title: task.title })}
-                className={cn(
-                  "min-w-0 flex-1 truncate text-left text-sm hover:underline",
-                  (task.statusCategory === "completed" || task.statusCategory === "cancelled") &&
-                    "text-muted-foreground line-through",
-                )}
-              >
-                {task.title}
-              </button>
-              <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
-                {t(`taskStatus.${task.statusCategory}`)}
-              </span>
-              {task.dueDate ? (
-                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                  {t("due", {
-                    date: format.dateTime(new Date(`${task.dueDate}T00:00:00Z`), SHORT),
-                  })}
-                </span>
-              ) : null}
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("unlinkTask", { title: task.title })}
-                title={t("unlinkTask", { title: task.title })}
-                onClick={() =>
-                  actions.unlinkTask.mutate({ goalId: detail.goal.id, taskId: task.id })
-                }
-              >
-                <X />
-              </Button>
-            </li>
+              task={task}
+              attribution={detail.taskAttribution[task.id]}
+              onOpen={() => onOpenTask(task.id)}
+              onAttribute={() => onAttribute(task.id)}
+              removeLabel={t("unlinkTask", { title: task.title })}
+              onRemove={() =>
+                actions.unlinkTask.mutate({ goalId: detail.goal.id, taskId: task.id })
+              }
+            />
           ))}
         </ul>
       )}
@@ -453,6 +531,7 @@ function AttributesCard({ detail }: { detail: GoalDetail }) {
       title={t("attributes")}
       testId="goal-attributes"
     >
+      <p className="-mt-2 text-xs text-muted-foreground">{t("attributesHint")}</p>
       <ul className="flex flex-col gap-3">
         {detail.attributes.map((link) => (
           <li key={link.attributeId} className="flex flex-col gap-1" data-testid="goal-attribute">

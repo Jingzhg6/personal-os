@@ -151,3 +151,23 @@ that make those the fastest-growing attributes, and the chosen focus 法语 · S
 | `08-focus-selection.png`     | `/development` (dialog)           | Choosing the focus: 3 / 3 selected, the rest disabled                                   |
 | `09-dashboard-focus.png`     | `/` (element)                     | M7 dashboard card: chosen focus added above the measured focus, link to 成长规划        |
 | `10-goal-detail-mobile.png`  | `/development/goals/[id]` (phone) | Goal detail on a phone                                                                  |
+
+## M9 — Growth planning & goal attribution (`m9/`)
+
+Data made through the app's API only: three goals (法语达到 B1, 成为数据分析师, 掌握 Python),
+growth plans with tasks created in them, completions, an unlinked 法国旅游准备 task that grows
+法语 without serving a goal, a task shared by two goals and allocated 60 / 40, a shared task still
+待分配, and a partial allocation (专注力 50 %).
+
+| File                          | Page                              | Shows                                                                                   |
+| ----------------------------- | --------------------------------- | --------------------------------------------------------------------------------------- |
+| `01-development-overview.png` | `/development`                    | Goal cards with goal-specific XP (本目标近 30 天) and plan counts, 成长计划 by activity |
+| `02-goal-detail.png`          | `/development/goals/[id]`         | Evidence row, plans with their actions, other actions, attribute context                |
+| `03-goal-plans.png`           | `/development/goals/[id]`         | Two plans expanded: actions, attributed XP per task, plan controls                      |
+| `04-attribution-editor.png`   | `/development/goals/[id]` dialog  | 成长归属 of a task shared by two goals: 60 % / 40 % → 18 / 12 XP                        |
+| `05-partial-attribution.png`  | `/development/goals/[id]` dialog  | 法语 100 %, 专注力 50 % — 8 XP stays 未归属                                             |
+| `06-goal-statistics.png`      | `/development/goals/[id]`         | 实际行动, 本目标成长经验 by attribute, 过去 30 天, 未归属                               |
+| `07-mobile-goal-detail.png`   | `/development/goals/[id]` (phone) | iPhone 13; task titles wrap, chips and controls stay together                           |
+| `08-dark-goal-detail.png`     | `/development/goals/[id]` (dark)  | Dark theme                                                                              |
+| `09-empty-state.png`          | `/development/goals/[id]`         | New goal: no plans, no actions, zero evidence                                           |
+| `10-dashboard-regression.png` | `/`                               | M7 dashboard after M9 data: unchanged figures                                           |

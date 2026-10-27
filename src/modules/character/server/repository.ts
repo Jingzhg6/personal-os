@@ -241,6 +241,39 @@ export async function getXpActivity(
   };
 }
 
+/**
+ * Net Growth XP per (task, attribute) for the given tasks, from the credits of the ledger entries
+ * whose source is the task (completions and their reversals), lifetime and since the local date
+ * `from`. Legacy attributes are excluded, like every Growth XP figure.
+ */
+export async function getTaskGrowth(
+  db: DbExecutor,
+  userId: string,
+  taskIds: string[],
+  range: { from: string; timeZone: string },
+): Promise<{ taskId: string; attributeId: string; lifetimeXp: number; recentXp: number }[]> {
+  if (taskIds.length === 0) return [];
+  return db
+    .select({
+      taskId: xpLedger.sourceId,
+      attributeId: xpAttributeCredits.attributeId,
+      lifetimeXp: sql<number>`sum(${xpAttributeCredits.amount})::int`,
+      recentXp: sql<number>`(coalesce(sum(${xpAttributeCredits.amount}) filter (where ${xpAttributeCredits.createdAt} >= (${range.from}::date::timestamp at time zone ${range.timeZone})), 0))::int`,
+    })
+    .from(xpAttributeCredits)
+    .innerJoin(xpLedger, eq(xpLedger.id, xpAttributeCredits.ledgerEntryId))
+    .innerJoin(developmentAttributes, eq(developmentAttributes.id, xpAttributeCredits.attributeId))
+    .where(
+      and(
+        eq(xpAttributeCredits.userId, userId),
+        eq(xpLedger.sourceType, "task"),
+        inArray(xpLedger.sourceId, taskIds),
+        sql`not ${isLegacySql}`,
+      ),
+    )
+    .groupBy(xpLedger.sourceId, xpAttributeCredits.attributeId);
+}
+
 /** When each attribute last received Growth XP (attributes that never grew are absent). */
 export async function getAttributeLastActivity(
   db: DbExecutor,

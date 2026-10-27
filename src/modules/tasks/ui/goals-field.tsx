@@ -1,9 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Settings2, Target, X } from "lucide-react";
+import { PieChart, Plus, Settings2, Target, X } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { useTRPC } from "@/shared/trpc/react";
 import { Button } from "@/shared/ui/button";
@@ -12,6 +13,7 @@ import { useToast } from "@/shared/ui/toast";
 import { useErrorMessage } from "@/shared/ui/use-error-message";
 
 import type { TaskDetail } from "../domain";
+import { GoalAttributionDialog } from "./goal-attribution-dialog";
 
 /**
  * 成长目标: which development goals this task acts on. Planning only — the task's XP is decided by
@@ -20,6 +22,8 @@ import type { TaskDetail } from "../domain";
  */
 export function GoalsField({ task }: { task: TaskDetail }) {
   const t = useTranslations("development.taskField");
+  const ta = useTranslations("development.attribution");
+  const [attributing, setAttributing] = useState(false);
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -118,7 +122,22 @@ export function GoalsField({ task }: { task: TaskDetail }) {
           ))}
         </ul>
       )}
+      {linked.length > 0 ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-fit"
+          onClick={() => setAttributing(true)}
+          data-testid="open-attribution"
+        >
+          <PieChart />
+          {ta("edit")}
+        </Button>
+      ) : null}
       <p className="text-xs text-muted-foreground">{t("hint")}</p>
+      {attributing ? (
+        <GoalAttributionDialog taskId={task.id} onClose={() => setAttributing(false)} />
+      ) : null}
     </section>
   );
 }

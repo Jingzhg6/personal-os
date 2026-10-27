@@ -214,8 +214,12 @@ export interface GoalSummary {
   goal: DevelopmentGoal;
   actions: GoalActionStats;
   projectCount: number;
-  /** Growth XP of the goal's attributes in the recent window (not weighted, not goal-specific). */
+  /** Growth XP attributed to this goal in the recent window (M9: goal-specific, ADR 0018). */
   recentGrowthXp: number;
+  /** Lifetime Growth XP attributed to this goal. */
+  attributedXp: number;
+  /** Non-archived plans. */
+  planCount: number;
 }
 
 export interface DevelopmentOverview {
@@ -231,6 +235,14 @@ export interface DevelopmentOverview {
   archivedAttributes: AttributeValue[];
   /** Attributes with the most Growth XP in the recent window — measured, not chosen. */
   recentGrowth: { attributeId: string; growthXp: number }[];
+  /** Non-archived plans of non-archived goals, by recent activity (M9). */
+  plans: {
+    goalId: string;
+    goalTitle: string;
+    plan: DevelopmentPlan;
+    recentCompleted: number;
+    taskCount: number;
+  }[];
 }
 
 export interface GoalAttributeGrowth extends GoalAttribute {
@@ -245,6 +257,23 @@ export interface GoalDetail {
   tasks: Task[];
   actions: GoalActionStats;
   projects: Project[];
+  /** Goal-specific evidence (M9). */
+  evidence: {
+    byAttribute: { attributeId: string; lifetimeXp: number; recentXp: number }[];
+    lifetimeXp: number;
+    recentXp: number;
+    unattributedXp: number;
+    /** Linked tasks completed in the recent window. */
+    recentCompleted: number;
+  };
+  /** Per linked task: attributed / unattributed Growth XP, and whether it awaits allocation. */
+  taskAttribution: Record<
+    string,
+    { attributedXp: number; unattributedXp: number; needsAllocation: boolean; goalCount: number }
+  >;
+  plans: PlanSummary[];
+  /** Linked tasks in no non-archived plan of this goal. */
+  unplannedTaskIds: string[];
 }
 
 export interface AttributeSource {
@@ -268,4 +297,227 @@ export interface AttributeDetail {
   sources: AttributeSource[];
   /** Labels for every attribute the entries mention. */
   allAttributes: DevelopmentAttribute[];
+}
+
+/* ================================================================ M9: attribution & plans */
+
+/*
+ * Goal attribution (ADR 0018). A linked task's Growth XP per attribute — the net of its credits,
+ * computed by the character module — is allocated across the task's goals by percentage shares.
+ * Allocation, never duplication: the shares of one (task, attribute) add up to at most 100 %, every
+ * goal's part is truncated towards zero, and whatever is left is 未归属. Nothing here is XP.
+ */
+
+/** One stored share: `share` % of the task's Growth XP in `attributeId` counts for `goalId`. */
+export interface Allocation {
+  goalId: string;
+  taskId: string;
+  attributeId: string;
+  share: number;
+}
+
+/** Net Growth XP a task earned in one attribute (lifetime and in the recent window). */
+export interface TaskAttributeGrowth {
+  taskId: string;
+  attributeId: string;
+  lifetimeXp: number;
+  recentXp: number;
+}
+
+/** A goal's part of `xp` at `share` %: truncated towards zero, so parts never exceed the whole. */
+export function allocatedXp(xp: number, share: number): number {
+  return Math.trunc((xp * share) / 100);
+}
+
+/**
+ * Splits one (task, attribute) Growth XP across goals. The parts plus `unattributed` equal `xp`
+ * exactly; with shares totalling ≤ 100 % no part is ever counted twice.
+ */
+export function splitGrowth(
+  xp: number,
+  shares: readonly { goalId: string; share: number }[],
+): { byGoal: Map<string, number>; unattributed: number } {
+  const byGoal = new Map<string, number>();
+  let allocated = 0;
+  for (const { goalId, share } of shares) {
+    const part = allocatedXp(xp, share);
+    byGoal.set(goalId, (byGoal.get(goalId) ?? 0) + part);
+    allocated += part;
+  }
+  return { byGoal, unattributed: xp - allocated };
+}
+
+export const allocationShare = z.number().int().min(0).max(100);
+
+export const setTaskAllocationInput = z.object({
+  taskId: z.uuid(),
+  /** The complete allocation of the task (0 = not attributed). Pairs not listed become 0. */
+  allocations: z
+    .array(z.object({ goalId: z.uuid(), attributeId: z.uuid(), share: allocationShare }))
+    .max(200),
+});
+export type SetTaskAllocationInput = z.infer<typeof setTaskAllocationInput>;
+
+/** Attributes whose shares across goals add up to more than 100 % (empty when valid). */
+export function overAllocated(
+  allocations: readonly { goalId: string; attributeId: string; share: number }[],
+): string[] {
+  const totals = new Map<string, number>();
+  for (const a of allocations)
+    totals.set(a.attributeId, (totals.get(a.attributeId) ?? 0) + a.share);
+  return [...totals].filter(([, total]) => total > 100).map(([attributeId]) => attributeId);
+}
+
+/**
+ * The default when a task is linked to a goal: if this is the task's only goal, 100 % of the
+ * task's growth in the goal's attributes; if the task already serves other goals, nothing — the
+ * user allocates explicitly instead of the system guessing (or counting it twice).
+ */
+export function defaultAllocation(
+  goal: { id: string; attributes: readonly { attributeId: string }[] },
+  taskAttributeIds: readonly string[],
+  otherGoalCount: number,
+): { goalId: string; attributeId: string; share: number }[] {
+  if (otherGoalCount > 0) return [];
+  const relevant = new Set(goal.attributes.map((a) => a.attributeId));
+  return [...new Set(taskAttributeIds)]
+    .filter((id) => relevant.has(id))
+    .map((attributeId) => ({ goalId: goal.id, attributeId, share: 100 }));
+}
+
+/** What one goal can claim, computed from growth rows and every allocation of its tasks. */
+export interface GoalAttribution {
+  /** Attributed Growth XP per attribute (lifetime / recent), heaviest first. */
+  byAttribute: { attributeId: string; lifetimeXp: number; recentXp: number }[];
+  lifetimeXp: number;
+  recentXp: number;
+  /** Growth XP of the goal's linked tasks that no goal claims (lifetime). */
+  unattributedXp: number;
+  /** Per linked task: what this goal claims and what nobody claims. */
+  tasks: Map<string, { attributedXp: number; unattributedXp: number; needsAllocation: boolean }>;
+}
+
+export function goalAttribution(
+  goalId: string,
+  linkedTaskIds: readonly string[],
+  growth: readonly TaskAttributeGrowth[],
+  allocations: readonly Allocation[],
+  /** How many goals each task is linked to. */
+  goalCountOf: ReadonlyMap<string, number>,
+  /** Tasks with development contributions (they will earn growth even if they have none yet). */
+  contributingTaskIds: ReadonlySet<string> = new Set(),
+): GoalAttribution {
+  const linked = new Set(linkedTaskIds);
+  const sharesOf = (taskId: string, attributeId: string) =>
+    allocations.filter((a) => a.taskId === taskId && a.attributeId === attributeId);
+  const byAttribute = new Map<string, { lifetimeXp: number; recentXp: number }>();
+  const tasks = new Map<
+    string,
+    { attributedXp: number; unattributedXp: number; needsAllocation: boolean }
+  >();
+  let unattributedXp = 0;
+
+  for (const taskId of linked) {
+    tasks.set(taskId, { attributedXp: 0, unattributedXp: 0, needsAllocation: false });
+  }
+  for (const row of growth) {
+    if (!linked.has(row.taskId)) continue;
+    const shares = sharesOf(row.taskId, row.attributeId);
+    const lifetime = splitGrowth(row.lifetimeXp, shares);
+    const recent = splitGrowth(row.recentXp, shares);
+    const mine = lifetime.byGoal.get(goalId) ?? 0;
+    const mineRecent = recent.byGoal.get(goalId) ?? 0;
+    if (mine !== 0 || mineRecent !== 0) {
+      const sum = byAttribute.get(row.attributeId) ?? { lifetimeXp: 0, recentXp: 0 };
+      sum.lifetimeXp += mine;
+      sum.recentXp += mineRecent;
+      byAttribute.set(row.attributeId, sum);
+    }
+    const task = tasks.get(row.taskId)!;
+    task.attributedXp += mine;
+    task.unattributedXp += lifetime.unattributed;
+    unattributedXp += lifetime.unattributed;
+  }
+  for (const [taskId, task] of tasks) {
+    // Shared with other goals, growth earned, and nothing of it allocated here yet.
+    const mineAny = allocations.some((a) => a.taskId === taskId && a.goalId === goalId);
+    task.needsAllocation =
+      (goalCountOf.get(taskId) ?? 1) > 1 &&
+      !mineAny &&
+      (task.unattributedXp > 0 || contributingTaskIds.has(taskId));
+  }
+  const rows = [...byAttribute].map(([attributeId, xp]) => ({ attributeId, ...xp }));
+  rows.sort((a, b) => b.lifetimeXp - a.lifetimeXp);
+  return {
+    byAttribute: rows,
+    lifetimeXp: rows.reduce((sum, r) => sum + r.lifetimeXp, 0),
+    recentXp: rows.reduce((sum, r) => sum + r.recentXp, 0),
+    unattributedXp,
+    tasks,
+  };
+}
+
+/** For the allocation editor: one task's growth and how it is split over its goals. */
+export interface TaskAttributionView {
+  taskId: string;
+  taskTitle: string;
+  /** Attributes the task contributes to now or earned Growth XP in, with weights and XP. */
+  attributes: {
+    attributeId: string;
+    weight: number | null;
+    lifetimeXp: number;
+  }[];
+  goals: { id: string; title: string; status: GoalStatus }[];
+  allocations: Allocation[];
+}
+
+/* ---------------------------------------------------------------- plans */
+
+export const planStatuses = goalStatuses;
+export type PlanStatus = GoalStatus;
+
+const planTitle = z.string().trim().min(1).max(120);
+
+export const createPlanInput = z.object({
+  goalId: z.uuid(),
+  title: planTitle,
+  description: z.string().trim().max(2000).nullable().optional(),
+});
+export const updatePlanInput = z.object({
+  id: z.uuid(),
+  patch: z
+    .object({ title: planTitle, description: z.string().trim().max(2000).nullable() })
+    .partial(),
+});
+export const setPlanStatusInput = z.object({ id: z.uuid(), status: z.enum(planStatuses) });
+export const planIdInput = z.object({ id: z.uuid() });
+export const movePlanInput = z.object({ id: z.uuid(), direction: z.enum(["up", "down"]) });
+export const planTaskInput = z.object({ planId: z.uuid(), taskId: z.uuid() });
+export const createPlanTaskInput = z.object({
+  planId: z.uuid(),
+  task: createTaskInput,
+  useGoalAttributes: z.boolean().default(true),
+});
+export type CreatePlanInput = z.infer<typeof createPlanInput>;
+export type UpdatePlanInput = z.infer<typeof updatePlanInput>;
+export type CreatePlanTaskInput = z.infer<typeof createPlanTaskInput>;
+
+export interface DevelopmentPlan {
+  id: string;
+  goalId: string;
+  title: string;
+  description: string | null;
+  status: PlanStatus;
+  sortKey: string;
+  completedAt: Date | null;
+  archivedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface PlanSummary {
+  plan: DevelopmentPlan;
+  taskIds: string[];
+  actions: GoalActionStats;
+  /** Plan tasks completed in the recent window. */
+  recentCompleted: number;
 }

@@ -201,6 +201,9 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 | `development_goal_attributes`                    | development | (M8) goal → attributes, weights 1–3                                 |
 | `development_goal_tasks`                         | development | (M8) goal → existing tasks (references)                             |
 | `development_goal_projects`                      | development | (M8) goal → existing projects (references)                          |
+| `development_goal_allocations`                   | development | (M9) share 1–100 % of a linked task's Growth XP per attribute       |
+| `development_plans`                              | development | (M9) growth plans of a goal: status, order                          |
+| `development_plan_tasks`                         | development | (M9) plan → existing tasks (always also linked to the goal)         |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
@@ -343,7 +346,18 @@ Read models compose the owners' reads (`getXpActivity` with an attribute filter,
 UI does not import the development UI. The XP trend chart and series (`buildTrend`,
 `XpTrendChart`) moved to the character module, shared by the dashboard and attribute pages.
 
-### 5.3 Phase 1 (planned, after M8)
+### 5.2.4 Growth plans and goal attribution (M9, ADR 0018)
+
+Vision → goal → **plans** (ways of reaching it, grouping existing tasks) → tasks → XP rules →
+credits → **goal evidence**. A goal's Growth XP is no longer its attributes' growth: it is the
+allocated part of its linked tasks' credits, `trunc(net(task, attribute) × share / 100)`, with
+shares across goals ≤ 100 % (CHECK + trigger) and the remainder shown as 未归属. A task's only goal
+gets 100 % of the goal's attributes by default; a task shared by goals is allocated explicitly in
+the 成长归属 editor (goal page and task panel). `getTaskGrowth` (character) is the only new XP read;
+nothing is written to the ledger. Plans expand inline on `/development/goals/[id]`; the overview
+shows them secondarily (with / without recent activity).
+
+### 5.3 Phase 1 (planned, after M9)
 
 ```
 tasks (additive)   + recurrence_id? (M8), actual_minutes? (Phase 2)
@@ -445,6 +459,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M4 Projects** ✅: project CRUD and list, project page (任务 / 看板 / 里程碑 / 说明), status Kanban (global and per project), milestones, computed progress, project filter and fields on tasks.
 - **M5 Dependencies & basic Gantt** ✅: finish-to-start dependencies with cycle checks, 前置 / 后续 lists and 受阻 markers, Gantt chart (global and per project) with day / week / month scales, milestones, dependency arrows with date-conflict highlighting, drag / keyboard rescheduling.
 - **M6.1 Personal development model** ✅: user-defined development attributes, task development contributions (independent of areas), overall XP vs attribute XP (credits), dynamic radar, settings, M6 compatibility.
+- **M9 Growth planning & goal attribution** ✅: growth plans grouping existing tasks, goal-specific Growth XP by explicit allocation (no duplication, 未归属 remainder), goal evidence (actions, attributed XP, last 30 days, unattributed), attribution editor; no XP changes, no AI.
 - **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.
 - **M6 Character & XP** ✅: event → XP rules, append-only idempotent ledger with reversals (incl. new `milestone.reopened`), levels derived from the ledger, attributes credited through areas, radar, XP history, character page.

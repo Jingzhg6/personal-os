@@ -24,6 +24,7 @@ import {
   type GoalStatus,
   type UpdateGoalInput,
 } from "../domain";
+import { applyDefaultAllocation } from "./attribution";
 
 /*
  * Development goals: planning metadata. Every command checks that each referenced goal, attribute,
@@ -229,10 +230,24 @@ async function assertGoalOpenForLinks(db: DbExecutor, userId: string, goalId: st
   if (row.status === "archived") throw new DomainError("invalid", "goal.archived");
 }
 
-export async function linkTask(db: DbExecutor, userId: string, goalId: string, taskId: string) {
-  await assertGoalOpenForLinks(db, userId, goalId);
-  await assertTaskOwned(db, userId, taskId);
-  await db.insert(developmentGoalTasks).values({ goalId, taskId }).onConflictDoNothing();
+/** Links a task to a goal (idempotent) and, when the link is new, applies the default allocation. */
+export function linkTask(db: DbExecutor, userId: string, goalId: string, taskId: string) {
+  return db.transaction(async (tx) => {
+    await assertGoalOpenForLinks(tx, userId, goalId);
+    await assertTaskOwned(tx, userId, taskId);
+    await insertLink(tx, userId, goalId, taskId);
+  });
+}
+
+async function insertLink(db: DbExecutor, userId: string, goalId: string, taskId: string) {
+  const inserted = await db
+    .insert(developmentGoalTasks)
+    .values({ goalId, taskId })
+    .onConflictDoNothing()
+    .returning({ goalId: developmentGoalTasks.goalId });
+  if (inserted.length > 0) {
+    await applyDefaultAllocation(db, userId, await getGoal(db, userId, goalId), taskId);
+  }
 }
 
 export async function unlinkTask(db: DbExecutor, userId: string, goalId: string, taskId: string) {
@@ -310,11 +325,16 @@ export function setTaskGoals(
           goalIds.length ? notInArray(developmentGoalTasks.goalId, goalIds) : undefined,
         ),
       );
-    if (goalIds.length) {
-      await tx
-        .insert(developmentGoalTasks)
-        .values(goalIds.map((goalId) => ({ goalId, taskId })))
-        .onConflictDoNothing();
+    // Link all first, then default: a task given two goals at once gets no automatic shares.
+    const inserted = goalIds.length
+      ? await tx
+          .insert(developmentGoalTasks)
+          .values(goalIds.map((goalId) => ({ goalId, taskId })))
+          .onConflictDoNothing()
+          .returning({ goalId: developmentGoalTasks.goalId })
+      : [];
+    for (const { goalId } of inserted) {
+      await applyDefaultAllocation(tx, userId, await getGoal(tx, userId, goalId), taskId);
     }
     return goalsForTask(tx, userId, taskId);
   });
@@ -354,10 +374,7 @@ export function createGoalTask(deps: TaskDeps, userId: string, input: CreateGoal
       ...input.task,
       contributions,
     });
-    await tx
-      .insert(developmentGoalTasks)
-      .values({ goalId: input.goalId, taskId: task.id })
-      .onConflictDoNothing();
+    await insertLink(tx, userId, input.goalId, task.id);
     return task;
   });
 }
@@ -440,4 +457,33 @@ export async function goalLinkCounts(db: DbExecutor, userId: string, goalIds: st
   }
   for (const row of projectRows) projectsOf.set(row.goalId, row.count);
   return { tasksOf, projectsOf };
+}
+
+/**
+ * Every goal ↔ task link of the user whose task is not in the Trash, with the task's status
+ * category and whether it was completed since the local date `from` (user's timezone).
+ */
+export async function goalTaskLinks(
+  db: DbExecutor,
+  userId: string,
+  range: { from: string; timeZone: string },
+): Promise<
+  { goalId: string; taskId: string; statusCategory: StatusCategory; recentlyCompleted: boolean }[]
+> {
+  const rows = await db
+    .select({
+      goalId: developmentGoalTasks.goalId,
+      taskId: developmentGoalTasks.taskId,
+      statusCategory: taskStatuses.category,
+      recentlyCompleted: sql<boolean>`coalesce(${taskStatuses.category} = 'completed' and ${tasks.completedAt} >= (${range.from}::date::timestamp at time zone ${range.timeZone}), false)`,
+    })
+    .from(developmentGoalTasks)
+    .innerJoin(developmentGoals, eq(developmentGoals.id, developmentGoalTasks.goalId))
+    .innerJoin(tasks, eq(tasks.id, developmentGoalTasks.taskId))
+    .innerJoin(taskStatuses, eq(taskStatuses.id, tasks.statusId))
+    .where(
+      and(eq(developmentGoals.userId, userId), eq(tasks.userId, userId), isNull(tasks.deletedAt)),
+    )
+    .orderBy(asc(developmentGoalTasks.createdAt));
+  return rows.map((row) => ({ ...row, statusCategory: row.statusCategory as StatusCategory }));
 }

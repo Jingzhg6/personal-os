@@ -7,6 +7,7 @@ import {
 import {
   getAttributeLastActivity,
   getAttributeSources,
+  getTaskGrowth,
   getXpActivity,
   listAttributes,
   listHistory,
@@ -25,18 +26,57 @@ import {
   MAX_FOCUS_ATTRIBUTES,
   RECENT_WINDOW_DAYS,
   goalActionStats,
+  goalAttribution,
   type AttributeDetail,
   type DevelopmentOverview,
   type GoalDetail,
 } from "../domain";
-import { getGoal, goalLinkCounts, linkedProjectIds, linkedTaskIds, listGoals } from "./goals";
+import { listAllocations } from "./attribution";
+import {
+  getGoal,
+  goalLinkCounts,
+  goalTaskLinks,
+  linkedProjectIds,
+  linkedTaskIds,
+  listGoals,
+} from "./goals";
+import { listPlans, planTaskIds } from "./plans";
 import { getFocus, getVision } from "./profile";
 
 /*
  * Read side of the development system. Growth figures come from the character module (ledger and
  * credits), task states from the tasks module, projects from the projects module; this module
- * adds only its own planning data (vision, focus, goals, links). Nothing here writes.
+ * adds only its own planning data (vision, focus, goals, plans, links, allocations). Goal XP is
+ * the allocated part of the linked tasks' credits (ADR 0018), computed here at read time. Nothing
+ * here writes.
  */
+
+/** Links, growth and allocations of the user's goals — everything goal attribution reads. */
+async function attributionContext(
+  db: DbExecutor,
+  userId: string,
+  range: { from: string; timeZone: string },
+) {
+  const links = await goalTaskLinks(db, userId, range);
+  const taskIds = [...new Set(links.map((link) => link.taskId))];
+  const [growth, allocations] = await Promise.all([
+    getTaskGrowth(db, userId, taskIds, range),
+    listAllocations(db, taskIds),
+  ]);
+  const goalCountOf = new Map<string, number>();
+  for (const link of links) goalCountOf.set(link.taskId, (goalCountOf.get(link.taskId) ?? 0) + 1);
+  const linksOf = (goalId: string) => links.filter((link) => link.goalId === goalId);
+  const attribution = (goalId: string, contributing?: ReadonlySet<string>) =>
+    goalAttribution(
+      goalId,
+      linksOf(goalId).map((link) => link.taskId),
+      growth,
+      allocations,
+      goalCountOf,
+      contributing,
+    );
+  return { links, linksOf, goalCountOf, attribution };
+}
 
 const RECENT_GROWTH_SIZE = 3;
 
@@ -61,11 +101,26 @@ export async function getDevelopmentOverview(
     getAttributeLastActivity(db, userId),
   ]);
   const open = goals.filter((goal) => goal.status !== "archived");
-  const { tasksOf, projectsOf } = await goalLinkCounts(
+  const [{ tasksOf, projectsOf }, context, plans] = await Promise.all([
+    goalLinkCounts(
+      db,
+      userId,
+      open.map((goal) => goal.id),
+    ),
+    attributionContext(db, userId, { from: recentFrom, timeZone }),
+    listPlans(
+      db,
+      userId,
+      open.map((goal) => goal.id),
+    ),
+  ]);
+  const openPlans = plans.filter((plan) => plan.status !== "archived");
+  const tasksOfPlan = await planTaskIds(
     db,
-    userId,
-    open.map((goal) => goal.id),
+    openPlans.map((plan) => plan.id),
   );
+  const linkOf = new Map(context.links.map((link) => [`${link.goalId}:${link.taskId}`, link]));
+  const goalTitle = new Map(open.map((goal) => [goal.id, goal.title]));
   const recentOf = new Map(recent.byAttribute.map((row) => [row.attributeId, row.growthXp]));
   const active = attributes.filter(isActiveAttribute);
   const focused = new Set(focus);
@@ -78,10 +133,11 @@ export async function getDevelopmentOverview(
       goal,
       actions: goalActionStats(tasksOf.get(goal.id) ?? []),
       projectCount: projectsOf.get(goal.id) ?? 0,
-      recentGrowthXp: goal.attributes.reduce(
-        (sum, link) => sum + (recentOf.get(link.attributeId) ?? 0),
-        0,
-      ),
+      ...(() => {
+        const attributed = context.attribution(goal.id);
+        return { recentGrowthXp: attributed.recentXp, attributedXp: attributed.lifetimeXp };
+      })(),
+      planCount: openPlans.filter((plan) => plan.goalId === goal.id).length,
     })),
     archivedGoals: goals.filter((goal) => goal.status === "archived"),
     attributes: active.map((attribute) => ({
@@ -99,6 +155,21 @@ export async function getDevelopmentOverview(
       .filter((attribute) => attribute.archivedAt && !isLegacyAttribute(attribute))
       .map((attribute) => ({ ...attribute, progress: getLevelProgress(attribute.xp) })),
     recentGrowth: rankGrowth(recent.byAttribute, active, RECENT_GROWTH_SIZE),
+    plans: openPlans
+      .map((plan) => {
+        const linked = (tasksOfPlan.get(plan.id) ?? []).flatMap((taskId) => {
+          const link = linkOf.get(`${plan.goalId}:${taskId}`);
+          return link ? [link] : [];
+        });
+        return {
+          goalId: plan.goalId,
+          goalTitle: goalTitle.get(plan.goalId) ?? "",
+          plan,
+          taskCount: linked.length,
+          recentCompleted: linked.filter((link) => link.recentlyCompleted).length,
+        };
+      })
+      .sort((a, b) => b.recentCompleted - a.recentCompleted),
   };
 }
 
@@ -115,10 +186,32 @@ export async function getGoalDetail(
     listAttributes(db, userId),
     getXpActivity(db, userId, { from: recentFrom, timeZone }),
   ]);
-  const [linkedTasks, projects] = await Promise.all([
+  const [linkedTasks, projects, context, plans] = await Promise.all([
     getTasksByIds(db, userId, taskIds),
     projectIds.length ? listProjects(db, userId, { today }) : Promise.resolve([]),
+    attributionContext(db, userId, { from: recentFrom, timeZone }),
+    listPlans(db, userId, [goalId]),
   ]);
+  const tasksOfPlan = await planTaskIds(
+    db,
+    plans.map((plan) => plan.id),
+  );
+  const visibleTasks = new Map(linkedTasks.map((task) => [task.id, task]));
+  const contributing = new Set(
+    linkedTasks.filter((task) => task.contributions.length > 0).map((task) => task.id),
+  );
+  const attribution = context.attribution(goalId, contributing);
+  const recentlyCompleted = new Set(
+    context
+      .linksOf(goalId)
+      .filter((link) => link.recentlyCompleted)
+      .map((link) => link.taskId),
+  );
+  const planned = new Set(
+    plans
+      .filter((plan) => plan.status !== "archived")
+      .flatMap((plan) => tasksOfPlan.get(plan.id) ?? []),
+  );
   const attributeOf = new Map(attributes.map((attribute) => [attribute.id, attribute]));
   const recentOf = new Map(recent.byAttribute.map((row) => [row.attributeId, row.growthXp]));
   const linkedProjects = new Set(projectIds);
@@ -148,6 +241,32 @@ export async function getGoalDetail(
     tasks: sortedTasks,
     actions: goalActionStats(linkedTasks),
     projects: projects.filter((project) => linkedProjects.has(project.id)),
+    evidence: {
+      byAttribute: attribution.byAttribute,
+      lifetimeXp: attribution.lifetimeXp,
+      recentXp: attribution.recentXp,
+      unattributedXp: attribution.unattributedXp,
+      recentCompleted: recentlyCompleted.size,
+    },
+    taskAttribution: Object.fromEntries(
+      [...attribution.tasks].map(([taskId, task]) => [
+        taskId,
+        { ...task, goalCount: context.goalCountOf.get(taskId) ?? 1 },
+      ]),
+    ),
+    plans: plans.map((plan) => {
+      const planTasks = (tasksOfPlan.get(plan.id) ?? []).flatMap((taskId) => {
+        const task = visibleTasks.get(taskId);
+        return task ? [task] : [];
+      });
+      return {
+        plan,
+        taskIds: planTasks.map((task) => task.id),
+        actions: goalActionStats(planTasks),
+        recentCompleted: planTasks.filter((task) => recentlyCompleted.has(task.id)).length,
+      };
+    }),
+    unplannedTaskIds: sortedTasks.filter((task) => !planned.has(task.id)).map((task) => task.id),
   };
 }
 

@@ -11,3 +11,4 @@ export { useToday } from "./labels";
 export { TaskPicker } from "./task-picker";
 export { TaskCompletionToggle } from "./status-toggle";
 export { StatusIcon } from "./status-icon";
+export { GoalAttributionDialog } from "./goal-attribution-dialog";

@@ -6,6 +6,7 @@ export {
   getAttributeLastActivity,
   getAttributeSources,
   getOverview,
+  getTaskGrowth,
   getXpActivity,
   getXpTotals,
   listHistory,

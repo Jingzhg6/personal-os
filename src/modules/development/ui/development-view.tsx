@@ -16,6 +16,7 @@ import { AttributesSection } from "./attributes-section";
 import { AttributeName, attributeHref, EmptyState, goalHref, SectionCard } from "./bits";
 import { GoalFormDialog, textareaClass } from "./goal-form-dialog";
 import { GoalsSection } from "./goals-section";
+import { PlansOverview } from "./plans-overview";
 import { useDevelopmentActions, useDevelopmentOverview } from "./use-development";
 
 /**
@@ -51,6 +52,7 @@ export function DevelopmentView({ title }: { title: string }) {
             <RecentGrowthCard data={data} />
           </div>
           <GoalsSection data={data} onCreate={() => setCreating(true)} />
+          <PlansOverview data={data} />
           <AttributesSection data={data} />
         </>
       ) : (

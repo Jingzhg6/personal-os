@@ -55,6 +55,7 @@ export function useDevelopmentActions() {
     onError: (error: unknown) => toast.show(errorMessage(error), "error"),
   };
   const g = trpc.development.goals;
+  const p = trpc.development.plans;
   return {
     updateVision: useMutation(trpc.development.updateVision.mutationOptions(options)),
     setFocus: useMutation(trpc.development.setFocus.mutationOptions(options)),
@@ -78,6 +79,14 @@ export function useDevelopmentActions() {
     createTask: useMutation(g.createTask.mutationOptions(options)),
     linkProject: useMutation(g.linkProject.mutationOptions(options)),
     unlinkProject: useMutation(g.unlinkProject.mutationOptions(options)),
+    createPlan: useMutation(p.create.mutationOptions(options)),
+    updatePlan: useMutation(p.update.mutationOptions(options)),
+    setPlanStatus: useMutation(p.setStatus.mutationOptions(options)),
+    movePlan: useMutation(p.move.mutationOptions(options)),
+    deletePlan: useMutation(p.delete.mutationOptions(options)),
+    linkPlanTask: useMutation(p.linkTask.mutationOptions(options)),
+    unlinkPlanTask: useMutation(p.unlinkTask.mutationOptions(options)),
+    createPlanTask: useMutation(p.createTask.mutationOptions(options)),
   };
 }
 

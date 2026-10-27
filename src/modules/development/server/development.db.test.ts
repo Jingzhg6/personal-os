@@ -387,8 +387,9 @@ describe("read models", () => {
       { attributeId: attr("french"), growthXp: 15 },
       { attributeId: attr("reading"), growthXp: 5 },
     ]);
-    // A goal's recent Growth XP is that of its attributes (here: 法语).
-    expect(overview.goals.map((g) => g.recentGrowthXp)).toEqual([15, 15]);
+    // Since M9 a goal's recent Growth XP is only what is attributed to it (ADR 0018): these goals
+    // have no linked tasks, so nothing — even though their attribute 法语 grew.
+    expect(overview.goals.map((g) => g.recentGrowthXp)).toEqual([0, 0]);
   });
 
   it("returns the goal detail with growth per linked attribute", async () => {

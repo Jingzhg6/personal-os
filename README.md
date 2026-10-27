@@ -6,14 +6,13 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: M8 — Personal development system.** `/development` turns development attributes into a
-> plan: a written vision, development goals (each developing one or more attributes, with existing
-> tasks and projects linked as its actions and progress counted as 已完成 X / Y 项行动), a chosen
-> focus of up to three attributes shown apart from what grew fastest, and a page per attribute.
-> Goals are planning only — XP still comes from completing tasks under the M6.2 rules. The home
-> page (`/`) is the M7 RPG dashboard. Other modules show a “即将推出” placeholder until their
-> milestone. See [`docs/architecture.md`](docs/architecture.md) and the milestone screenshots in
-> [`docs/screenshots/`](docs/screenshots/README.md).
+> **Status: M9 — Growth planning & goal attribution.** Development goals (M8) now have growth
+> plans — ways of reaching them that group existing tasks — and their own evidence: a goal's Growth
+> XP is the share of its linked tasks' growth the user attributed to it (one task's growth can be
+> split across goals, never counted twice; the rest stays 未归属). XP itself still comes only from
+> completing tasks under the M6.2 rules. `/` is the M7 RPG dashboard, `/development` the
+> development system. See [`docs/architecture.md`](docs/architecture.md) and the milestone
+> screenshots in [`docs/screenshots/`](docs/screenshots/README.md).
 
 ## Requirements
 

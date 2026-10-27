@@ -125,7 +125,7 @@ test("links an existing task and creates a new one from the goal", async ({ page
     .getByRole("checkbox")
     .click();
   await expect(page.getByTestId("goal-actions").first()).toHaveText("已完成 1 / 2 项行动");
-  await expect(page.getByTestId("goal-stat-completed")).toHaveText("1");
+  await expect(page.getByTestId("recent-completed")).toHaveText("1"); // M9 evidence card
 
   // Open the task: it is a normal task with the goal's attributes as contributions, and the goal.
   await page.getByRole("button", { name: "打开「整理法语语法笔记」" }).click();

@@ -1,6 +1,14 @@
 import { protectedProcedure, router } from "@/shared/trpc/init";
 
 import {
+  createPlanInput,
+  createPlanTaskInput,
+  movePlanInput,
+  planIdInput,
+  planTaskInput,
+  setPlanStatusInput,
+  setTaskAllocationInput,
+  updatePlanInput,
   createGoalInput,
   createGoalTaskInput,
   goalIdInput,
@@ -27,6 +35,17 @@ import {
   unlinkTask,
   updateGoal,
 } from "./goals";
+import { getTaskAttribution, setTaskAllocation } from "./attribution";
+import {
+  createPlan,
+  createPlanTask,
+  deletePlan,
+  linkPlanTask,
+  movePlan,
+  setPlanStatus,
+  unlinkPlanTask,
+  updatePlan,
+} from "./plans";
 import { setFocus, updateVision } from "./profile";
 import { getAttributeDetail, getDevelopmentOverview, getGoalDetail } from "./read-model";
 
@@ -84,5 +103,40 @@ export const developmentRouter = router({
     setForTask: protectedProcedure
       .input(setTaskGoalsInput)
       .mutation(({ ctx, input }) => setTaskGoals(ctx.db, ctx.userId, input.taskId, input.goalIds)),
+  }),
+  /** Goal attribution (ADR 0018): shares of a task's Growth XP per goal. Never XP itself. */
+  attribution: router({
+    forTask: protectedProcedure
+      .input(taskIdInput)
+      .query(({ ctx, input }) => getTaskAttribution(ctx.db, ctx.userId, input.taskId)),
+    set: protectedProcedure
+      .input(setTaskAllocationInput)
+      .mutation(({ ctx, input }) => setTaskAllocation(ctx.db, ctx.userId, input)),
+  }),
+  plans: router({
+    create: protectedProcedure
+      .input(createPlanInput)
+      .mutation(({ ctx, input }) => createPlan(ctx.db, ctx.userId, input)),
+    update: protectedProcedure
+      .input(updatePlanInput)
+      .mutation(({ ctx, input }) => updatePlan(ctx.db, ctx.userId, input)),
+    setStatus: protectedProcedure
+      .input(setPlanStatusInput)
+      .mutation(({ ctx, input }) => setPlanStatus(ctx.db, ctx.userId, input.id, input.status)),
+    move: protectedProcedure
+      .input(movePlanInput)
+      .mutation(({ ctx, input }) => movePlan(ctx.db, ctx.userId, input.id, input.direction)),
+    delete: protectedProcedure
+      .input(planIdInput)
+      .mutation(({ ctx, input }) => deletePlan(ctx.db, ctx.userId, input.id)),
+    linkTask: protectedProcedure
+      .input(planTaskInput)
+      .mutation(({ ctx, input }) => linkPlanTask(ctx.db, ctx.userId, input.planId, input.taskId)),
+    unlinkTask: protectedProcedure
+      .input(planTaskInput)
+      .mutation(({ ctx, input }) => unlinkPlanTask(ctx.db, ctx.userId, input.planId, input.taskId)),
+    createTask: protectedProcedure
+      .input(createPlanTaskInput)
+      .mutation(({ ctx, input }) => createPlanTask(ctx, ctx.userId, input)),
   }),
 });

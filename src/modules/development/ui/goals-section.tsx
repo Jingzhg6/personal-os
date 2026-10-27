@@ -1,6 +1,14 @@
 "use client";
 
-import { Archive, CalendarDays, ChevronRight, FolderKanban, Plus, Target } from "lucide-react";
+import {
+  Archive,
+  CalendarDays,
+  ChevronRight,
+  FolderKanban,
+  Map as MapIcon,
+  Plus,
+  Target,
+} from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo } from "react";
@@ -145,6 +153,12 @@ function GoalCard({ summary, data }: { summary: GoalSummary; data: DevelopmentOv
             xp: format.number(summary.recentGrowthXp),
           })}
         </span>
+        {summary.planCount > 0 ? (
+          <span className="inline-flex items-center gap-1" data-testid="goal-plan-count">
+            <MapIcon className="size-3.5" aria-hidden />
+            {t("plans", { count: summary.planCount })}
+          </span>
+        ) : null}
         {summary.projectCount > 0 ? (
           <span className="inline-flex items-center gap-1">
             <FolderKanban className="size-3.5" aria-hidden />
