@@ -175,35 +175,40 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 
 ### 5.2 Implemented (M0–M6.2)
 
-| Table                                            | Owner       | Notes                                                               |
-| ------------------------------------------------ | ----------- | ------------------------------------------------------------------- |
-| `users`, `sessions`, `accounts`, `verifications` | shared/auth | Better Auth models                                                  |
-| `user_settings`                                  | settings    | `locale`, `time_zone`, `week_starts_on`                             |
-| `areas`                                          | areas       | system-key pattern; `color`/`icon` ids; `sort_key`                  |
-| `task_statuses`                                  | tasks       | fixed `category`; system-key pattern; unique per user + system key  |
-| `tags`                                           | tasks       | unique per user, case-insensitive (`lower(name)`)                   |
-| `tasks`                                          | tasks       | see below                                                           |
-| `task_tags`                                      | tasks       | composite PK; cascades from both sides                              |
-| `task_views`                                     | tasks       | (M2) area scope of the 工作 / 业务 / 行政任务 / 个人生活 views      |
-| `projects`                                       | projects    | (M4) see below                                                      |
-| `milestones`                                     | projects    | (M4) belong to one project; cascade with it                         |
-| `task_dependencies`                              | tasks       | (M5) finish-to-start edges; see below                               |
-| `development_attributes`                         | character   | (M6.1) user-defined growth directions (法语, 阅读, Python …)        |
-| `xp_attribute_credits`                           | character   | (M6.1) append-only split of a ledger entry across attributes        |
-| `task_development_contributions`                 | tasks       | (M6.1) which attributes a task grows, with weights 1–3              |
-| `xp_ledger`                                      | character   | (M6) append-only XP ledger; see below                               |
-| `rewards`                                        | rewards     | (M6.2) user-defined real-world rewards; value + accepted currencies |
-| `level_rewards`                                  | rewards     | (M6.2) one reward per level; system-key pattern for seeded ones     |
-| `reward_ledger`                                  | rewards     | (M6.2) append-only spending: redemptions and level-reward claims    |
-| `development_profiles`                           | development | (M8) one row per user: the free-text vision                         |
-| `development_focus`                              | development | (M8) chosen focus attributes, ordered, at most 3                    |
-| `development_goals`                              | development | (M8) goals: status, priority 1–3, target date; see below            |
-| `development_goal_attributes`                    | development | (M8) goal → attributes, weights 1–3                                 |
-| `development_goal_tasks`                         | development | (M8) goal → existing tasks (references)                             |
-| `development_goal_projects`                      | development | (M8) goal → existing projects (references)                          |
-| `development_goal_allocations`                   | development | (M9) share 1–100 % of a linked task's Growth XP per attribute       |
-| `development_plans`                              | development | (M9) growth plans of a goal: status, order                          |
-| `development_plan_tasks`                         | development | (M9) plan → existing tasks (always also linked to the goal)         |
+| Table                                            | Owner       | Notes                                                                |
+| ------------------------------------------------ | ----------- | -------------------------------------------------------------------- |
+| `users`, `sessions`, `accounts`, `verifications` | shared/auth | Better Auth models                                                   |
+| `user_settings`                                  | settings    | `locale`, `time_zone`, `week_starts_on`                              |
+| `areas`                                          | areas       | system-key pattern; `color`/`icon` ids; `sort_key`                   |
+| `task_statuses`                                  | tasks       | fixed `category`; system-key pattern; unique per user + system key   |
+| `tags`                                           | tasks       | unique per user, case-insensitive (`lower(name)`)                    |
+| `tasks`                                          | tasks       | see below                                                            |
+| `task_tags`                                      | tasks       | composite PK; cascades from both sides                               |
+| `task_views`                                     | tasks       | (M2) area scope of the 工作 / 业务 / 行政任务 / 个人生活 views       |
+| `projects`                                       | projects    | (M4) see below                                                       |
+| `milestones`                                     | projects    | (M4) belong to one project; cascade with it                          |
+| `task_dependencies`                              | tasks       | (M5) finish-to-start edges; see below                                |
+| `development_attributes`                         | character   | (M6.1) user-defined growth directions (法语, 阅读, Python …)         |
+| `xp_attribute_credits`                           | character   | (M6.1) append-only split of a ledger entry across attributes         |
+| `task_development_contributions`                 | tasks       | (M6.1) which attributes a task grows, with weights 1–3               |
+| `xp_ledger`                                      | character   | (M6) append-only XP ledger; see below                                |
+| `rewards`                                        | rewards     | (M6.2) user-defined real-world rewards; value + accepted currencies  |
+| `level_rewards`                                  | rewards     | (M6.2) one reward per level; system-key pattern for seeded ones      |
+| `reward_ledger`                                  | rewards     | (M6.2) append-only spending: redemptions and level-reward claims     |
+| `development_profiles`                           | development | (M8) one row per user: the free-text vision                          |
+| `development_focus`                              | development | (M8) chosen focus attributes, ordered, at most 3                     |
+| `development_goals`                              | development | (M8) goals: status, priority 1–3, target date; see below             |
+| `development_goal_attributes`                    | development | (M8) goal → attributes, weights 1–3                                  |
+| `development_goal_tasks`                         | development | (M8) goal → existing tasks (references)                              |
+| `development_goal_projects`                      | development | (M8) goal → existing projects (references)                           |
+| `development_goal_allocations`                   | development | (M9) share 1–100 % of a linked task's Growth XP per attribute        |
+| `development_plans`                              | development | (M9) growth plans of a goal: status, order                           |
+| `development_plan_tasks`                         | development | (M9) plan → existing tasks (always also linked to the goal)          |
+| `finance_settings`                               | finance     | (M9.5) base currency per user (EUR by default; locked once valued)   |
+| `finance_providers`                              | finance     | (M9.5) institutions: bank, e-wallet, cash, broker, other             |
+| `finance_accounts`                               | finance     | (M9.5) asset / liability accounts, one currency each                 |
+| `finance_snapshots`                              | finance     | (M9.5) dated balance + frozen valuation (rate, base value), revision |
+| `finance_fx_defaults`                            | finance     | (M9.5) last typed rate per currency — pre-fill only                  |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
@@ -357,6 +362,18 @@ the 成长归属 editor (goal page and task panel). `getTaskGrowth` (character) 
 nothing is written to the ledger. Plans expand inline on `/development/goals/[id]`; the overview
 shows them secondarily (with / without recent activity).
 
+### 5.2.5 Personal finance (M9.5, ADR 0019)
+
+A self-contained `finance` module (depends only on `users`; reads the settings time zone).
+Institution → account (asset with category, or liability stored as a positive amount) → dated
+snapshots. Composite keys carry `user_id` (and the account currency into snapshots), so ownership
+and currency are enforced by the database too. Exact `numeric` storage and a BigInt decimal helper;
+FX rates are typed per batch and frozen in each snapshot (missing → 未换算, never 1). Read models
+(overview, history, account history) are computed from snapshots at request time: one history
+point per recorded date, carried balances disclosed, change split into balance / FX / accounts.
+Pages: `/finance`, `/finance/accounts`, `/finance/accounts/[id]`, `/finance/snapshot?date=`.
+No XP, no dashboard card, no bank connections.
+
 ### 5.3 Phase 1 (planned, after M9)
 
 ```
@@ -460,6 +477,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M5 Dependencies & basic Gantt** ✅: finish-to-start dependencies with cycle checks, 前置 / 后续 lists and 受阻 markers, Gantt chart (global and per project) with day / week / month scales, milestones, dependency arrows with date-conflict highlighting, drag / keyboard rescheduling.
 - **M6.1 Personal development model** ✅: user-defined development attributes, task development contributions (independent of areas), overall XP vs attribute XP (credits), dynamic radar, settings, M6 compatibility.
 - **M9 Growth planning & goal attribution** ✅: growth plans grouping existing tasks, goal-specific Growth XP by explicit allocation (no duplication, 未归属 remainder), goal evidence (actions, attributed XP, last 30 days, unattributed), attribution editor; no XP changes, no AI.
+- **M9.5 Personal finance** ✅: institutions and accounts, assets and liabilities, dated balance snapshots in atomic batches, manual frozen FX (missing never = 1), base currency, net worth with balance / FX split, history of recorded dates, archival keeping history; no bank APIs, no transactions, no XP.
 - **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.
 - **M6 Character & XP** ✅: event → XP rules, append-only idempotent ledger with reversals (incl. new `milestone.reopened`), levels derived from the ledger, attributes credited through areas, radar, XP history, character page.

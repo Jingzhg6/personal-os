@@ -2,6 +2,7 @@ import { areasRouter } from "@/modules/areas/server";
 import { characterRouter } from "@/modules/character/server";
 import { dashboardRouter } from "@/modules/dashboard/server";
 import { developmentRouter } from "@/modules/development/server";
+import { financeRouter } from "@/modules/finance/server";
 import { projectsRouter } from "@/modules/projects/server";
 import { rewardsRouter } from "@/modules/rewards/server";
 import { settingsRouter } from "@/modules/settings/server";
@@ -18,6 +19,7 @@ export const appRouter = router({
   rewards: rewardsRouter,
   dashboard: dashboardRouter,
   development: developmentRouter,
+  finance: financeRouter,
 });
 
 export type AppRouter = typeof appRouter;

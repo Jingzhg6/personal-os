@@ -6,13 +6,14 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: M9 — Growth planning & goal attribution.** Development goals (M8) now have growth
-> plans — ways of reaching them that group existing tasks — and their own evidence: a goal's Growth
-> XP is the share of its linked tasks' growth the user attributed to it (one task's growth can be
-> split across goals, never counted twice; the rest stays 未归属). XP itself still comes only from
-> completing tasks under the M6.2 rules. `/` is the M7 RPG dashboard, `/development` the
-> development system. See [`docs/architecture.md`](docs/architecture.md) and the milestone
-> screenshots in [`docs/screenshots/`](docs/screenshots/README.md).
+> **Status: M9.5 — Personal finance.** A self-contained 财务 section records balances by hand:
+> institutions and accounts (assets and liabilities, any currency), dated balance snapshots entered
+> in one batch, manually typed exchange rates frozen with each snapshot (a missing rate is shown,
+> never assumed to be 1), net worth with its change split into balance and FX effects, and a history
+> of recorded dates. No bank connections, transactions or XP. `/` is the M7 RPG dashboard,
+> `/development` the development system (M8–M9), `/finance` the finance overview. See
+> [`docs/architecture.md`](docs/architecture.md) and the milestone screenshots in
+> [`docs/screenshots/`](docs/screenshots/README.md).
 
 ## Requirements
 

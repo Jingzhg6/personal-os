@@ -79,5 +79,21 @@
   "allocation": {
     "over_limit": "同一项成长贡献分配给各目标的比例合计不能超过 100%。",
     "duplicate": "同一个目标和能力只能设置一次归属。"
+  },
+  "finance": {
+    "provider_not_found": "机构不存在。",
+    "provider_archived": "这个机构已归档，不能再添加账户。",
+    "provider_has_accounts": "机构下还有账户，不能删除，可以归档。",
+    "account_not_found": "账户不存在。",
+    "account_archived": "账户已关闭，不能记录新的余额。请先重新启用。",
+    "account_has_history": "这个账户已有余额记录，不能删除，也不能更改币种或资产/负债类型。可以关闭它，或新建一个账户。",
+    "account_shape": "账户类型或类别与资产/负债不匹配。",
+    "base_locked": "已有余额记录后不能更改报告货币。",
+    "invalid_date": "估值日期无效或晚于今天。",
+    "invalid_amount": "余额必须是不小于 0 的数字，小数位不能超过该币种的精度。",
+    "invalid_rate": "汇率必须是大于 0 的数字，最多 10 位小数。",
+    "duplicate_entry": "同一个账户在一次记录中只能出现一次。",
+    "snapshot_exists": "这一天已经有余额记录。请以修正方式保存。",
+    "snapshot_not_found": "余额记录不存在。"
   }
 }

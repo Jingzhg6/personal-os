@@ -5,6 +5,7 @@ import common from "../../../messages/zh-CN/common.json";
 import dashboard from "../../../messages/zh-CN/dashboard.json";
 import development from "../../../messages/zh-CN/development.json";
 import editor from "../../../messages/zh-CN/editor.json";
+import finance from "../../../messages/zh-CN/finance.json";
 import errors from "../../../messages/zh-CN/errors.json";
 import nav from "../../../messages/zh-CN/nav.json";
 import projects from "../../../messages/zh-CN/projects.json";
@@ -29,6 +30,7 @@ export const sourceMessages = {
   rewards,
   dashboard,
   development,
+  finance,
 };
 
 export type Messages = typeof sourceMessages;

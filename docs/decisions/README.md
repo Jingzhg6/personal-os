@@ -23,3 +23,4 @@ changes; never rewrite history — supersede instead.
 | [0016](./0016-dashboard-read-model.md)                 | The dashboard is a read-only composition of other modules, served at `/`  | Accepted                                |
 | [0017](./0017-development-system.md)                   | Development system: goals, focus and vision plan; tasks act; XP unchanged | Accepted                                |
 | [0018](./0018-growth-planning-and-goal-attribution.md) | Growth plans; goal XP is an allocation (≤ 100 %) of linked tasks' credits | Accepted                                |
+| [0019](./0019-personal-finance.md)                     | Finance: manual dated balance snapshots, frozen manual FX, net worth      | Accepted                                |

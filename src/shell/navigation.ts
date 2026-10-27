@@ -17,6 +17,7 @@ import {
   GraduationCap,
   Grid2x2,
   Heart,
+  Landmark,
   LayoutDashboard,
   ListTodo,
   type LucideIcon,
@@ -28,6 +29,7 @@ import {
   Target,
   Trash2,
   TrendingUp,
+  Wallet,
   Zap,
 } from "lucide-react";
 
@@ -47,6 +49,7 @@ import type { Messages } from "@/shared/i18n/messages";
 export type ModuleId =
   | "dashboard"
   | "development"
+  | "finance"
   | "tasks"
   | "projects"
   | "goals"
@@ -173,6 +176,27 @@ export const navigation: NavSection[] = [
         module: "tasks",
         phase: 1,
         milestone: "M2",
+      },
+    ],
+  },
+  {
+    id: "finance",
+    items: [
+      {
+        id: "financeOverview",
+        href: "/finance",
+        icon: Wallet,
+        module: "finance",
+        phase: 1,
+        milestone: "M9",
+      },
+      {
+        id: "financeAccounts",
+        href: "/finance/accounts",
+        icon: Landmark,
+        module: "finance",
+        phase: 1,
+        milestone: "M9",
       },
     ],
   },

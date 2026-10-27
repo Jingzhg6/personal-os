@@ -171,3 +171,20 @@ growth plans with tasks created in them, completions, an unlinked 法国旅游�
 | `08-dark-goal-detail.png`     | `/development/goals/[id]` (dark)  | Dark theme                                                                              |
 | `09-empty-state.png`          | `/development/goals/[id]`         | New goal: no plans, no actions, zero evidence                                           |
 | `10-dashboard-regression.png` | `/`                               | M7 dashboard after M9 data: unchanged figures                                           |
+
+## M9.5 — Personal finance (`m9-5/`)
+
+Data made through the app's API only: five institutions (BNP Paribas, 中国银行, 支付宝, Trade
+Republic, 现金), eight accounts in EUR, CNY and USD including a credit card, and six recorded
+dates over five months with typed CNY rates. The USD account has no balance yet.
+
+| File                         | Page                        | Shows                                                                                  |
+| ---------------------------- | --------------------------- | -------------------------------------------------------------------------------------- |
+| `01-overview.png`            | `/finance`                  | Net worth, assets, liabilities, change split (余额 / 汇率), warning, chart, breakdowns |
+| `02-accounts.png`            | `/finance/accounts`         | Institutions with their accounts, locked base currency, latest balance per account     |
+| `03-snapshot-missing-fx.png` | `/finance/snapshot`         | Batch entry: previous values as hints, USD amount without a rate (未换算), totals      |
+| `04-account-history.png`     | `/finance/accounts/[id]`    | CNY account: original amounts, the rate of each date, value in EUR, revision           |
+| `05-empty-state.png`         | `/finance` (new user)       | Empty state with the three first steps                                                 |
+| `06-mobile-overview.png`     | `/finance` (phone)          | iPhone 13, full page                                                                   |
+| `07-mobile-snapshot.png`     | `/finance/snapshot` (phone) | iPhone 13; compact pinned total and save button                                        |
+| `08-dark-overview.png`       | `/finance` (dark)           | Dark theme                                                                             |

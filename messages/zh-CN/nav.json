@@ -5,6 +5,7 @@
     "tasks": "任务",
     "projects": "项目",
     "life": "生活",
+    "finance": "财务",
     "work": "工作",
     "administration": "行政事务",
     "calendar": "日历",
@@ -40,6 +41,8 @@
     "productivity": "效率",
     "learningStats": "学习统计",
     "fitnessStats": "健身统计",
-    "settings": "设置"
+    "settings": "设置",
+    "financeOverview": "资产总览",
+    "financeAccounts": "账户"
   }
 }
