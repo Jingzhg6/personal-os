@@ -92,6 +92,19 @@ async function rootProjectId(
   return result.rows[0]?.project_id ?? null;
 }
 
+/**
+ * Locks the task row for the rest of the transaction. Commands that publish events read the
+ * current state after this, so concurrent requests (double clicks, a drag and a click) are
+ * serialised and a logical change publishes its event once.
+ */
+async function lockTask(db: DbExecutor, userId: string, id: string) {
+  await db
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
+    .for("update");
+}
+
 function assertSchedule(schedule: Pick<Task, "startDate" | "dueDate" | "dueTime">) {
   const error = validateSchedule(schedule);
   if (error) throw new DomainError("invalid", error);
@@ -291,6 +304,7 @@ export function setTaskStatus(
   input: { id: string; statusId: string },
 ): Promise<Task> {
   return db.transaction(async (tx) => {
+    await lockTask(tx, userId, input.id);
     const current = await getTask(tx, userId, input.id);
     const next = await getOwnedStatus(tx, userId, input.statusId);
     if (next.id === current.statusId) return current;
@@ -409,6 +423,7 @@ export function setTaskParent(
 /** Moves the task and all of its subtasks to the Trash (one shared `deleted_at`). */
 export function deleteTask({ db, bus }: TaskDeps, userId: string, id: string): Promise<void> {
   return db.transaction(async (tx) => {
+    await lockTask(tx, userId, id);
     await getTask(tx, userId, id);
     const ids = await subtreeIds(tx, userId, id);
     const deleted = await tx
@@ -427,7 +442,8 @@ async function getTrashed(db: DbExecutor, userId: string, id: string) {
   const [row] = await db
     .select({ id: tasks.id, parentTaskId: tasks.parentTaskId, deletedAt: tasks.deletedAt })
     .from(tasks)
-    .where(and(eq(tasks.id, id), eq(tasks.userId, userId), isNotNull(tasks.deletedAt)));
+    .where(and(eq(tasks.id, id), eq(tasks.userId, userId), isNotNull(tasks.deletedAt)))
+    .for("update");
   if (!row) throw new DomainError("not_found", "task.not_in_trash");
   return row as typeof row & { deletedAt: Date };
 }
@@ -458,9 +474,15 @@ export function restoreTask({ db, bus }: TaskDeps, userId: string, id: string): 
         .from(tasks)
         .where(eq(tasks.id, trashed.parentTaskId));
       if (!parentRow || parentRow.deletedAt) {
+        // Promoted to the top level: it keeps the project of its (deleted) root, as setTaskParent
+        // does for a subtask moved to the top level.
         await tx
           .update(tasks)
-          .set({ parentTaskId: null, sortKey: await lastSiblingKey(tx, userId, null) })
+          .set({
+            parentTaskId: null,
+            projectId: await rootProjectId(tx, userId, id),
+            sortKey: await lastSiblingKey(tx, userId, null),
+          })
           .where(eq(tasks.id, id));
       }
     }

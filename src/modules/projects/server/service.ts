@@ -56,11 +56,13 @@ function toProject(
 
 const milestoneOrder = [sql`${milestones.dueDate} asc nulls last`, asc(milestones.sortKey)];
 
-async function getOwnedRow(db: DbExecutor, userId: string, id: string) {
-  const [row] = await db
+/** `lock` holds the row until the transaction ends, so status changes publish their event once. */
+async function getOwnedRow(db: DbExecutor, userId: string, id: string, lock = false) {
+  const select = db
     .select()
     .from(projects)
     .where(and(eq(projects.id, id), eq(projects.userId, userId)));
+  const [row] = lock ? await select.for("update") : await select;
   if (!row) throw new DomainError("not_found", "project.not_found");
   return row;
 }
@@ -219,7 +221,7 @@ export function updateProject(
   input: UpdateProjectInput,
 ): Promise<Project> {
   return db.transaction(async (tx) => {
-    const current = await getOwnedRow(tx, userId, input.id);
+    const current = await getOwnedRow(tx, userId, input.id, true);
     const patch = input.patch;
     await assertArea(tx, userId, patch.areaId);
     const dateError = validateProjectDates({
@@ -274,11 +276,12 @@ export function listMilestoneMarkers(db: DbExecutor, userId: string): Promise<Mi
     .orderBy(...milestoneOrder);
 }
 
-async function getOwnedMilestone(db: DbExecutor, userId: string, id: string) {
-  const [row] = await db
+async function getOwnedMilestone(db: DbExecutor, userId: string, id: string, lock = false) {
+  const select = db
     .select()
     .from(milestones)
     .where(and(eq(milestones.id, id), eq(milestones.userId, userId)));
+  const [row] = lock ? await select.for("update") : await select;
   if (!row) throw new DomainError("not_found", "milestone.not_found");
   return row;
 }
@@ -320,7 +323,7 @@ export function setMilestoneCompleted(
   input: { id: string; completed: boolean },
 ) {
   return db.transaction(async (tx) => {
-    const current = await getOwnedMilestone(tx, userId, input.id);
+    const current = await getOwnedMilestone(tx, userId, input.id, true);
     if (Boolean(current.completedAt) === input.completed) return current;
     const [row] = await tx
       .update(milestones)

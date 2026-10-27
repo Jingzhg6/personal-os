@@ -33,7 +33,13 @@ function useAreaMutations() {
     create: useMutation(trpc.areas.create.mutationOptions(options)),
     update: useMutation(trpc.areas.update.mutationOptions(options)),
     move: useMutation(trpc.areas.move.mutationOptions(options)),
-    remove: useMutation(trpc.areas.delete.mutationOptions(options)),
+    // Deleting an area clears it on tasks, projects and view scopes: refresh every view.
+    remove: useMutation(
+      trpc.areas.delete.mutationOptions({
+        ...options,
+        onSuccess: () => queryClient.invalidateQueries(),
+      }),
+    ),
   };
 }
 

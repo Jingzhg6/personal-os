@@ -9,6 +9,7 @@ import { useErrorMessage } from "@/shared/ui/use-error-message";
 import type {
   StatusCategory,
   Task,
+  TaskDependency,
   TaskDetail,
   TaskListQuery,
   TaskStatus,
@@ -20,6 +21,11 @@ import type {
  * procedure + input, so a change made anywhere (list, view, search, detail panel, later
  * matrix/Kanban) refreshes every view of the same task.
  */
+
+interface Timeline {
+  tasks: Task[];
+  dependencies: TaskDependency[];
+}
 
 export function useTaskList(query: TaskListQuery, options: { enabled?: boolean } = {}) {
   const trpc = useTRPC();
@@ -97,6 +103,8 @@ export function useTaskActions() {
     queryClient.getQueriesData<Task[]>({ queryKey: trpc.tasks.list.pathKey() });
   const detailQueries = () =>
     queryClient.getQueriesData<TaskDetail>({ queryKey: trpc.tasks.byId.pathKey() });
+  const timelineQueries = () =>
+    queryClient.getQueriesData<Timeline>({ queryKey: trpc.tasks.timeline.pathKey() });
 
   // Project progress is computed from tasks, so task changes refresh project queries too.
   const invalidate = () =>
@@ -114,12 +122,18 @@ export function useTaskActions() {
     await queryClient.cancelQueries(trpc.tasks.pathFilter());
     const lists = listQueries();
     const details = detailQueries();
+    const timelines = timelineQueries();
     for (const [key, tasks] of lists) if (tasks) queryClient.setQueryData(key, changeList(tasks));
     for (const [key, detail] of details)
       if (detail) queryClient.setQueryData(key, changeDetail(detail));
+    // The Gantt chart reads the same tasks, so a moved bar does not jump back while saving.
+    for (const [key, timeline] of timelines)
+      if (timeline)
+        queryClient.setQueryData(key, { ...timeline, tasks: changeList(timeline.tasks) });
     return () => {
       for (const [key, tasks] of lists) queryClient.setQueryData(key, tasks);
       for (const [key, detail] of details) queryClient.setQueryData(key, detail);
+      for (const [key, timeline] of timelines) queryClient.setQueryData(key, timeline);
     };
   }
 
