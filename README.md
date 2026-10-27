@@ -6,14 +6,15 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: M9.5 — Personal finance.** A self-contained 财务 section records balances by hand:
-> institutions and accounts (assets and liabilities, any currency), dated balance snapshots entered
-> in one batch, manually typed exchange rates frozen with each snapshot (a missing rate is shown,
-> never assumed to be 1), net worth with its change split into balance and FX effects, and a history
-> of recorded dates. No bank connections, transactions or XP. `/` is the M7 RPG dashboard,
-> `/development` the development system (M8–M9), `/finance` the finance overview. See
-> [`docs/architecture.md`](docs/architecture.md) and the milestone screenshots in
-> [`docs/screenshots/`](docs/screenshots/README.md).
+> **Status: M10 — Automation engine.** Rules of the form _trigger → conditions → actions_ let
+> the modules work together: e.g. completing an important task creates a follow-up, saving a
+> balance batch sends an in-app notification, a monthly schedule creates a "record balances" task.
+> Rules are typed data (never code), start disabled, run through the owning modules' services, and
+> every execution is recorded; duplicates and loops are prevented by the engine. Scheduled rules
+> need the worker endpoint (`AUTOMATION_WORKER_SECRET`, `pnpm automation:worker`); without it the
+> app says so. `/` is the M7 RPG dashboard, `/development` the development system, `/finance`
+> the finance overview, `/automation` the rules. See [`docs/architecture.md`](docs/architecture.md)
+> and the milestone screenshots in [`docs/screenshots/`](docs/screenshots/README.md).
 
 ## Requirements
 

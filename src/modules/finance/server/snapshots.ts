@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, lt, sql } from "drizzle-orm";
 
 import type { DbExecutor } from "@/shared/db/types";
+import type { EventBus } from "@/shared/events/bus";
 import { DomainError } from "@/shared/lib/errors";
 
 import { financeFxDefaults, financeSnapshots } from "../db";
@@ -144,7 +145,11 @@ export function latestValuationDate(now = new Date()): string {
  * the batch rate, or left unconverted without one. A snapshot that already exists on the date is
  * replaced only when `overwrite` is set (an explicit correction; its revision is bumped).
  */
-export function saveBatch(db: DbExecutor, userId: string, input: SaveBatchInput) {
+export function saveBatch(
+  { db, bus }: { db: DbExecutor; bus: EventBus },
+  userId: string,
+  input: SaveBatchInput,
+) {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`finance:${userId}`}))`);
     if (!isIsoDate(input.valuationDate) || input.valuationDate > latestValuationDate()) {
@@ -182,6 +187,7 @@ export function saveBatch(db: DbExecutor, userId: string, input: SaveBatchInput)
       throw new DomainError("conflict", "finance.snapshot_exists");
     }
 
+    let unconvertedCount = 0;
     for (const entry of input.entries) {
       const account = accountOf.get(entry.accountId)!;
       if (account.archivedAt) throw new DomainError("invalid", "finance.account_archived");
@@ -194,6 +200,7 @@ export function saveBatch(db: DbExecutor, userId: string, input: SaveBatchInput)
         baseCurrency,
         rates.get(account.currencyCode) ?? null,
       );
+      if (valuation.baseAmount === null) unconvertedCount += 1;
       const values = {
         amount: entry.amount.trim(),
         currencyCode: account.currencyCode,
@@ -233,6 +240,19 @@ export function saveBatch(db: DbExecutor, userId: string, input: SaveBatchInput)
           set: { rate: value, updatedAt: new Date() },
         });
     }
+    await bus.publish(
+      {
+        type: "finance.snapshot_saved",
+        userId,
+        payload: {
+          valuationDate: input.valuationDate,
+          entryCount: input.entries.length,
+          unconvertedCount,
+          corrected: existing.length > 0,
+        },
+      },
+      { db: tx },
+    );
     return { saved: input.entries.length, valuationDate: input.valuationDate };
   });
 }

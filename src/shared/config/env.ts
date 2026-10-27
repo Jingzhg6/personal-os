@@ -11,6 +11,11 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((value) => value === "true"),
+  /**
+   * Shared secret of the automation worker (M10). When unset, the tick endpoint is disabled and
+   * scheduled rules are not run automatically (the UI says so).
+   */
+  AUTOMATION_WORKER_SECRET: z.string().min(32).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -7,7 +7,7 @@ export { MatrixView } from "./matrix-view";
 export { KanbanBoard } from "./kanban-board";
 export { GanttChart } from "./gantt-chart";
 export { useTaskPanel } from "./use-task-panel";
-export { useToday } from "./labels";
+export { usePriorityLabel, useStatusLabel, useToday } from "./labels";
 export { TaskPicker } from "./task-picker";
 export { TaskCompletionToggle } from "./status-toggle";
 export { StatusIcon } from "./status-icon";

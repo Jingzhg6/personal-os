@@ -16,6 +16,13 @@ declare module "@/shared/events/types" {
       estimatedMinutes: number | null;
       completedAt: Date;
     };
+    /** A task moved to another status (any category; published besides completed / reopened). */
+    "task.status_changed": {
+      taskId: string;
+      fromStatusId: string;
+      toStatusId: string;
+      toCategory: string;
+    };
     /** A completed task left the "completed" category (reopened or cancelled). */
     "task.reopened": { taskId: string };
     /** A task (and its subtasks, listed in taskIds) moved to the Trash. */

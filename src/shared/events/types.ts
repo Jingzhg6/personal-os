@@ -34,6 +34,16 @@ export interface EventContext {
    * roll back together with the change that caused them.
    */
   db: DbExecutor;
+  /**
+   * Set when the change was made by an automation (M10): how deep in an automation chain it is
+   * and which rules already acted. Absent for a person's own actions.
+   */
+  origin?: EventOrigin;
+}
+
+export interface EventOrigin {
+  depth: number;
+  ruleIds: string[];
 }
 
 export type EventHandler<T extends DomainEventType> = (

@@ -339,6 +339,19 @@ export function setTaskStatus(
       .where(and(eq(tasks.id, current.id), eq(tasks.userId, userId)));
 
     const task = await getTask(tx, userId, current.id);
+    await bus.publish(
+      {
+        type: "task.status_changed",
+        userId,
+        payload: {
+          taskId: task.id,
+          fromStatusId: current.statusId,
+          toStatusId: next.id,
+          toCategory: next.category,
+        },
+      },
+      { db: tx },
+    );
     await publishCompletion(bus, tx, userId, transition.event, task);
     return task;
   });

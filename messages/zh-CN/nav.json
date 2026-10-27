@@ -6,6 +6,7 @@
     "projects": "项目",
     "life": "生活",
     "finance": "财务",
+    "automation": "自动化",
     "work": "工作",
     "administration": "行政事务",
     "calendar": "日历",
@@ -43,6 +44,8 @@
     "fitnessStats": "健身统计",
     "settings": "设置",
     "financeOverview": "资产总览",
-    "financeAccounts": "账户"
+    "financeAccounts": "账户",
+    "automationRules": "规则",
+    "automationNotifications": "通知"
   }
 }

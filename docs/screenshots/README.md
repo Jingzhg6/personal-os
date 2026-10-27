@@ -188,3 +188,23 @@ dates over five months with typed CNY rates. The USD account has no balance yet.
 | `06-mobile-overview.png`     | `/finance` (phone)          | iPhone 13, full page                                                                   |
 | `07-mobile-snapshot.png`     | `/finance/snapshot` (phone) | iPhone 13; compact pinned total and save button                                        |
 | `08-dark-overview.png`       | `/finance` (dark)           | Dark theme                                                                             |
+
+## M10 — Automation engine (`m10/`)
+
+Data made through the app's API only: five rules (follow-up on important tasks, notification after
+a balance batch, a monthly schedule, a disabled goal rule, and a rule whose project was deleted),
+then real task completions (one re-completed), a finance batch and the resulting executions. No
+worker is configured, so the scheduler is reported as not running.
+
+| File                        | Page                         | Shows                                                                              |
+| --------------------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| `01-rules.png`              | `/automation`                | Rules with trigger → actions, switches, last result, next run; runtime status card |
+| `02-rule-builder.png`       | `/automation/new`            | Guided builder: trigger, condition, two actions, summary, saved disabled           |
+| `03-rule-history.png`       | `/automation/[id]`           | Summary and history: successes, condition skips, a duplicate ignored               |
+| `04-failed-execution.png`   | `/automation/[id]`           | Partial failure: action 1 done, action 2 failed (project deleted), not retryable   |
+| `05-schedule-runtime.png`   | `/automation/new` (schedule) | Schedule fields, time zone, DST rule, and the "no worker" warning                  |
+| `06-notifications.png`      | `/automation/notifications`  | In-app notifications from rules, unread                                            |
+| `07-empty-state.png`        | `/automation` (new user)     | Empty state and runtime status                                                     |
+| `08-mobile-rules.png`       | `/automation` (phone)        | iPhone 13, full page                                                               |
+| `09-mobile-rule-detail.png` | `/automation/[id]` (phone)   | iPhone 13, rule detail and history                                                 |
+| `10-dark-rule-detail.png`   | `/automation/[id]` (dark)    | Dark theme                                                                         |

@@ -76,7 +76,7 @@ export const developmentRouter = router({
       .mutation(({ ctx, input }) => updateGoal(ctx.db, ctx.userId, input)),
     setStatus: protectedProcedure
       .input(setGoalStatusInput)
-      .mutation(({ ctx, input }) => setGoalStatus(ctx.db, ctx.userId, input.id, input.status)),
+      .mutation(({ ctx, input }) => setGoalStatus(ctx, ctx.userId, input.id, input.status)),
     delete: protectedProcedure
       .input(goalIdInput)
       .mutation(({ ctx, input }) => deleteGoal(ctx.db, ctx.userId, input.id)),

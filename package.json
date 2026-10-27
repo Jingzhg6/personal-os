@@ -16,6 +16,7 @@
     "test:db": "vitest run --project db",
     "test:e2e": "playwright test --project=setup --project=chromium",
     "i18n:check": "tsx scripts/check-i18n.ts",
+    "automation:worker": "tsx scripts/automation-worker.ts",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",

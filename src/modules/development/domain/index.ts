@@ -1,3 +1,4 @@
+import "./events";
 import { z } from "zod";
 
 import type {

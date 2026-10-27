@@ -1,6 +1,7 @@
 import {
   Gift,
   Activity,
+  Bell,
   AlarmClock,
   Briefcase,
   CalendarClock,
@@ -30,6 +31,7 @@ import {
   Trash2,
   TrendingUp,
   Wallet,
+  Workflow,
   Zap,
 } from "lucide-react";
 
@@ -50,6 +52,7 @@ export type ModuleId =
   | "dashboard"
   | "development"
   | "finance"
+  | "automation"
   | "tasks"
   | "projects"
   | "goals"
@@ -197,6 +200,27 @@ export const navigation: NavSection[] = [
         module: "finance",
         phase: 1,
         milestone: "M9",
+      },
+    ],
+  },
+  {
+    id: "automation",
+    items: [
+      {
+        id: "automationRules",
+        href: "/automation",
+        icon: Workflow,
+        module: "automation",
+        phase: 1,
+        milestone: "M10",
+      },
+      {
+        id: "automationNotifications",
+        href: "/automation/notifications",
+        icon: Bell,
+        module: "automation",
+        phase: 1,
+        milestone: "M10",
       },
     ],
   },

@@ -92,6 +92,13 @@
       "when": 1793125600551,
       "tag": "0012_personal_finance",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793134035253,
+      "tag": "0013_automation",
+      "breakpoints": true
     }
   ]
 }

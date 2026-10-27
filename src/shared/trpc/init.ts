@@ -13,6 +13,11 @@ export interface TrpcContext {
   userId: string | null;
   /** Response headers, so procedures can set cookies. Null for server-side callers. */
   resHeaders: Headers | null;
+  /**
+   * Runs after a successful mutation has committed (M10: processes the user's pending automation
+   * events). Never fails the mutation. Absent in tests and server-side callers.
+   */
+  afterMutation?: (userId: string) => Promise<void>;
 }
 
 const t = initTRPC.context<TrpcContext>().create({
@@ -54,9 +59,18 @@ export const publicProcedure = t.procedure.use(domainErrors);
  * Requires a signed-in user. Every query inside must be scoped by `ctx.userId`;
  * this is the authorization boundary for all user-owned data.
  */
-export const protectedProcedure = publicProcedure.use(({ ctx, next }) => {
+export const protectedProcedure = publicProcedure.use(async ({ ctx, next, type }) => {
   if (!ctx.userId) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
-  return next({ ctx: { ...ctx, userId: ctx.userId } });
+  const result = await next({ ctx: { ...ctx, userId: ctx.userId } });
+  if (type === "mutation" && result.ok && ctx.afterMutation) {
+    try {
+      await ctx.afterMutation(ctx.userId);
+    } catch (error) {
+      // Pending events stay in the outbox and are picked up by the next drain.
+      console.error("afterMutation failed", (error as Error).name);
+    }
+  }
+  return result;
 });

@@ -120,14 +120,17 @@ Server Components ─ getServerApi() ─▶ same routers, no HTTP round trip
 
 Current events:
 
-| Event             | Published by                                                                 | Subscribers today                                                                                                   |
-| ----------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `user.registered` | Better Auth hook                                                             | settings (defaults), areas (seed), tasks (seed statuses), character (seed attributes), rewards (seed level rewards) |
-| `task.created`    | tasks service                                                                | — (XP, analytics later)                                                                                             |
-| `task.completed`  | tasks service, when a task enters the _completed_ category                   | character (Active XP; Growth + Level XP if it has contributions)                                                    |
-| `task.reopened`   | tasks service, when a completed task leaves that category (reopen or cancel) | character (XP reversal)                                                                                             |
-| `task.deleted`    | tasks service, when a task (and its subtree, `taskIds`) moves to the Trash   | — (analytics / XP reversal later)                                                                                   |
-| `task.restored`   | tasks service, when tasks come back from the Trash                           | —                                                                                                                   |
+| Event                    | Published by                                                                 | Subscribers today                                                                                                   |
+| ------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `user.registered`        | Better Auth hook                                                             | settings (defaults), areas (seed), tasks (seed statuses), character (seed attributes), rewards (seed level rewards) |
+| `task.created`           | tasks service                                                                | — (XP, analytics later)                                                                                             |
+| `task.completed`         | tasks service, when a task enters the _completed_ category                   | character (Active XP; Growth + Level XP if it has contributions), automation (capture)                              |
+| `task.reopened`          | tasks service, when a completed task leaves that category (reopen or cancel) | character (XP reversal)                                                                                             |
+| `task.deleted`           | tasks service, when a task (and its subtree, `taskIds`) moves to the Trash   | — (analytics / XP reversal later)                                                                                   |
+| `task.restored`          | tasks service, when tasks come back from the Trash                           | —                                                                                                                   |
+| `task.status_changed`    | tasks service, on every real status change (M10)                             | automation (capture)                                                                                                |
+| `goal.status_changed`    | development service, on every real goal status change (M10)                  | automation (capture)                                                                                                |
+| `finance.snapshot_saved` | finance service, once per saved batch; counts only, no balances (M10)        | automation (capture)                                                                                                |
 
 `task.completed` carries the facts XP rules need (priority, urgent/important flags, area,
 estimate, completion time), so subscribers never have to query the tasks module.
@@ -175,40 +178,46 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 
 ### 5.2 Implemented (M0–M6.2)
 
-| Table                                            | Owner       | Notes                                                                |
-| ------------------------------------------------ | ----------- | -------------------------------------------------------------------- |
-| `users`, `sessions`, `accounts`, `verifications` | shared/auth | Better Auth models                                                   |
-| `user_settings`                                  | settings    | `locale`, `time_zone`, `week_starts_on`                              |
-| `areas`                                          | areas       | system-key pattern; `color`/`icon` ids; `sort_key`                   |
-| `task_statuses`                                  | tasks       | fixed `category`; system-key pattern; unique per user + system key   |
-| `tags`                                           | tasks       | unique per user, case-insensitive (`lower(name)`)                    |
-| `tasks`                                          | tasks       | see below                                                            |
-| `task_tags`                                      | tasks       | composite PK; cascades from both sides                               |
-| `task_views`                                     | tasks       | (M2) area scope of the 工作 / 业务 / 行政任务 / 个人生活 views       |
-| `projects`                                       | projects    | (M4) see below                                                       |
-| `milestones`                                     | projects    | (M4) belong to one project; cascade with it                          |
-| `task_dependencies`                              | tasks       | (M5) finish-to-start edges; see below                                |
-| `development_attributes`                         | character   | (M6.1) user-defined growth directions (法语, 阅读, Python …)         |
-| `xp_attribute_credits`                           | character   | (M6.1) append-only split of a ledger entry across attributes         |
-| `task_development_contributions`                 | tasks       | (M6.1) which attributes a task grows, with weights 1–3               |
-| `xp_ledger`                                      | character   | (M6) append-only XP ledger; see below                                |
-| `rewards`                                        | rewards     | (M6.2) user-defined real-world rewards; value + accepted currencies  |
-| `level_rewards`                                  | rewards     | (M6.2) one reward per level; system-key pattern for seeded ones      |
-| `reward_ledger`                                  | rewards     | (M6.2) append-only spending: redemptions and level-reward claims     |
-| `development_profiles`                           | development | (M8) one row per user: the free-text vision                          |
-| `development_focus`                              | development | (M8) chosen focus attributes, ordered, at most 3                     |
-| `development_goals`                              | development | (M8) goals: status, priority 1–3, target date; see below             |
-| `development_goal_attributes`                    | development | (M8) goal → attributes, weights 1–3                                  |
-| `development_goal_tasks`                         | development | (M8) goal → existing tasks (references)                              |
-| `development_goal_projects`                      | development | (M8) goal → existing projects (references)                           |
-| `development_goal_allocations`                   | development | (M9) share 1–100 % of a linked task's Growth XP per attribute        |
-| `development_plans`                              | development | (M9) growth plans of a goal: status, order                           |
-| `development_plan_tasks`                         | development | (M9) plan → existing tasks (always also linked to the goal)          |
-| `finance_settings`                               | finance     | (M9.5) base currency per user (EUR by default; locked once valued)   |
-| `finance_providers`                              | finance     | (M9.5) institutions: bank, e-wallet, cash, broker, other             |
-| `finance_accounts`                               | finance     | (M9.5) asset / liability accounts, one currency each                 |
-| `finance_snapshots`                              | finance     | (M9.5) dated balance + frozen valuation (rate, base value), revision |
-| `finance_fx_defaults`                            | finance     | (M9.5) last typed rate per currency — pre-fill only                  |
+| Table                                            | Owner       | Notes                                                                 |
+| ------------------------------------------------ | ----------- | --------------------------------------------------------------------- |
+| `users`, `sessions`, `accounts`, `verifications` | shared/auth | Better Auth models                                                    |
+| `user_settings`                                  | settings    | `locale`, `time_zone`, `week_starts_on`                               |
+| `areas`                                          | areas       | system-key pattern; `color`/`icon` ids; `sort_key`                    |
+| `task_statuses`                                  | tasks       | fixed `category`; system-key pattern; unique per user + system key    |
+| `tags`                                           | tasks       | unique per user, case-insensitive (`lower(name)`)                     |
+| `tasks`                                          | tasks       | see below                                                             |
+| `task_tags`                                      | tasks       | composite PK; cascades from both sides                                |
+| `task_views`                                     | tasks       | (M2) area scope of the 工作 / 业务 / 行政任务 / 个人生活 views        |
+| `projects`                                       | projects    | (M4) see below                                                        |
+| `milestones`                                     | projects    | (M4) belong to one project; cascade with it                           |
+| `task_dependencies`                              | tasks       | (M5) finish-to-start edges; see below                                 |
+| `development_attributes`                         | character   | (M6.1) user-defined growth directions (法语, 阅读, Python …)          |
+| `xp_attribute_credits`                           | character   | (M6.1) append-only split of a ledger entry across attributes          |
+| `task_development_contributions`                 | tasks       | (M6.1) which attributes a task grows, with weights 1–3                |
+| `xp_ledger`                                      | character   | (M6) append-only XP ledger; see below                                 |
+| `rewards`                                        | rewards     | (M6.2) user-defined real-world rewards; value + accepted currencies   |
+| `level_rewards`                                  | rewards     | (M6.2) one reward per level; system-key pattern for seeded ones       |
+| `reward_ledger`                                  | rewards     | (M6.2) append-only spending: redemptions and level-reward claims      |
+| `development_profiles`                           | development | (M8) one row per user: the free-text vision                           |
+| `development_focus`                              | development | (M8) chosen focus attributes, ordered, at most 3                      |
+| `development_goals`                              | development | (M8) goals: status, priority 1–3, target date; see below              |
+| `development_goal_attributes`                    | development | (M8) goal → attributes, weights 1–3                                   |
+| `development_goal_tasks`                         | development | (M8) goal → existing tasks (references)                               |
+| `development_goal_projects`                      | development | (M8) goal → existing projects (references)                            |
+| `development_goal_allocations`                   | development | (M9) share 1–100 % of a linked task's Growth XP per attribute         |
+| `development_plans`                              | development | (M9) growth plans of a goal: status, order                            |
+| `development_plan_tasks`                         | development | (M9) plan → existing tasks (always also linked to the goal)           |
+| `finance_settings`                               | finance     | (M9.5) base currency per user (EUR by default; locked once valued)    |
+| `finance_providers`                              | finance     | (M9.5) institutions: bank, e-wallet, cash, broker, other              |
+| `finance_accounts`                               | finance     | (M9.5) asset / liability accounts, one currency each                  |
+| `finance_snapshots`                              | finance     | (M9.5) dated balance + frozen valuation (rate, base value), revision  |
+| `finance_fx_defaults`                            | finance     | (M9.5) last typed rate per currency — pre-fill only                   |
+| `automation_rules`                               | automation  | (M10) typed trigger / conditions / actions JSON, enabled, next run    |
+| `automation_events`                              | automation  | (M10) transactional outbox of automatable events + captured facts     |
+| `automation_executions`                          | automation  | (M10) one per (rule, trigger key): status, results, retries           |
+| `automation_effects`                             | automation  | (M10) one per executed action, written with the effect (at most once) |
+| `automation_notifications`                       | automation  | (M10) minimal in-app notifications (read / unread)                    |
+| `automation_worker_status`                       | automation  | (M10) scheduler heartbeat                                             |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
@@ -374,6 +383,18 @@ point per recorded date, carried balances disclosed, change split into balance /
 Pages: `/finance`, `/finance/accounts`, `/finance/accounts/[id]`, `/finance/snapshot?date=`.
 No XP, no dashboard card, no bank connections.
 
+### 5.2.6 Automation engine (M10, ADR 0020)
+
+Trigger → Conditions → Actions as validated JSON, never code. Automatable events are captured into
+an outbox inside the publisher's transaction (only when an enabled rule exists), then processed
+after commit by the `afterMutation` hook of tRPC mutations (and by the worker), one event per
+transaction under `SKIP LOCKED`. One execution per (rule, trigger key); each action commits with its
+effect record, so retries never duplicate effects. Actions call `createTask` / `updateTask` of the
+tasks module or write the automation's own notifications. Loop guard via event origin (depth,
+rule chain). Schedules (once / daily / weekly / monthly, IANA zone, explicit DST rules, 6 h misfire
+grace) run only through `POST /api/automation/tick` (`AUTOMATION_WORKER_SECRET`) or the manual
+立即检查. Pages: `/automation`, `/automation/new`, `/automation/[id]`, `/automation/notifications`.
+
 ### 5.3 Phase 1 (planned, after M9)
 
 ```
@@ -478,6 +499,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M6.1 Personal development model** ✅: user-defined development attributes, task development contributions (independent of areas), overall XP vs attribute XP (credits), dynamic radar, settings, M6 compatibility.
 - **M9 Growth planning & goal attribution** ✅: growth plans grouping existing tasks, goal-specific Growth XP by explicit allocation (no duplication, 未归属 remainder), goal evidence (actions, attributed XP, last 30 days, unattributed), attribution editor; no XP changes, no AI.
 - **M9.5 Personal finance** ✅: institutions and accounts, assets and liabilities, dated balance snapshots in atomic batches, manual frozen FX (missing never = 1), base currency, net worth with balance / FX split, history of recorded dates, archival keeping history; no bank APIs, no transactions, no XP.
+- **M10 Automation engine** ✅: user-owned typed rules (5 event triggers + schedules), allowlisted conditions and actions through the owning services, transactional outbox, at-most-once effects, duplicate and loop protection, execution history with safe retries, in-app notifications, health view, worker endpoint for schedules; no AI, no external services.
 - **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.
 - **M6 Character & XP** ✅: event → XP rules, append-only idempotent ledger with reversals (incl. new `milestone.reopened`), levels derived from the ledger, attributes credited through areas, radar, XP history, character page.

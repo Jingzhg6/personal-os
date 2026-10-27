@@ -7,6 +7,7 @@ import { tasks, taskStatuses } from "@/modules/tasks/db";
 import type { StatusCategory } from "@/modules/tasks/domain";
 import { createTask, getTask, type TaskDeps } from "@/modules/tasks/server";
 import type { DbExecutor } from "@/shared/db/types";
+import type { EventBus } from "@/shared/events/bus";
 import { DomainError } from "@/shared/lib/errors";
 
 import {
@@ -190,7 +191,7 @@ export function updateGoal(
 
 /** active ⇄ paused, → completed, → archived, and restore (archived → active). */
 export function setGoalStatus(
-  db: DbExecutor,
+  { db, bus }: { db: DbExecutor; bus: EventBus },
   userId: string,
   id: string,
   status: GoalStatus,
@@ -206,6 +207,16 @@ export function setGoalStatus(
       .update(developmentGoals)
       .set({ ...change, updatedAt: new Date() })
       .where(and(eq(developmentGoals.id, id), eq(developmentGoals.userId, userId)));
+    if (row.status !== status) {
+      await bus.publish(
+        {
+          type: "goal.status_changed",
+          userId,
+          payload: { goalId: id, title: row.title, fromStatus: row.status, toStatus: status },
+        },
+        { db: tx },
+      );
+    }
     return getGoal(tx, userId, id);
   });
 }

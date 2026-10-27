@@ -3,6 +3,7 @@ import "server-only";
 import "@/shared/auth/events";
 import { createEventBus, type EventBus } from "@/shared/events/bus";
 import { registerAreasEventHandlers } from "@/modules/areas/server";
+import { registerAutomationEventHandlers } from "@/modules/automation/server";
 import { registerCharacterEventHandlers } from "@/modules/character/server";
 import { registerRewardsEventHandlers } from "@/modules/rewards/server";
 import { registerSettingsEventHandlers } from "@/modules/settings/server";
@@ -20,6 +21,8 @@ export function createAppEventBus(): EventBus {
   // After areas: seeding attributes links them to the seeded areas.
   registerCharacterEventHandlers(bus);
   registerRewardsEventHandlers(bus);
+  // Last: captures automatable events into the outbox after every consistency-critical handler.
+  registerAutomationEventHandlers(bus);
   return bus;
 }
 

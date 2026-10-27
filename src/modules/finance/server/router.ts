@@ -96,7 +96,7 @@ export const financeRouter = router({
       .query(({ ctx, input }) => getBatchDraft(ctx.db, ctx.userId, input.valuationDate)),
     saveBatch: protectedProcedure
       .input(saveBatchInput)
-      .mutation(({ ctx, input }) => saveBatch(ctx.db, ctx.userId, input)),
+      .mutation(({ ctx, input }) => saveBatch(ctx, ctx.userId, input)),
     delete: protectedProcedure
       .input(idInput)
       .mutation(({ ctx, input }) => deleteSnapshot(ctx.db, ctx.userId, input.id)),
