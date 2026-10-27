@@ -64,6 +64,13 @@
       "when": 1793097716522,
       "tag": "0008_drop_area_attributes",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793104983323,
+      "tag": "0009_growth_rpg_rewards",
+      "breakpoints": true
     }
   ]
 }

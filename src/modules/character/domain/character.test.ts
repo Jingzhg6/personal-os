@@ -1,22 +1,96 @@
 import { describe, expect, it } from "vitest";
 
 import { splitByWeight } from "./attributes";
-import { ATTRIBUTE_LEVEL_STEP, fractionalLevel, levelProgress, xpForLevel } from "./levels";
+import {
+  calculateLevelXpFromGrowth,
+  historicLevelXp,
+  LEVEL_XP_PER_GROWTH_XP,
+  REWARD_XP_RATES,
+} from "./economy";
+import {
+  fractionalLevel,
+  getLevelFromLevelXp,
+  getLevelProgress,
+  getXpRequiredForNextLevel,
+  getXpToNextLevel,
+  xpForLevel,
+} from "./levels";
+import { getNextStage, getStage, getStageProgress } from "./stages";
 import { TASK_XP, xpEventTypes, xpRules } from "./rules";
 
-describe("levels", () => {
-  it("derives the level from total XP on one curve", () => {
-    expect([1, 2, 3, 4].map((level) => xpForLevel(level))).toEqual([0, 100, 300, 600]);
-    expect(levelProgress(0)).toMatchObject({ level: 1, xpIntoLevel: 0, xpForNext: 100, ratio: 0 });
-    expect(levelProgress(99).level).toBe(1);
-    expect(levelProgress(100)).toMatchObject({ level: 2, xpIntoLevel: 0, xpForNext: 200 });
-    expect(levelProgress(450)).toMatchObject({ level: 3, xpIntoLevel: 150, xpForNext: 300 });
-    expect(levelProgress(-20)).toMatchObject({ level: 1, xp: 0 });
+describe("level curve", () => {
+  it("raises the cost of each level by 8%", () => {
+    expect([1, 2, 3, 4, 5].map(getXpRequiredForNextLevel)).toEqual([100, 108, 117, 126, 136]);
+    expect([1, 2, 3, 4, 5, 6].map((level) => xpForLevel(level))).toEqual([
+      0, 100, 208, 325, 451, 587,
+    ]);
   });
 
-  it("uses a smaller step for attributes", () => {
-    expect(levelProgress(50, ATTRIBUTE_LEVEL_STEP).level).toBe(2);
-    expect(fractionalLevel(75)).toBeCloseTo(2.25);
+  it("derives the level at exact boundaries", () => {
+    for (const level of [2, 5, 10, 20, 30, 60, 61]) {
+      expect(getLevelFromLevelXp(xpForLevel(level))).toBe(level);
+      expect(getLevelFromLevelXp(xpForLevel(level) - 1)).toBe(level - 1);
+    }
+    expect(getLevelFromLevelXp(0)).toBe(1);
+    expect(getLevelFromLevelXp(-50)).toBe(1);
+  });
+
+  it("reports progress and XP to the next level", () => {
+    expect(getLevelProgress(150)).toMatchObject({
+      level: 2,
+      xp: 150,
+      xpIntoLevel: 50,
+      xpForNext: 108,
+    });
+    expect(getXpToNextLevel(150)).toBe(58);
+    expect(getLevelProgress(0)).toMatchObject({ level: 1, ratio: 0 });
+    expect(fractionalLevel(150)).toBeCloseTo(2 + 50 / 108);
+  });
+});
+
+describe("growth stages", () => {
+  it.each([
+    [1, "starter"],
+    [5, "starter"],
+    [6, "explorer"],
+    [10, "explorer"],
+    [11, "practitioner"],
+    [20, "practitioner"],
+    [21, "refiner"],
+    [30, "refiner"],
+    [31, "shaper"],
+    [41, "outstanding"],
+    [51, "master"],
+    [60, "master"],
+    [61, "legend"],
+    [200, "legend"],
+  ])("level %i is %s", (level, key) => {
+    expect(getStage(level).key).toBe(key);
+  });
+
+  it("knows the next stage and the XP to reach it", () => {
+    const at17 = getStageProgress(xpForLevel(17));
+    expect(at17.stage.key).toBe("practitioner");
+    expect(at17.nextStage?.key).toBe("refiner");
+    expect(at17.xpToNextStage).toBe(xpForLevel(21) - xpForLevel(17));
+    expect(getNextStage(61)).toBeNull();
+    expect(getStageProgress(xpForLevel(61)).xpToNextStage).toBeNull();
+  });
+});
+
+describe("xp economy", () => {
+  it("turns growth into Level XP for current attributes only", () => {
+    expect(calculateLevelXpFromGrowth(20, { systemKey: "french" })).toBe(
+      20 * LEVEL_XP_PER_GROWTH_XP,
+    );
+    expect(calculateLevelXpFromGrowth(20, { systemKey: null })).toBe(20);
+    expect(calculateLevelXpFromGrowth(20, { systemKey: "legacy.work" })).toBe(0);
+    expect(historicLevelXp(15, { systemKey: "reading" })).toBe(15);
+    expect(historicLevelXp(15, { systemKey: "legacy.learning" })).toBe(0);
+  });
+
+  it("prices Level XP at five times Active XP", () => {
+    expect(REWARD_XP_RATES).toEqual({ active: 1, level: 5 });
   });
 });
 

@@ -4,6 +4,7 @@ import "@/shared/auth/events";
 import { createEventBus, type EventBus } from "@/shared/events/bus";
 import { registerAreasEventHandlers } from "@/modules/areas/server";
 import { registerCharacterEventHandlers } from "@/modules/character/server";
+import { registerRewardsEventHandlers } from "@/modules/rewards/server";
 import { registerSettingsEventHandlers } from "@/modules/settings/server";
 import { registerTasksEventHandlers } from "@/modules/tasks/server";
 
@@ -18,6 +19,7 @@ export function createAppEventBus(): EventBus {
   registerTasksEventHandlers(bus);
   // After areas: seeding attributes links them to the seeded areas.
   registerCharacterEventHandlers(bus);
+  registerRewardsEventHandlers(bus);
   return bus;
 }
 

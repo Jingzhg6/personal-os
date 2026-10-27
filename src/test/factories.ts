@@ -14,14 +14,16 @@ export async function createUser(
   return user!;
 }
 
-/** A user with the default areas, task statuses and development attributes, as after registration. */
+/** A user with the default areas, task statuses, development attributes and level rewards, as after registration. */
 export async function createSeededUser(db: DbExecutor) {
   const { seedDefaultAreas } = await import("@/modules/areas/server");
   const { seedDefaultStatuses } = await import("@/modules/tasks/server");
   const { seedDevelopmentAttributes } = await import("@/modules/character/server");
+  const { seedLevelRewards } = await import("@/modules/rewards/server");
   const user = await createUser(db);
   await seedDefaultAreas(db, user.id);
   await seedDefaultStatuses(db, user.id);
   await seedDevelopmentAttributes(db, user.id);
+  await seedLevelRewards(db, user.id);
   return user;
 }

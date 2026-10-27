@@ -1,4 +1,5 @@
 import {
+  Gift,
   Activity,
   AlarmClock,
   Briefcase,
@@ -52,6 +53,7 @@ export type ModuleId =
   | "documents"
   | "calendar"
   | "character"
+  | "rewards"
   | "skills"
   | "analytics"
   | "settings";
@@ -230,6 +232,14 @@ export const navigation: NavSection[] = [
         href: "/character/xp",
         icon: Zap,
         module: "character",
+        phase: 1,
+        milestone: "M6",
+      },
+      {
+        id: "rewards",
+        href: "/rewards",
+        icon: Gift,
+        module: "rewards",
         phase: 1,
         milestone: "M6",
       },

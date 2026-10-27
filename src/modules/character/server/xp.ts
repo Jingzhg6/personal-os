@@ -5,7 +5,14 @@ import type { DbExecutor } from "@/shared/db/types";
 import type { DomainEvent } from "@/shared/events/types";
 
 import { developmentAttributes, xpAttributeCredits, xpLedger } from "../db";
-import { splitByWeight, xpRules, type XpGrant, type XpRule } from "../domain";
+import {
+  calculateLevelXpFromGrowth,
+  historicLevelXp,
+  splitByWeight,
+  xpRules,
+  type XpGrant,
+  type XpRule,
+} from "../domain";
 
 /*
  * The XP engine: turns domain events into ledger entries, in the publisher's transaction.
@@ -66,11 +73,11 @@ async function grant(db: DbExecutor, event: DomainEvent, rule: XpRule, xp: XpGra
   // Only the user's own attributes can be credited (archived ones still count: the task named
   // them when it was completed).
   const ids = xp.contributions.map((c) => c.attributeId);
-  const owned = ids.length
-    ? new Set(
-        (
+  const owned = new Map(
+    ids.length
+      ? (
           await db
-            .select({ id: developmentAttributes.id })
+            .select({ id: developmentAttributes.id, systemKey: developmentAttributes.systemKey })
             .from(developmentAttributes)
             .where(
               and(
@@ -78,9 +85,9 @@ async function grant(db: DbExecutor, event: DomainEvent, rule: XpRule, xp: XpGra
                 inArray(developmentAttributes.id, ids),
               ),
             )
-        ).map((row) => row.id),
-      )
-    : new Set<string>();
+        ).map((row) => [row.id, row] as const)
+      : [],
+  );
   const credits = splitByWeight(
     xp.amount,
     xp.contributions.filter((c) => owned.has(c.attributeId)),
@@ -94,6 +101,8 @@ async function grant(db: DbExecutor, event: DomainEvent, rule: XpRule, xp: XpGra
           ledgerEntryId: entry.id,
           attributeId: credit.attributeId,
           amount: credit.amount,
+          // Level XP is fixed now, at the current rate; later rate changes never rewrite it.
+          levelXp: calculateLevelXpFromGrowth(credit.amount, owned.get(credit.attributeId)!),
           createdAt: event.occurredAt,
         })),
       )
@@ -146,8 +155,14 @@ async function reverse(db: DbExecutor, event: DomainEvent, rule: XpRule, sourceI
 
   // Undo exactly what the grant credited, whatever the task's contributions are now.
   const credits = await db
-    .select({ attributeId: xpAttributeCredits.attributeId, amount: xpAttributeCredits.amount })
+    .select({
+      attributeId: xpAttributeCredits.attributeId,
+      amount: xpAttributeCredits.amount,
+      levelXp: xpAttributeCredits.levelXp,
+      systemKey: developmentAttributes.systemKey,
+    })
     .from(xpAttributeCredits)
+    .innerJoin(developmentAttributes, eq(developmentAttributes.id, xpAttributeCredits.attributeId))
     .where(eq(xpAttributeCredits.ledgerEntryId, open.grant.id));
   if (credits.length > 0) {
     await db
@@ -158,6 +173,7 @@ async function reverse(db: DbExecutor, event: DomainEvent, rule: XpRule, sourceI
           ledgerEntryId: entry.id,
           attributeId: credit.attributeId,
           amount: -credit.amount,
+          levelXp: -(credit.levelXp ?? historicLevelXp(credit.amount, credit)),
           createdAt: event.occurredAt,
         })),
       )

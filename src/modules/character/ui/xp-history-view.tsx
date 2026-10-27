@@ -11,10 +11,10 @@ import { Select } from "@/shared/ui/select";
 import { cn } from "@/shared/lib/cn";
 
 import {
-  ATTRIBUTE_LEVEL_STEP,
-  CHARACTER_LEVEL_STEP,
+  LEVEL_XP_PER_GROWTH_XP,
   MILESTONE_XP,
   PROJECT_XP,
+  REWARD_XP_RATES,
   TASK_XP,
   type XpEntryKind,
 } from "../domain";
@@ -137,10 +137,15 @@ function RulesCard() {
           <li>{t("task", { ...TASK_XP })}</li>
           <li>{t("milestone", { amount: MILESTONE_XP })}</li>
           <li>{t("project", { ...PROJECT_XP })}</li>
-          <li>{t("contributions")}</li>
+          <li>{t("growth")}</li>
+          <li>{t("level", { rate: LEVEL_XP_PER_GROWTH_XP })}</li>
+          <li>{t("curve")}</li>
           <li>{t("reversal")}</li>
           <li>
-            {t("levels", { step: CHARACTER_LEVEL_STEP, attributeStep: ATTRIBUTE_LEVEL_STEP })}
+            {t("spending", {
+              activeRate: REWARD_XP_RATES.active,
+              levelRate: REWARD_XP_RATES.level,
+            })}
           </li>
         </ul>
       </CardContent>

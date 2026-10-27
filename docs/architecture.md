@@ -120,26 +120,24 @@ Server Components ─ getServerApi() ─▶ same routers, no HTTP round trip
 
 Current events:
 
-| Event             | Published by                                                                 | Subscribers today                                        |
-| ----------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `user.registered` | Better Auth hook                                                             | settings (defaults), areas (seed), tasks (seed statuses) |
-| `task.created`    | tasks service                                                                | — (XP, analytics later)                                  |
-| `task.completed`  | tasks service, when a task enters the _completed_ category                   | — (XP in M6)                                             |
-| `task.reopened`   | tasks service, when a completed task leaves that category (reopen or cancel) | — (XP reversal in M6)                                    |
-| `task.deleted`    | tasks service, when a task (and its subtree, `taskIds`) moves to the Trash   | — (analytics / XP reversal later)                        |
-| `task.restored`   | tasks service, when tasks come back from the Trash                           | —                                                        |
+| Event             | Published by                                                                 | Subscribers today                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `user.registered` | Better Auth hook                                                             | settings (defaults), areas (seed), tasks (seed statuses), character (seed attributes), rewards (seed level rewards) |
+| `task.created`    | tasks service                                                                | — (XP, analytics later)                                                                                             |
+| `task.completed`  | tasks service, when a task enters the _completed_ category                   | character (Active XP; Growth + Level XP if it has contributions)                                                    |
+| `task.reopened`   | tasks service, when a completed task leaves that category (reopen or cancel) | character (XP reversal)                                                                                             |
+| `task.deleted`    | tasks service, when a task (and its subtree, `taskIds`) moves to the Trash   | — (analytics / XP reversal later)                                                                                   |
+| `task.restored`   | tasks service, when tasks come back from the Trash                           | —                                                                                                                   |
 
 `task.completed` carries the facts XP rules need (priority, urgent/important flags, area,
 estimate, completion time), so subscribers never have to query the tasks module.
 
 ### 4.5 Internationalisation
 
-- Locales: `zh-CN` (default, source of truth), `en`, `fr`. Configured in `src/shared/i18n/config.ts`.
-- Messages: `messages/<locale>/<namespace>.json`; namespaces are listed in config.
-- Resolution per request (`src/server/i18n/request.ts`): signed-in user's `user_settings.locale`
-  → `NEXT_LOCALE` cookie → `zh-CN`. URLs carry no locale prefix.
-- Missing keys in `en`/`fr` fall back to zh-CN at runtime. CI fails on keys that exist in
-  `en`/`fr` but not in zh-CN, on invalid ICU syntax, and on mismatched placeholders.
+- One locale: `zh-CN` (ADR 0015; EN/FR removed in M6.2). Configured in `src/shared/i18n/config.ts`;
+  `src/server/i18n/request.ts` always serves it. URLs carry no locale prefix.
+- Messages: `messages/zh-CN/<namespace>.json`; namespaces are listed in config. CI fails on
+  empty values and invalid ICU syntax (`pnpm i18n:check`).
 - Types: message keys are type-checked (next-intl `AppConfig` augmentation).
 - Lint: `i18next/no-literal-string` rejects literal JSX text and literal `aria-label`, `title`,
   `placeholder`, `alt`, `label` attributes in `.tsx` files.
@@ -175,25 +173,28 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 - Each module owns its tables in `src/modules/<m>/db`; `src/server/db-schema.ts` aggregates them
   for drizzle-kit and Better Auth.
 
-### 5.2 Implemented (M0–M6.1)
+### 5.2 Implemented (M0–M6.2)
 
-| Table                                            | Owner       | Notes                                                              |
-| ------------------------------------------------ | ----------- | ------------------------------------------------------------------ |
-| `users`, `sessions`, `accounts`, `verifications` | shared/auth | Better Auth models                                                 |
-| `user_settings`                                  | settings    | `locale`, `time_zone`, `week_starts_on`                            |
-| `areas`                                          | areas       | system-key pattern; `color`/`icon` ids; `sort_key`                 |
-| `task_statuses`                                  | tasks       | fixed `category`; system-key pattern; unique per user + system key |
-| `tags`                                           | tasks       | unique per user, case-insensitive (`lower(name)`)                  |
-| `tasks`                                          | tasks       | see below                                                          |
-| `task_tags`                                      | tasks       | composite PK; cascades from both sides                             |
-| `task_views`                                     | tasks       | (M2) area scope of the 工作 / 业务 / 行政任务 / 个人生活 views     |
-| `projects`                                       | projects    | (M4) see below                                                     |
-| `milestones`                                     | projects    | (M4) belong to one project; cascade with it                        |
-| `task_dependencies`                              | tasks       | (M5) finish-to-start edges; see below                              |
-| `development_attributes`                         | character   | (M6.1) user-defined growth directions (法语, 阅读, Python …)       |
-| `xp_attribute_credits`                           | character   | (M6.1) append-only split of a ledger entry across attributes       |
-| `task_development_contributions`                 | tasks       | (M6.1) which attributes a task grows, with weights 1–3             |
-| `xp_ledger`                                      | character   | (M6) append-only XP ledger; see below                              |
+| Table                                            | Owner       | Notes                                                               |
+| ------------------------------------------------ | ----------- | ------------------------------------------------------------------- |
+| `users`, `sessions`, `accounts`, `verifications` | shared/auth | Better Auth models                                                  |
+| `user_settings`                                  | settings    | `locale`, `time_zone`, `week_starts_on`                             |
+| `areas`                                          | areas       | system-key pattern; `color`/`icon` ids; `sort_key`                  |
+| `task_statuses`                                  | tasks       | fixed `category`; system-key pattern; unique per user + system key  |
+| `tags`                                           | tasks       | unique per user, case-insensitive (`lower(name)`)                   |
+| `tasks`                                          | tasks       | see below                                                           |
+| `task_tags`                                      | tasks       | composite PK; cascades from both sides                              |
+| `task_views`                                     | tasks       | (M2) area scope of the 工作 / 业务 / 行政任务 / 个人生活 views      |
+| `projects`                                       | projects    | (M4) see below                                                      |
+| `milestones`                                     | projects    | (M4) belong to one project; cascade with it                         |
+| `task_dependencies`                              | tasks       | (M5) finish-to-start edges; see below                               |
+| `development_attributes`                         | character   | (M6.1) user-defined growth directions (法语, 阅读, Python …)        |
+| `xp_attribute_credits`                           | character   | (M6.1) append-only split of a ledger entry across attributes        |
+| `task_development_contributions`                 | tasks       | (M6.1) which attributes a task grows, with weights 1–3              |
+| `xp_ledger`                                      | character   | (M6) append-only XP ledger; see below                               |
+| `rewards`                                        | rewards     | (M6.2) user-defined real-world rewards; value + accepted currencies |
+| `level_rewards`                                  | rewards     | (M6.2) one reward per level; system-key pattern for seeded ones     |
+| `reward_ledger`                                  | rewards     | (M6.2) append-only spending: redemptions and level-reward claims    |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
@@ -243,6 +244,17 @@ counted twice. Tasks without contributions, projects and milestones earn overall
 and pickers but keeps its XP. The radar shows active attributes with `on_radar`; it stores
 nothing. M6's area-derived attributes survive as archived `legacy.*` attributes with their
 original ids; `xp_ledger.attribute_id` keeps what M6 recorded and is no longer written.
+
+XP economy (M6.2, ADR 0014). Four layers: **Active XP** = sum of `xp_ledger.amount` (every
+completion); **Growth XP** = credits per attribute (only tasks with contributions);
+**Level XP** = `xp_attribute_credits.level_xp` (`calculateLevelXpFromGrowth`, 1:1; NULL on
+pre-M6.2 rows ⇒ 1:1, or 0 for `legacy.*`). The level and growth stage are derived from lifetime
+Level XP only. **Spendable** Active / Level XP = lifetime − what `reward_ledger` spent; spending
+never touches lifetime values or the level. Rewards are priced in purchasing units
+(`REWARD_XP_RATES`: Active 1, Level 5); purchases are computed server-side
+(`calculateRewardPurchase`), in one transaction under a per-user advisory lock, idempotent by
+`(user, idempotency_key)`. Level rewards are free once reached, claimable once, or early for the
+missing Level XP up to the end of the next growth stage.
 
 Rules enforced in the service layer (`src/modules/tasks/server/service.ts`):
 
@@ -388,6 +400,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M4 Projects** ✅: project CRUD and list, project page (任务 / 看板 / 里程碑 / 说明), status Kanban (global and per project), milestones, computed progress, project filter and fields on tasks.
 - **M5 Dependencies & basic Gantt** ✅: finish-to-start dependencies with cycle checks, 前置 / 后续 lists and 受阻 markers, Gantt chart (global and per project) with day / week / month scales, milestones, dependency arrows with date-conflict highlighting, drag / keyboard rescheduling.
 - **M6.1 Personal development model** ✅: user-defined development attributes, task development contributions (independent of areas), overall XP vs attribute XP (credits), dynamic radar, settings, M6 compatibility.
+- **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.
 - **M6 Character & XP** ✅: event → XP rules, append-only idempotent ledger with reversals (incl. new `milestone.reopened`), levels derived from the ledger, attributes credited through areas, radar, XP history, character page.
 - **M7 Dashboard.**
 - **M8 Recurring tasks, settings polish, JSON export, deployment (Dockerfile), E2E sweep, polish.**

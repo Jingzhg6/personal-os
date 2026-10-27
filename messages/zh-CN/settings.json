@@ -1,11 +1,6 @@
 {
   "title": "设置",
   "description": "管理你的偏好设置。",
-  "language": {
-    "title": "界面语言",
-    "description": "切换语言只会改变界面显示，不会修改你创建的任何内容。",
-    "incomplete": "翻译未完成"
-  },
   "theme": {
     "title": "外观",
     "description": "选择浅色、深色，或跟随系统设置。"

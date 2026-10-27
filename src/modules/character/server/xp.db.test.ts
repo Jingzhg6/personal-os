@@ -201,8 +201,8 @@ describe("overall XP vs attribute XP", () => {
     await api.tasks.complete({ id: task.id });
 
     const overview = await api.character.overview();
-    expect(overview.progress.xp).toBe(TASK_XP.base);
-    expect(overview.developmentXp).toBe(0);
+    expect(overview.totals.lifetimeActiveXp).toBe(TASK_XP.base);
+    expect(overview.totals.growthXp).toBe(0);
     expect(overview.attributes.every((a) => a.xp === 0)).toBe(true);
     expect(await credits(user.id)).toHaveLength(0);
   });
@@ -218,7 +218,7 @@ describe("overall XP vs attribute XP", () => {
     await api.tasks.complete({ id: task.id });
     const amount = TASK_XP.base + 2 * TASK_XP.perPriority;
     expect((await attributeXp(api))[attr("cardio")]).toBe(amount);
-    expect((await api.character.overview()).progress.xp).toBe(amount);
+    expect((await api.character.overview()).totals.lifetimeActiveXp).toBe(amount);
   });
 
   it("splits — never duplicates — the overall XP across several attributes", async () => {
@@ -234,15 +234,15 @@ describe("overall XP vs attribute XP", () => {
     await api.tasks.complete({ id: task.id });
 
     const overview = await api.character.overview();
-    expect(overview.progress.xp).toBe(20); // not 20 + 12 + 8
-    expect(overview.developmentXp).toBe(20);
+    expect(overview.totals.lifetimeActiveXp).toBe(20); // not 20 + 12 + 8
+    expect(overview.totals.growthXp).toBe(20);
     const xp = await attributeXp(api);
     expect([xp[attr("french")], xp[attr("reading")]]).toEqual([12, 8]);
     expect(await ledger(user.id)).toHaveLength(1);
 
     const [entry] = (await api.character.history({})).entries;
     expect(entry!.amount).toBe(20);
-    expect(entry!.credits).toEqual([
+    expect(entry!.credits.map(({ attributeId, amount }) => ({ attributeId, amount }))).toEqual([
       { attributeId: attr("french"), amount: 12 },
       { attributeId: attr("reading"), amount: 8 },
     ]);
@@ -268,8 +268,8 @@ describe("overall XP vs attribute XP", () => {
     expect(xp[attr("english")]).toBe(10);
     expect(xp[attr("reading")]).toBe(5);
     const overview = await api.character.overview();
-    expect(overview.progress.xp).toBe(40);
-    expect(overview.developmentXp).toBe(30);
+    expect(overview.totals.lifetimeActiveXp).toBe(40);
+    expect(overview.totals.growthXp).toBe(30);
 
     const french = await api.character.history({ attributeId: attr("french") });
     expect(french.entries.map((e) => e.sourceTitle)).toEqual(["法语阅读", "法语口语"]);
@@ -303,7 +303,7 @@ describe("reversals and idempotency", () => {
     // Completing again uses the current contributions.
     await api.tasks.complete({ id: task.id });
     expect((await attributeXp(api))[attr("english")]).toBe(20);
-    expect((await api.character.overview()).progress.xp).toBe(20);
+    expect((await api.character.overview()).totals.lifetimeActiveXp).toBe(20);
   });
 
   it("treats completed → cancelled as a reversal of overall and attribute XP", async () => {
@@ -317,7 +317,7 @@ describe("reversals and idempotency", () => {
     await api.tasks.complete({ id: task.id });
     await api.tasks.setStatus({ id: task.id, statusId: cancelled.id });
     const overview = await api.character.overview();
-    expect([overview.progress.xp, overview.developmentXp]).toEqual([0, 0]);
+    expect([overview.totals.lifetimeActiveXp, overview.totals.growthXp]).toEqual([0, 0]);
   });
 
   it("is idempotent under duplicate event delivery, credits included", async () => {
@@ -345,7 +345,7 @@ describe("reversals and idempotency", () => {
     await applyXpEvent(db, { ...reopened, id: crypto.randomUUID() });
     expect((await ledger(user.id)).map((r) => r.kind)).toEqual(["grant", "reversal"]);
     expect(await credits(user.id)).toHaveLength(4);
-    expect((await api.character.overview()).developmentXp).toBe(0);
+    expect((await api.character.overview()).totals.growthXp).toBe(0);
   });
 
   it("grants once when a failed attempt is retried", async () => {
@@ -402,7 +402,9 @@ describe("history and the radar source", () => {
     await api.character.attributes.update({ id: attr("english"), patch: { archived: true } });
 
     const [entry] = (await api.character.history({})).entries;
-    expect(entry!.credits).toEqual([{ attributeId: attr("english"), amount: TASK_XP.base }]);
+    expect(entry!.credits.map(({ attributeId, amount }) => ({ attributeId, amount }))).toEqual([
+      { attributeId: attr("english"), amount: TASK_XP.base },
+    ]);
     const english = (await api.character.attributes.list()).find((a) => a.id === attr("english"))!;
     expect(english).toMatchObject({ name: "English", xp: TASK_XP.base });
     expect(english.archivedAt).not.toBeNull();
@@ -415,7 +417,10 @@ describe("history and the radar source", () => {
       "cardio",
     ]);
     // Archived XP still counts towards development XP and the overall total.
-    expect([overview.progress.xp, overview.developmentXp]).toEqual([TASK_XP.base, TASK_XP.base]);
+    expect([overview.totals.lifetimeActiveXp, overview.totals.growthXp]).toEqual([
+      TASK_XP.base,
+      TASK_XP.base,
+    ]);
 
     // Reactivating brings it back with its XP.
     await api.character.attributes.update({ id: attr("english"), patch: { archived: false } });
@@ -497,9 +502,12 @@ describe("M6 compatibility", () => {
       ["reversal", -10, legacy!.id],
     ]);
     expect((await api.character.attributes.list()).find((a) => a.id === legacy!.id)!.xp).toBe(0);
-    expect((await api.character.history({})).entries[0]!.credits).toEqual([
-      { attributeId: legacy!.id, amount: -10 },
-    ]);
+    expect(
+      (await api.character.history({})).entries[0]!.credits.map(({ attributeId, amount }) => ({
+        attributeId,
+        amount,
+      })),
+    ).toEqual([{ attributeId: legacy!.id, amount: -10 }]);
   });
 });
 
@@ -510,12 +518,12 @@ describe("projects and milestones", () => {
     const milestone = await api.projects.milestones.create({ projectId: project.id, name: "M" });
     await api.projects.milestones.setCompleted({ id: milestone.id, completed: true });
     await api.projects.update({ id: project.id, patch: { status: "completed" } });
-    expect((await api.character.overview()).progress.xp).toBe(
+    expect((await api.character.overview()).totals.lifetimeActiveXp).toBe(
       MILESTONE_XP + PROJECT_XP.base + 2 * PROJECT_XP.perPriority,
     );
     await api.projects.milestones.setCompleted({ id: milestone.id, completed: false });
     await api.projects.update({ id: project.id, patch: { status: "active" } });
-    expect((await api.character.overview()).progress.xp).toBe(0);
+    expect((await api.character.overview()).totals.lifetimeActiveXp).toBe(0);
     expect(await credits(user.id)).toHaveLength(0);
   });
 });
@@ -562,7 +570,7 @@ describe("ledger integrity and ownership", () => {
     await expect(b.api.character.attributes.delete({ id: french })).rejects.toMatchObject(notFound);
     expect((await b.api.character.attributes.list()).some((x) => x.id === french)).toBe(false);
     expect((await b.api.character.history({ attributeId: french })).entries).toEqual([]);
-    expect((await b.api.character.overview()).progress.xp).toBe(0);
+    expect((await b.api.character.overview()).totals.lifetimeActiveXp).toBe(0);
 
     const list = await a.api.character.attributes.list();
     expect(list.find((x) => x.id === french)).toMatchObject({ name: null, xp: TASK_XP.base });

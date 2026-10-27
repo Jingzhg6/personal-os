@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
-import { LanguageSettings } from "@/modules/settings/ui";
-import { getServerApi } from "@/server/trpc/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { ThemeSelector } from "@/shell/theme-toggle";
 
@@ -13,20 +11,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SettingsPage() {
   const t = await getTranslations("settings");
-  const settings = await (await getServerApi()).settings.get();
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("language.title")}</CardTitle>
-          <CardDescription>{t("language.description")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LanguageSettings current={settings.locale} />
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle>{t("theme.title")}</CardTitle>

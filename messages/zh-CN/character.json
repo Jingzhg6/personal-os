@@ -1,13 +1,18 @@
 {
   "overview": {
-    "description": "完成任务会获得经验值；只有标注了「成长贡献」的任务，才会让对应的成长能力成长。",
-    "level": "等级 {level}",
-    "totalXp": "累计经验",
-    "developmentXp": "其中 {xp} XP 计入成长能力",
+    "description": "行动经验记录你做了多少事；成长经验记录哪些能力在成长；升级经验决定角色等级。",
+    "levelLabel": "角色等级",
+    "level": "Lv {level}",
+    "lifetimeLevelXp": "累计升级经验",
     "progressLabel": "升级进度：{current} / {needed} XP",
-    "toNext": "再获得 {xp} XP 升到 {level} 级",
+    "toNext": "距离 Lv {level} 还需 {xp} XP",
+    "stageRange": "Lv {start}–{end}",
+    "stageRangeOpen": "Lv {start}+",
+    "toNextStage": "距离「{stage}」还需 {xp} XP",
+    "lastStage": "已到达最高成长阶段",
     "counts": "获得 {grants} 次 · 撤销 {reversals} 次",
-    "viewHistory": "查看全部记录"
+    "viewHistory": "查看全部记录",
+    "toRewards": "去奖励商店"
   },
   "attributes": {
     "title": "成长能力",
@@ -43,7 +48,7 @@
     "emptyReversals": "没有撤销记录。"
   },
   "history": {
-    "description": "每一笔经验都来自一次完成或撤销。记录只增不改：撤销会新增一笔负数记录。",
+    "description": "每一笔经验都来自一次完成或撤销，记录只增不改：撤销会新增一笔负数记录。奖励消费不在这里，见奖励页的兑换记录。",
     "filter": "类型",
     "kinds": {
       "all": "全部",
@@ -60,7 +65,9 @@
     "untitled": "（无标题）",
     "openSource": "打开「{title}」",
     "credits": "计入成长能力",
-    "overallOnly": "仅计入总经验"
+    "overallOnly": "仅行动经验",
+    "active": "行动 {xp}",
+    "levelXp": "升级 {xp}"
   },
   "reasons": {
     "task": {
@@ -84,12 +91,14 @@
   "rules": {
     "title": "经验规则",
     "description": "规则统一定义：无论在列表、矩阵、看板、甘特图还是项目页完成，结果都一样。",
-    "task": "完成任务：{base} XP，优先级每高一级 +{perPriority}，标为重要 +{important}；子任务 {subtask} XP",
-    "project": "完成项目：{base} XP，优先级每高一级 +{perPriority}",
-    "milestone": "完成里程碑：{amount} XP",
-    "reversal": "重新打开或取消已完成的事项，会撤销当次获得的经验。删除、恢复不影响经验：经验记录的是你曾经完成过。",
-    "levels": "升级：从 n 级升到 n+1 级需要 n × {step} XP；属性每级需要 n × {attributeStep} XP。",
-    "contributions": "经验先按上述规则计算一次（总经验）；任务标注了成长贡献时，这份经验按权重（主要 3 · 一般 2 · 少量 1）分配给对应的成长能力，不会重复计算。没有成长贡献的任务只计入总经验。"
+    "task": "完成任务：{base} 行动经验，优先级每高一级 +{perPriority}，标为重要 +{important}；子任务 {subtask}",
+    "milestone": "完成里程碑：{amount} 行动经验",
+    "project": "完成项目：{base} 行动经验，优先级每高一级 +{perPriority}",
+    "growth": "有成长贡献的任务：这份行动经验同时按权重（主要 3 · 一般 2 · 少量 1）分配为各成长能力的成长经验，不会重复计算。没有成长贡献的任务只得到行动经验。",
+    "level": "成长经验按 1 : {rate} 转换为升级经验；只有成长才会让角色升级。",
+    "curve": "升级：从 Lv n 到 Lv n+1 需要 round(100 × 1.08^(n−1)) 升级经验（100、108、117、126…）。成长能力的等级使用同一曲线。",
+    "reversal": "重新打开或取消已完成的事项，会撤销当次获得的三种经验。删除、恢复不影响经验：经验记录的是你曾经完成过。",
+    "spending": "奖励商店中 1 升级经验 = {levelRate} 个购买力单位，1 行动经验 = {activeRate} 个；消费只减少可用值，不减少累计值和等级。"
   },
   "settings": {
     "title": "成长能力设置",
@@ -117,5 +126,33 @@
     "noArchived": "没有停用的成长能力。",
     "xp": "{xp} XP",
     "back": "返回角色"
+  },
+  "currencies": {
+    "lifetime": "累计",
+    "spendable": "可用",
+    "active": {
+      "title": "行动经验",
+      "hint": "我做了多少事情。每完成一件事都会获得；可在奖励商店消费，消费不影响累计值。"
+    },
+    "level": {
+      "title": "升级经验",
+      "hint": "角色成长到了什么程度。只来自成长经验；累计值决定等级，可用值可兑换奖励，消费永远不会降低等级。"
+    },
+    "growth": {
+      "title": "成长经验",
+      "hint": "哪些能力真正获得了成长。按任务的成长贡献分配给成长能力，不能消费。",
+      "total": "成长能力合计",
+      "legacy": "另有 {xp} XP 为 M6 旧属性的历史经验：保留可查，不计入等级。"
+    }
+  },
+  "stages": {
+    "starter": "启程者",
+    "explorer": "探索者",
+    "practitioner": "实践者",
+    "refiner": "精进者",
+    "shaper": "塑造者",
+    "outstanding": "卓越者",
+    "master": "大师",
+    "legend": "传奇"
   }
 }

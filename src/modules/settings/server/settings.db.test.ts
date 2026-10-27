@@ -28,24 +28,24 @@ describe("settings repository", () => {
 
   it("upserts partial updates", async () => {
     const user = await createUser(db);
-    await updateUserSettings(db, user.id, { locale: "fr" });
+    await updateUserSettings(db, user.id, { weekStartsOn: 0 });
     const updated = await updateUserSettings(db, user.id, { timeZone: "Europe/Paris" });
-    expect(updated).toEqual({ locale: "fr", timeZone: "Europe/Paris", weekStartsOn: 1 });
+    expect(updated).toEqual({ locale: "zh-CN", timeZone: "Europe/Paris", weekStartsOn: 0 });
   });
 
   it("ensureUserSettings is idempotent and never overwrites existing values", async () => {
     const user = await createUser(db);
-    await updateUserSettings(db, user.id, { locale: "en" });
+    await updateUserSettings(db, user.id, { timeZone: "Asia/Shanghai" });
     await ensureUserSettings(db, user.id);
     await ensureUserSettings(db, user.id);
-    expect((await getUserSettings(db, user.id)).locale).toBe("en");
+    expect((await getUserSettings(db, user.id)).timeZone).toBe("Asia/Shanghai");
   });
 
   it("isolates users from each other", async () => {
     const a = await createUser(db);
     const b = await createUser(db);
-    await updateUserSettings(db, a.id, { locale: "fr" });
-    expect((await getUserSettings(db, b.id)).locale).toBe("zh-CN");
+    await updateUserSettings(db, a.id, { timeZone: "Europe/Paris" });
+    expect((await getUserSettings(db, b.id)).timeZone).toBeNull();
   });
 });
 
@@ -94,16 +94,15 @@ describe("settings router", () => {
     await expect(caller.get()).rejects.toBeInstanceOf(TRPCError);
   });
 
-  it("updates the locale and sets the locale cookie", async () => {
+  it("updates settings; the locale stays zh-CN and no locale cookie is set", async () => {
     const user = await createUser(db);
     const resHeaders = new Headers();
     const caller = createCaller({ db, bus: createEventBus(), userId: user.id, resHeaders });
 
-    const settings = await caller.update({ locale: "en" });
+    const settings = await caller.update({ timeZone: "Europe/Paris" });
 
-    expect(settings.locale).toBe("en");
-    expect(resHeaders.get("set-cookie")).toContain("NEXT_LOCALE=en");
-    expect((await caller.get()).locale).toBe("en");
+    expect(settings).toMatchObject({ locale: "zh-CN", timeZone: "Europe/Paris" });
+    expect(resHeaders.get("set-cookie")).toBeNull();
   });
 
   it("validates input", async () => {

@@ -3,15 +3,16 @@
 A personal operating system: tasks, projects, calendar, learning, fitness and an RPG-style
 character, built on one shared data model — **capture once, use everywhere**.
 
-The UI is in Simplified Chinese (简体中文) by default; English and French are supported
-through the same translation system.
+The UI is in Simplified Chinese (简体中文) only; every string still goes through the
+translation catalogue (`messages/zh-CN`).
 
-> **Status: M6.1 — Personal development model.** On top of M0–M6: areas organise life,
-> user-defined development attributes (法语, 阅读, 有氧 …) describe growth. A task names the
-> attributes it develops; its XP (counted once in the append-only ledger) is split across them.
-> Other modules show a “即将推出” placeholder until their milestone. See
-> [`docs/architecture.md`](docs/architecture.md) and the milestone screenshots in
-> [`docs/screenshots/`](docs/screenshots/README.md).
+> **Status: M6.2 — Growth RPG & real-world rewards.** On top of M0–M6.1: every completion
+> earns **Active XP**; tasks that develop an attribute also earn **Growth XP**, which converts to
+> **Level XP** — the only thing that raises the character's level and growth stage (启程者 →
+> 传奇). Spendable Active / Level XP buys user-defined real-world rewards at `/rewards` (mixed
+> payment, level rewards, early claims); spending never lowers the level. Other modules show a
+> “即将推出” placeholder until their milestone. See [`docs/architecture.md`](docs/architecture.md)
+> and the milestone screenshots in [`docs/screenshots/`](docs/screenshots/README.md).
 
 ## Requirements
 
@@ -80,7 +81,7 @@ First time running E2E tests on a new machine: `pnpm exec playwright install chr
 ```
 docs/                 architecture.md and decision records
 drizzle/              generated SQL migrations (committed)
-messages/<locale>/    translation catalogues; zh-CN is the source of truth
+messages/zh-CN/       translation catalogue (the only UI language)
 src/app/              Next.js routes only
 src/shell/            app chrome: sidebar, navigation config, auth screens, providers
 src/server/           composition root: auth, tRPC root router, event-bus wiring, i18n request config

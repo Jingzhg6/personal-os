@@ -91,3 +91,24 @@ development attributes (two admin tasks earn overall XP only).
 | `07-character-dark.png`                 | `/character` (dark)           | Dark theme, desktop                                                                       |
 | `08-mobile-character.png`               | `/character` (phone)          | Phone layout                                                                              |
 | `09-mobile-task-contributions-dark.png` | `/tasks?task=…` (phone, dark) | Phone, dark: task detail with contributions (due time now wraps below the date)           |
+
+## M6.2 — Growth RPG & real-world rewards (`m6-2/`)
+
+Data made through the app's API only: a custom "Python" attribute, 110 growth tasks (with
+development contributions) interleaved with ordinary tasks (Active XP only), six rewards, a few
+redemptions, Lv 5 and Lv 10 level rewards claimed and a Lv 15 reward added. Result: Lv 17 实践者,
+lifetime Level XP 3,300, Active XP 3,900, Growth XP 2,717.
+
+| File                       | Page                    | Shows                                                                                         |
+| -------------------------- | ----------------------- | --------------------------------------------------------------------------------------------- |
+| `01-character-level.png`   | `/character`            | Level 17, growth stage 实践者 (Lv 11–20), lifetime Level XP, progress, distance to next stage |
+| `02-action-vs-growth.png`  | `/character/xp`         | Every entry earns 行动 XP; growth tasks add attribute credits and 升级 XP                     |
+| `03-level-xp-balance.png`  | `/character` (element)  | Active / Level XP each with 累计 vs 可用, Growth XP total                                     |
+| `04-growth-attributes.png` | `/character` (scrolled) | Radar and 成长能力 list with per-attribute levels                                             |
+| `05-level-reward.png`      | `/rewards?tab=level`    | Level rewards: 已领取, 免费领取 (reached), 提前领取 (846 XP), locked beyond the next stage    |
+| `06-early-claim.png`       | `/rewards?tab=level`    | Early-claim confirmation: cost = missing Level XP; lifetime and level unchanged               |
+| `07-reward-store.png`      | `/rewards`              | Reward store: value, real cost, Active vs Level price, Active-only and one-time rewards       |
+| `08-mixed-payment.png`     | `/rewards`              | Redeem dialog, custom split 300 Active + 40 Level, live preview of balances after             |
+| `09-reward-history.png`    | `/rewards?tab=history`  | Redemptions, early claim and free level rewards; spendable reduced, lifetime unchanged        |
+| `10-mobile-rewards.png`    | `/rewards` (phone)      | Phone layout: balances, tabs, reward cards                                                    |
+| `11-dark-character.png`    | `/character` (dark)     | Dark theme, desktop                                                                           |

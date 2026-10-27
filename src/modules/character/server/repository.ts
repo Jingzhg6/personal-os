@@ -3,10 +3,12 @@ import { alias } from "drizzle-orm/pg-core";
 
 import type { DbExecutor } from "@/shared/db/types";
 
-import { xpAttributeCredits, xpLedger } from "../db";
+import { developmentAttributes, xpAttributeCredits, xpLedger } from "../db";
 import {
-  ATTRIBUTE_LEVEL_STEP,
-  levelProgress,
+  getLevelProgress,
+  getStageProgress,
+  isLegacyAttribute,
+  type XpTotals,
   type CharacterOverview,
   type XpEntry,
   type XpEntryKind,
@@ -16,8 +18,13 @@ import {
 import { listAttributes } from "./attributes";
 
 /*
- * Read side. Every number shown on the character page is aggregated from the ledger here.
+ * Read side. Every number shown on the character page is aggregated from the ledger and its
+ * credits here; nothing is stored as a counter.
  */
+
+const isLegacySql = sql`${developmentAttributes.systemKey} like 'legacy.%'`;
+/** Stored Level XP, or `historicLevelXp` for credits recorded before M6.2 (see economy.ts). */
+const creditLevelXpSql = sql`coalesce(${xpAttributeCredits.levelXp}, case when ${isLegacySql} then 0 else ${xpAttributeCredits.amount} end)`;
 
 const reversal = alias(xpLedger, "reversal");
 
@@ -41,49 +48,83 @@ async function loadEntries(
           entryId: xpAttributeCredits.ledgerEntryId,
           attributeId: xpAttributeCredits.attributeId,
           amount: xpAttributeCredits.amount,
+          levelXp: sql<number>`${creditLevelXpSql}::int`,
         })
         .from(xpAttributeCredits)
+        .innerJoin(
+          developmentAttributes,
+          eq(developmentAttributes.id, xpAttributeCredits.attributeId),
+        )
         .where(inArray(xpAttributeCredits.ledgerEntryId, ids))
     : [];
   const creditsOf = new Map<string, XpEntry["credits"]>();
-  for (const { entryId, attributeId, amount } of creditRows) {
-    creditsOf.set(entryId, [...(creditsOf.get(entryId) ?? []), { attributeId, amount }]);
+  for (const { entryId, attributeId, amount, levelXp } of creditRows) {
+    creditsOf.set(entryId, [...(creditsOf.get(entryId) ?? []), { attributeId, amount, levelXp }]);
   }
 
-  return rows.map(({ entry, reversedBy }) => ({
-    id: entry.id,
-    kind: entry.kind as XpEntryKind,
-    amount: entry.amount,
-    ruleKey: entry.ruleKey,
-    sourceEventId: entry.sourceEventId,
-    sourceEventType: entry.sourceEventType,
-    sourceType: entry.sourceType as XpSourceType,
-    sourceId: entry.sourceId,
-    sourceTitle: entry.sourceTitle,
-    credits: (creditsOf.get(entry.id) ?? []).sort(
+  return rows.map(({ entry, reversedBy }) => {
+    const credits = (creditsOf.get(entry.id) ?? []).sort(
       (a, b) => Math.abs(b.amount) - Math.abs(a.amount),
-    ),
-    reversalOf: entry.reversalOf,
-    reversed: reversedBy !== null,
-    createdAt: entry.createdAt,
-  }));
+    );
+    return {
+      id: entry.id,
+      kind: entry.kind as XpEntryKind,
+      amount: entry.amount,
+      levelXp: credits.reduce((sum, credit) => sum + credit.levelXp, 0),
+      ruleKey: entry.ruleKey,
+      sourceEventId: entry.sourceEventId,
+      sourceEventType: entry.sourceEventType,
+      sourceType: entry.sourceType as XpSourceType,
+      sourceId: entry.sourceId,
+      sourceTitle: entry.sourceTitle,
+      credits: (creditsOf.get(entry.id) ?? []).sort(
+        (a, b) => Math.abs(b.amount) - Math.abs(a.amount),
+      ),
+      reversalOf: entry.reversalOf,
+      reversed: reversedBy !== null,
+      createdAt: entry.createdAt,
+    };
+  });
 }
 
-/** Total XP: the sum of the ledger, never a stored counter. */
-export async function totalXp(db: DbExecutor, userId: string): Promise<number> {
-  const [row] = await db
-    .select({ total: sql<number>`coalesce(sum(${xpLedger.amount}), 0)::int` })
-    .from(xpLedger)
-    .where(eq(xpLedger.userId, userId));
-  return row?.total ?? 0;
+/**
+ * Lifetime totals of the three XP kinds. Active XP sums the ledger; Growth and Level XP sum the
+ * credits. Reversals are corrections and count negatively; spending (rewards module) is not part
+ * of these figures at all.
+ */
+export async function getXpTotals(db: DbExecutor, userId: string): Promise<XpTotals> {
+  const [[active], [credits]] = await Promise.all([
+    db
+      .select({ xp: sql<number>`coalesce(sum(${xpLedger.amount}), 0)::int` })
+      .from(xpLedger)
+      .where(eq(xpLedger.userId, userId)),
+    db
+      .select({
+        growth: sql<number>`coalesce(sum(${xpAttributeCredits.amount}) filter (where not ${isLegacySql}), 0)::int`,
+        legacy: sql<number>`coalesce(sum(${xpAttributeCredits.amount}) filter (where ${isLegacySql}), 0)::int`,
+        level: sql<number>`coalesce(sum(${creditLevelXpSql}), 0)::int`,
+      })
+      .from(xpAttributeCredits)
+      .innerJoin(
+        developmentAttributes,
+        eq(developmentAttributes.id, xpAttributeCredits.attributeId),
+      )
+      .where(eq(xpAttributeCredits.userId, userId)),
+  ]);
+  return {
+    lifetimeActiveXp: active?.xp ?? 0,
+    growthXp: credits?.growth ?? 0,
+    legacyGrowthXp: credits?.legacy ?? 0,
+    lifetimeLevelXp: credits?.level ?? 0,
+  };
 }
 
 export async function getOverview(db: DbExecutor, userId: string): Promise<CharacterOverview> {
-  const [attributes, totals, recentGrants, recentReversals] = await Promise.all([
+  const [attributes, totals, counts, recentGrants, recentReversals] = await Promise.all([
     listAttributes(db, userId),
+    getXpTotals(db, userId),
     db
       .select({
-        total: sql<number>`coalesce(sum(${xpLedger.amount}), 0)::int`,
         grants: sql<number>`(count(*) filter (where ${xpLedger.kind} = 'grant'))::int`,
         reversals: sql<number>`(count(*) filter (where ${xpLedger.kind} = 'reversal'))::int`,
       })
@@ -92,18 +133,15 @@ export async function getOverview(db: DbExecutor, userId: string): Promise<Chara
     loadEntries(db, userId, eq(xpLedger.kind, "grant"), 6),
     loadEntries(db, userId, eq(xpLedger.kind, "reversal"), 4),
   ]);
-  const total = totals[0]!;
   return {
-    progress: levelProgress(total.total),
-    developmentXp: attributes.reduce((sum, a) => sum + a.xp, 0),
-    grantCount: total.grants,
-    reversalCount: total.reversals,
+    totals,
+    level: getLevelProgress(totals.lifetimeLevelXp),
+    stage: getStageProgress(totals.lifetimeLevelXp),
+    grantCount: counts[0]?.grants ?? 0,
+    reversalCount: counts[0]?.reversals ?? 0,
     attributes: attributes
-      .filter((attribute) => !attribute.archivedAt)
-      .map((attribute) => ({
-        ...attribute,
-        progress: levelProgress(attribute.xp, ATTRIBUTE_LEVEL_STEP),
-      })),
+      .filter((attribute) => !attribute.archivedAt && !isLegacyAttribute(attribute))
+      .map((attribute) => ({ ...attribute, progress: getLevelProgress(attribute.xp) })),
     recentGrants,
     recentReversals,
   };

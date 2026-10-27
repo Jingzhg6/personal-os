@@ -42,5 +42,27 @@
     "archived": "这个成长能力已停用，不能再添加到任务。",
     "has_xp": "这个成长能力已有经验记录，不能删除，可以停用。",
     "name_required": "请填写成长能力的名称。"
+  },
+  "reward": {
+    "not_found": "奖励不存在。",
+    "not_payable": "奖励至少要接受一种经验支付。",
+    "has_history": "这个奖励已有兑换记录，不能删除，可以停用。",
+    "disabled": "这个奖励已停用。",
+    "sold_out": "这个奖励的兑换次数已用完。",
+    "insufficient": "可用经验不足，无法兑换。",
+    "insufficient_active": "可用行动经验不足。",
+    "insufficient_level": "可用升级经验不足。",
+    "not_enough_value": "支付的购买力不足奖励价值。",
+    "overpay": "支付超过了奖励价值，请减少支付数量。",
+    "currency_not_accepted": "这个奖励不接受该种经验。",
+    "idempotency_mismatch": "重复的兑换请求与原请求不一致，请刷新后重试。"
+  },
+  "level_reward": {
+    "not_found": "等级奖励不存在。",
+    "level_taken": "这个等级已经设置了奖励。",
+    "already_claimed": "这个等级奖励已经领取过了。",
+    "too_far": "只能提前领取到下一个成长阶段结束为止的等级奖励。",
+    "insufficient_level": "可用升级经验不足，无法提前领取。",
+    "name_required": "请填写奖励名称。"
   }
 }

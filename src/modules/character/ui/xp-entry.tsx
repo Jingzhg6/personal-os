@@ -10,6 +10,8 @@ import { ColorDot } from "@/shared/ui/color";
 import type { DevelopmentAttribute, XpEntry, XpSourceType } from "../domain";
 import { sourceHref, useAttributeLabel } from "./use-character";
 
+const signed = (xp: number) => (xp > 0 ? `+${xp}` : `${xp}`);
+
 const DATE_TIME = { dateStyle: "medium", timeStyle: "short" } as const;
 
 const sourceIcons: Record<XpSourceType, typeof CheckCircle2> = {
@@ -89,6 +91,11 @@ export function XpEntryRow({
               ) : null;
             })
           )}
+          {entry.levelXp !== 0 ? (
+            <span className="text-primary tabular-nums" data-testid="xp-level">
+              {t("history.levelXp", { xp: signed(entry.levelXp) })}
+            </span>
+          ) : null}
           <time dateTime={entry.createdAt.toISOString()} className="tabular-nums">
             {format.dateTime(entry.createdAt, DATE_TIME)}
           </time>
@@ -104,7 +111,7 @@ export function XpEntryRow({
           entry.reversed && "text-muted-foreground line-through",
         )}
       >
-        {reversal ? `${entry.amount}` : `+${entry.amount}`}
+        {t("history.active", { xp: signed(entry.amount) })}
       </span>
     </li>
   );

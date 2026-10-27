@@ -1,37 +1,17 @@
-export const locales = ["zh-CN", "en", "fr"] as const;
+/**
+ * The UI is Simplified Chinese only. The next-intl infrastructure stays (every user-facing string
+ * is a key in messages/zh-CN, enforced by lint), but there is one locale and no language switch.
+ */
+export const locales = ["zh-CN"] as const;
 
 export type Locale = (typeof locales)[number];
 
-/** Source language: every key must exist here first. */
 export const defaultLocale: Locale = "zh-CN";
-
-/** Cookie remembering the language for signed-out pages (login, register). */
-export const LOCALE_COOKIE = "NEXT_LOCALE";
 
 /** Used until the user's own timezone is known. */
 export const defaultTimeZone = "UTC";
 
-/**
- * Language names are written in their own language (endonyms), so they are
- * intentionally not translated.
- */
-export const localeEndonyms: Record<Locale, string> = {
-  "zh-CN": "简体中文",
-  en: "English",
-  fr: "Français",
-};
-
-/**
- * zh-CN is maintained with every feature. Other locales are structurally supported and
- * fall back to zh-CN for any missing key until they are fully translated.
- */
-export const localeStatus: Record<Locale, "complete" | "partial"> = {
-  "zh-CN": "complete",
-  en: "partial",
-  fr: "partial",
-};
-
-/** Translation namespaces. One JSON file per namespace per locale in /messages. */
+/** Translation namespaces. One JSON file per namespace in /messages/zh-CN. */
 export const namespaces = [
   "common",
   "nav",
@@ -44,6 +24,7 @@ export const namespaces = [
   "tasks",
   "projects",
   "character",
+  "rewards",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

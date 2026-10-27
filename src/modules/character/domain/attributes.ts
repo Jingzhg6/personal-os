@@ -46,7 +46,7 @@ export interface DevelopmentAttribute {
   xp: number;
 }
 
-export const isLegacyAttribute = (attribute: Pick<DevelopmentAttribute, "systemKey">) =>
+export const isLegacyAttribute = (attribute: { systemKey: string | null }) =>
   attribute.systemKey?.startsWith("legacy.") ?? false;
 
 const attributeName = z.string().trim().min(1).max(40);

@@ -119,7 +119,13 @@ export const xpAttributeCredits = pgTable(
     attributeId: uuid("attribute_id")
       .notNull()
       .references(() => developmentAttributes.id, { onDelete: "restrict" }),
+    /** Growth XP credited to the attribute (signed). */
     amount: integer("amount").notNull(),
+    /**
+     * Level XP produced by this growth, fixed when earned (M6.2). NULL on credits recorded before
+     * M6.2: their Level XP follows `historicLevelXp` (1:1, legacy attributes 0).
+     */
+    levelXp: integer("level_xp"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

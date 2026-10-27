@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 import type { DevelopmentAttribute } from "./attributes";
+import type { XpTotals } from "./economy";
 import type { LevelProgress } from "./levels";
+import type { StageProgress } from "./stages";
 import type { XpSourceType } from "./rules";
 
 export type XpEntryKind = "grant" | "reversal";
@@ -10,16 +12,18 @@ export type XpEntryKind = "grant" | "reversal";
 export interface XpEntry {
   id: string;
   kind: XpEntryKind;
-  /** Positive for grants, negative for reversals. */
+  /** Active XP: positive for grants, negative for reversals. */
   amount: number;
+  /** Level XP produced by this entry's growth (0 when it has none). */
+  levelXp: number;
   ruleKey: string;
   sourceEventId: string;
   sourceEventType: string;
   sourceType: XpSourceType;
   sourceId: string;
   sourceTitle: string | null;
-  /** How this entry's XP was split across development attributes (may be empty). */
-  credits: { attributeId: string; amount: number }[];
+  /** Growth XP: how this entry's XP was split across development attributes (may be empty). */
+  credits: { attributeId: string; amount: number; levelXp: number }[];
   /** The grant this entry cancels (reversals only). */
   reversalOf: string | null;
   /** Grants only: a later reversal cancelled it. */
@@ -32,13 +36,13 @@ export interface AttributeValue extends DevelopmentAttribute {
 }
 
 export interface CharacterOverview {
-  /** Overall XP and level: every completion counts once. */
-  progress: LevelProgress;
-  /** Part of the overall XP credited to development attributes (archived ones included). */
-  developmentXp: number;
+  totals: XpTotals;
+  /** Character level from lifetime Level XP. */
+  level: LevelProgress;
+  stage: StageProgress;
   grantCount: number;
   reversalCount: number;
-  /** Active development attributes, in the user's order. */
+  /** Active, non-legacy development attributes, in the user's order. */
   attributes: AttributeValue[];
   recentGrants: XpEntry[];
   recentReversals: XpEntry[];
