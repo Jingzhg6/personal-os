@@ -109,6 +109,10 @@ export async function getHealth(
     .select({ n: count(), oldest: min(automationEvents.createdAt) })
     .from(automationEvents)
     .where(and(eq(automationEvents.userId, userId), eq(automationEvents.status, "pending")));
+  const [failedEvents] = await db
+    .select({ n: count() })
+    .from(automationEvents)
+    .where(and(eq(automationEvents.userId, userId), eq(automationEvents.status, "failed")));
   const [processed] = await db
     .select({ last: max(automationEvents.processedAt) })
     .from(automationEvents)
@@ -122,7 +126,11 @@ export async function getHealth(
     eq(automationRules.triggerType, "schedule"),
     eq(automationRules.enabled, true),
   );
-  const [scheduled] = await db.select({ n: count() }).from(automationRules).where(scheduleFilter);
+  // Only schedules that will run again (a finished one-time schedule has no next run).
+  const [scheduled] = await db
+    .select({ n: count() })
+    .from(automationRules)
+    .where(and(scheduleFilter, isNotNull(automationRules.nextRunAt)));
   const [due] = await db
     .select({ n: count() })
     .from(automationRules)
@@ -155,6 +163,7 @@ export async function getHealth(
   return {
     events: {
       pending: pending?.n ?? 0,
+      failed: failedEvents?.n ?? 0,
       oldestPendingAt: pending?.oldest ?? null,
       lastProcessedAt: processed?.last ?? null,
     },

@@ -1,6 +1,6 @@
 # 0020 — Automation engine: typed rules, transactional outbox, at-most-once effects
 
-Status: Accepted (M10). Builds on ADR 0011 (events published under row locks) and 0012 (XP ledger).
+Status: Accepted (M10; corrected after the M10.1 audit, see §11). Builds on ADR 0011 (events published under row locks) and 0012 (XP ledger).
 
 ## 1. Scope
 
@@ -66,11 +66,15 @@ tasks comes only from completing them through the normal flow.
 1. A capture subscriber (`automation.capture`, registered last on the bus) runs inside the
    publisher's transaction. If the user has an enabled rule for the event type, it writes the event
    and its **facts** (ids, titles, counts — the state at that moment) to `automation_events`, in a
-   savepoint: a capture failure is logged (without payload) and never undoes the user's change.
+   savepoint — including the rule lookup (M10.1). A capture failure is logged (event type and
+   error name only) and never undoes the user's change; **that event is then lost** for automation
+   (capture is best-effort by design: the person's change always wins).
 2. After a tRPC mutation commits, `afterMutation` drains the user's pending events. Each event is
    processed in its own transaction holding its row lock (`FOR UPDATE SKIP LOCKED`); concurrent
-   drains never take the same event. An engine error leaves the event pending (retried by the next
-   drain) and fails it after 5 attempts.
+   drains never take the same event. An engine error rolls the whole event transaction back
+   (executions, effects, tasks, notifications) and leaves the event pending for the next drain;
+   after 5 attempts it is marked `failed` and shown in the health view (M10.1). If the database
+   itself fails before an event is claimed, the drain stops and nothing is blamed (M10.1).
 3. The worker tick drains everyone's pending events too.
 
 Rules enabled (or edited) after an event occurred never see it.
@@ -81,13 +85,21 @@ Rules enabled (or edited) after an event occurred never see it.
   occurrence — redelivery, two drains, a re-completed task — increments `duplicates` instead of
   running again.
 - Each action runs in a savepoint together with its row in `automation_effects`
-  (primary key `(execution, action index)`). The effect and the proof that it happened commit
-  together, so an action's effect happens **at most once**, across retries and workers. Since all
-  actions are database writes in the same transaction, this is effectively exactly-once for
-  committed executions; we do not claim exactly-once delivery in general.
+  (primary key `(execution, action index)`). Every action is a write to the same PostgreSQL
+  database (tasks, notifications) — there is no external side effect — so the effect, its effect
+  record, the execution row and the outbox status commit in **one transaction** or not at all.
+  Verified guarantees (tests): a crash or error before commit leaves no task, no effect and no
+  execution, and the event is processed again later; once committed, an action's effect is never
+  repeated by redelivery, concurrent drains / ticks or retries. Net result: **each action takes
+  effect at most once; when processing eventually succeeds, exactly once.** Delivery is
+  at-least-once until commit; a capture failure (§4) loses the event, and an event that fails 5
+  times is not processed (visible as failed).
 - Actions stop at the first failure; later ones are `not_run`. Status is `succeeded`, `partial`
-  (some ran) or `failed`. Business-rule refusals (a deleted project, a foreign area) are
-  **permanent** and not retryable; other errors are **transient** and may be retried manually.
+  (some ran) or `failed`. Business-rule refusals (a deleted project, a foreign area), task input
+  that fails the tasks module's own schema (`automation.invalid_task`, e.g. a template rendering
+  an empty or over-long title) and PostgreSQL data / integrity errors (SQLSTATE 22xxx / 23xxx,
+  `automation.invalid_data`) are **permanent** and not retryable; other errors (timeouts,
+  serialization failures, lost connections) are **transient** and may be retried manually.
 - A retry reuses the same execution (same key), the configuration snapshot taken when it started
   and the captured facts, and only runs actions without an effect. At most 3 retries; disabled
   rules cannot be retried.
@@ -114,6 +126,24 @@ Scheduled rules store `next_run_at`. They run only when something calls `tickSch
   a heartbeat; the health view calls the scheduler operational only with a heartbeat < 5 min old.
 - 立即检查 (manual path) runs the signed-in user's due schedules and pending events, without a
   heartbeat.
+
+Each due rule is processed in its own transaction under `FOR UPDATE SKIP LOCKED`; overlapping
+ticks never take the same rule, and the unique (rule, occurrence) key makes a repeated occurrence
+a counted duplicate. A rule whose processing fails is logged, counted in the tick summary
+(`failed`), stays due for the next tick and does not block the other rules (M10.1). A stored
+schedule that no longer parses is recorded as `skipped: invalid_config` and taken off the
+schedule (M10.1). A healthy heartbeat means ticks are arriving, not that every action succeeded:
+failures are shown separately.
+
+Operating the worker (verified with a production build and the real worker process):
+
+| Item                       | Requirement                                                                                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `AUTOMATION_WORKER_SECRET` | Set in the **app's** environment, at least 32 characters (shorter values make env validation fail). Generate with `openssl rand -hex 24`.                                                                          |
+| Worker process             | `APP_URL=<app url> AUTOMATION_WORKER_SECRET=<same secret> pnpm automation:worker` — ticks immediately, then every `AUTOMATION_TICK_MS` (default 60000). Keep it running (systemd, a process manager, a container). |
+| Or external cron           | `* * * * * curl -fsS -X POST -H "Authorization: Bearer $SECRET" https://<app>/api/automation/tick`                                                                                                                 |
+| Responses                  | 200 `{ok, executed, missed, failed, events, failedEvents}`; 401 wrong / missing secret; 503 secret not configured; 500 `tick_failed` (no heartbeat written).                                                       |
+| Timeliness                 | An occurrence runs at the first tick after it is due (≤ one interval late).                                                                                                                                        |
 
 Next.js has no reliable in-process timer in production, so nothing pretends otherwise.
 
@@ -145,3 +175,19 @@ Visual workflow canvas, arbitrary expressions, RRULE, OR / nested conditions, nu
 conditions (no stable event carries such values yet), status-changing actions, push / e-mail
 notifications, webhooks, replay of past events, multi-worker distribution beyond row locks,
 automation of finance values.
+
+## 11. M10.1 audit corrections
+
+Confirmed defects fixed within this design (each has a regression test):
+
+1. A failure before an event was claimed was blamed on the previous, already processed event
+   (reset to pending), and a database outage made the drain loop forever.
+2. One failing scheduled rule aborted the whole tick, blocked all later rules and prevented the
+   heartbeat; a schedule with unreadable stored configuration was dropped silently.
+3. The capture's rule lookup ran outside its savepoint, so its failure undid the person's change.
+4. Actions called the task service without the tasks module's input schema, so a template could
+   produce an empty title (rejected only by a DB check) or a title over 500 characters (stored).
+5. Database data / integrity errors were classified as transient and offered for retry.
+6. Events that failed permanently were invisible in the health view.
+7. Finished one-time schedules were counted as active, and enabled schedules were not marked as
+   waiting for a worker in the rule list and detail.

@@ -599,6 +599,7 @@ describe("schedules", () => {
     expect(await tickSchedules({ db, bus }, { now: new Date(due.getTime() - 60_000) })).toEqual({
       executed: 0,
       missed: 0,
+      failed: 0,
     });
     const now = new Date(due.getTime() + 30_000);
     await Promise.all([
@@ -772,5 +773,228 @@ describe("integrity", () => {
       unconvertedCount: 1,
       corrected: false,
     });
+  });
+});
+
+/* ---------------------------------------------------------------- M10.1 audit regressions */
+
+describe("M10.1 audit", () => {
+  const within = <T>(promise: Promise<T>, ms = 10_000) =>
+    Promise.race([
+      promise,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timed out")), ms)),
+    ]);
+
+  it("D1: a failure before claiming an event neither blames the previous event nor loops forever", async () => {
+    const { api, user } = await setup();
+    await rule(api, followUp);
+    for (const title of ["一", "二"]) {
+      const task = await api.tasks.create({ title });
+      await api.tasks.complete({ id: task.id });
+    }
+    let calls = 0;
+    const flaky = Object.create(db) as typeof db;
+    flaky.transaction = ((fn: Parameters<typeof db.transaction>[0]) =>
+      calls++ === 0
+        ? db.transaction(fn)
+        : Promise.reject(new Error("connection lost"))) as typeof db.transaction;
+    const result = await within(drainEvents({ db: flaky, bus }, { userId: user.id }));
+    expect(result.processed).toBe(1);
+    const events = await db.select().from(automationEvents).orderBy(automationEvents.createdAt);
+    expect(events.map((e) => [e.status, e.attempts])).toEqual([
+      ["processed", 1],
+      ["pending", 0],
+    ]);
+    // The database stays down: the drain gives up instead of spinning.
+    const down = Object.create(db) as typeof db;
+    down.transaction = (() => Promise.reject(new Error("down"))) as typeof db.transaction;
+    await expect(
+      within(drainEvents({ db: down, bus }, { userId: user.id })),
+    ).resolves.toMatchObject({
+      processed: 0,
+    });
+    // Back up: the remaining event is processed once.
+    await drainEvents({ db, bus }, { userId: user.id });
+    expect((await titled(user.id, "跟进：二")).length).toBe(1);
+  });
+
+  it("D2: one failing scheduled rule does not block the others, and the tick still reports", async () => {
+    const { api } = await setup();
+    const make = (name: string) =>
+      rule(api, {
+        name,
+        trigger: { type: "schedule", schedule: { kind: "daily", time: "09:00" } },
+        timeZone: "Europe/Paris",
+        actions: [{ type: "notify", title: name }],
+      });
+    const broken = await make("坏的");
+    const good = await make("好的");
+    const due = new Date("2026-10-28T08:00:00Z");
+    await db
+      .update(automationRules)
+      .set({ nextRunAt: new Date(due.getTime() - 60_000) })
+      .where(eq(automationRules.id, broken.id));
+    await db.update(automationRules).set({ nextRunAt: due }).where(eq(automationRules.id, good.id));
+    // A database error while processing the first rule (e.g. a constraint or a lost lock).
+    await db.execute(
+      sql.raw(`
+      create function automation_poison() returns trigger language plpgsql as $$
+      begin
+        if new.rule_id = '${broken.id}' then raise exception 'poison'; end if;
+        return new;
+      end $$;
+      create trigger automation_poison before insert on automation_executions
+        for each row execute function automation_poison();
+    `),
+    );
+    try {
+      const summary = await workerTick({ db, bus }, new Date(due.getTime() + 30_000));
+      expect(summary).toMatchObject({ executed: 1, failed: 1 });
+    } finally {
+      await db.execute(sql`drop trigger automation_poison on automation_executions`);
+      await db.execute(sql`drop function automation_poison()`);
+    }
+    expect((await api.automation.notifications.list()).items.map((n) => n.title)).toEqual(["好的"]);
+    expect((await db.select().from(automationWorkerStatus))[0]?.lastTickAt).toBeInstanceOf(Date);
+    // The failed rule stays due and runs on the next tick.
+    const [still] = await db
+      .select()
+      .from(automationRules)
+      .where(eq(automationRules.id, broken.id));
+    expect(still!.nextRunAt?.toISOString()).toBe(new Date(due.getTime() - 60_000).toISOString());
+    await workerTick({ db, bus }, new Date(due.getTime() + 90_000));
+    expect((await api.automation.notifications.list()).items.map((n) => n.title).sort()).toEqual([
+      "坏的",
+      "好的",
+    ]);
+  });
+
+  it("D2b: a scheduled rule with invalid stored configuration is recorded, not silently dropped", async () => {
+    const { api } = await setup();
+    const created = await rule(api, {
+      name: "配置损坏",
+      trigger: { type: "schedule", schedule: { kind: "daily", time: "09:00" } },
+      timeZone: "Europe/Paris",
+      actions: [{ type: "notify", title: "x" }],
+    });
+    const due = new Date("2026-10-28T08:00:00Z");
+    await db
+      .update(automationRules)
+      .set({ nextRunAt: due, timeZone: "Mars/Olympus" })
+      .where(eq(automationRules.id, created.id));
+    await tickSchedules({ db, bus }, { now: new Date(due.getTime() + 30_000) });
+    const [execution] = await executionsOf(created.id);
+    expect(execution).toMatchObject({ status: "skipped", skipReason: "invalid_config" });
+  });
+
+  it("D3: an outbox failure while checking rules never undoes the person's change", async () => {
+    const { api, user } = await setup();
+    await rule(api, followUp);
+    await db.execute(
+      sql`alter table automation_rules rename column trigger_type to trigger_type_x`,
+    );
+    try {
+      const task = await api.tasks.create({ title: "照常完成 2" });
+      await api.tasks.complete({ id: task.id });
+      const [row] = await titled(user.id, "照常完成 2");
+      expect(row!.completedAt).not.toBeNull();
+    } finally {
+      await db.execute(
+        sql`alter table automation_rules rename column trigger_type_x to trigger_type`,
+      );
+    }
+  });
+
+  it("D4 + D5: automated tasks pass the task module's input validation; such failures are permanent", async () => {
+    const { api, user, drain } = await setup();
+    const created = await rule(api, {
+      name: "坏模板",
+      trigger: { type: "task.completed" },
+      actions: [{ type: "create_task", title: "{goal}" }],
+    });
+    const long = await rule(api, {
+      name: "太长",
+      trigger: { type: "task.completed" },
+      actions: [{ type: "create_task", title: "{task}{task}{task}" }],
+    });
+    const task = await api.tasks.create({ title: "长".repeat(200) });
+    await api.tasks.complete({ id: task.id });
+    await drain();
+    for (const id of [created.id, long.id]) {
+      const [execution] = await executionsOf(id);
+      expect(execution).toMatchObject({
+        status: "failed",
+        errorCode: "automation.invalid_task",
+        retryable: false,
+      });
+    }
+    const all = await db
+      .select({ title: tasks.title })
+      .from(tasks)
+      .where(eq(tasks.userId, user.id));
+    expect(all).toHaveLength(1);
+  });
+
+  it("D6: events that failed permanently are visible in the health view", async () => {
+    const { api, user } = await setup();
+    await rule(api, followUp);
+    const task = await api.tasks.create({ title: "x" });
+    await api.tasks.complete({ id: task.id });
+    await db
+      .update(automationEvents)
+      .set({ status: "failed", attempts: 5 })
+      .where(eq(automationEvents.userId, user.id));
+    const health = await api.automation.health();
+    expect(health.events).toMatchObject({ pending: 0, failed: 1 });
+  });
+
+  it("D7: a finished one-time schedule is not counted as an active schedule", async () => {
+    const { api } = await setup();
+    const at = new Date(Date.now() + 3_600_000);
+    const once = await rule(api, {
+      name: "一次",
+      trigger: {
+        type: "schedule",
+        schedule: {
+          kind: "once",
+          date: at.toISOString().slice(0, 10),
+          time: at.toISOString().slice(11, 16),
+        },
+      },
+      timeZone: "UTC",
+      actions: [{ type: "notify", title: "x" }],
+    });
+    expect((await api.automation.health()).scheduler.scheduledRules).toBe(1);
+    await tickSchedules({ db, bus }, { now: new Date(at.getTime() + 60_000) });
+    expect((await api.automation.rules.byId({ id: once.id })).nextRunAt).toBeNull();
+    expect((await api.automation.health()).scheduler.scheduledRules).toBe(0);
+  });
+
+  it("at most once across a crash between the action and the end of processing", async () => {
+    const { api, user, drain } = await setup();
+    await rule(api, followUp);
+    const task = await api.tasks.create({ title: "崩溃" });
+    await api.tasks.complete({ id: task.id });
+    // The final outbox update fails: the whole event transaction (task, effect, execution) rolls back.
+    await db.execute(
+      sql`alter table automation_events add constraint crash check (status <> 'processed') not valid`,
+    );
+    try {
+      await drain();
+    } finally {
+      await db.execute(sql`alter table automation_events drop constraint crash`);
+    }
+    expect(await titled(user.id, "跟进：崩溃")).toEqual([]);
+    expect(await db.select().from(automationEffects)).toEqual([]);
+    expect(await db.select().from(automationExecutions)).toEqual([]);
+    const [event] = await db.select().from(automationEvents);
+    expect(event).toMatchObject({
+      status: "pending",
+      attempts: 1,
+      lastError: "automation.invalid_data",
+    });
+    await drain();
+    expect(await titled(user.id, "跟进：崩溃")).toHaveLength(1);
+    expect(await db.select().from(automationEffects)).toHaveLength(1);
   });
 });

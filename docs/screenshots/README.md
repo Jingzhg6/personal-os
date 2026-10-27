@@ -191,6 +191,9 @@ dates over five months with typed CNY rates. The USD account has no balance yet.
 
 ## M10 — Automation engine (`m10/`)
 
+Re-captured in M10.1 (rule list, detail and health card changed: "等待后台 worker" badge,
+finished one-time schedules, failed-event count).
+
 Data made through the app's API only: five rules (follow-up on important tasks, notification after
 a balance batch, a monthly schedule, a disabled goal rule, and a rule whose project was deleted),
 then real task completions (one re-completed), a finance batch and the resulting executions. No

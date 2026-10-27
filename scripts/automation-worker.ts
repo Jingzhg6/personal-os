@@ -30,5 +30,6 @@ async function tick() {
   }
 }
 
-await tick();
+// No top-level await: tsx runs this file as CommonJS (M10.1 fix).
+void tick();
 setInterval(tick, intervalMs);

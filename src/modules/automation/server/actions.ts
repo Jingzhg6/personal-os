@@ -1,5 +1,5 @@
 import { createTask, updateTask } from "@/modules/tasks/server";
-import type { RichTextDoc } from "@/modules/tasks/domain";
+import { createTaskInput, type CreateTaskInput, type RichTextDoc } from "@/modules/tasks/domain";
 import type { DbExecutor } from "@/shared/db/types";
 import type { EventBus } from "@/shared/events/bus";
 import { DomainError } from "@/shared/lib/errors";
@@ -56,6 +56,16 @@ function followUpPlace(facts: Facts) {
   throw new DomainError("invalid", "automation.action_not_applicable");
 }
 
+/**
+ * The tasks module validates input in its router; automation calls the service directly, so it
+ * applies the same schema first (rendered templates may be empty or too long).
+ */
+function validTask(input: CreateTaskInput): CreateTaskInput {
+  const parsed = createTaskInput.safeParse(input);
+  if (!parsed.success) throw new DomainError("invalid", "automation.invalid_task");
+  return parsed.data;
+}
+
 export async function runAction(ctx: ActionContext, action: Action): Promise<ActionEffect> {
   const deps = { db: ctx.db, bus: ctx.bus };
   const render = (template: string) => renderTemplate(template, ctx.facts, ctx.localDate);
@@ -64,25 +74,33 @@ export async function runAction(ctx: ActionContext, action: Action): Promise<Act
   switch (action.type) {
     case "create_task": {
       // Always the default (unstarted) status: automation never creates completed tasks.
-      const task = await createTask(deps, ctx.userId, {
-        title: render(action.title),
-        description: textDoc(action.description && render(action.description)),
-        areaId: action.areaId,
-        projectId: action.projectId,
-        priority: action.priority,
-        dueDate: due(action.dueInDays),
-      });
+      const task = await createTask(
+        deps,
+        ctx.userId,
+        validTask({
+          title: render(action.title),
+          description: textDoc(action.description && render(action.description)),
+          areaId: action.areaId,
+          projectId: action.projectId,
+          priority: action.priority,
+          dueDate: due(action.dueInDays),
+        }),
+      );
       return { entityType: "task", entityId: task.id };
     }
     case "create_follow_up_task": {
       const place = followUpPlace(ctx.facts);
-      const task = await createTask(deps, ctx.userId, {
-        title: render(action.title),
-        description: textDoc(action.description && render(action.description)),
-        ...place,
-        priority: action.priority,
-        dueDate: due(action.dueInDays),
-      });
+      const task = await createTask(
+        deps,
+        ctx.userId,
+        validTask({
+          title: render(action.title),
+          description: textDoc(action.description && render(action.description)),
+          ...place,
+          priority: action.priority,
+          dueDate: due(action.dueInDays),
+        }),
+      );
       return { entityType: "task", entityId: task.id };
     }
     case "set_task_priority": {

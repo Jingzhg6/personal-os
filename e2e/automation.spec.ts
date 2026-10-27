@@ -238,7 +238,14 @@ test("10 — schedules state their runtime requirement; the manual path runs due
   });
   await mutate(page, "automation.rules.setEnabled", { id: rule.id, enabled: true });
   await page.goto("/automation");
-  await expect(page.getByTestId("health-scheduler")).toContainText("1 条已启用的计划规则");
+  await expect(page.getByTestId("health-scheduler")).toContainText("1 条计划规则等待下次运行");
+  // Enabled, but honestly marked as not running on its own.
+  await expect(ruleRow(page, "一次性提醒").getByTestId("rule-awaiting-worker")).toHaveText(
+    "等待后台 worker：不会自动运行",
+  );
+  await page.goto(`/automation/${rule.id}`);
+  await expect(page.getByTestId("rule-awaiting-worker")).toContainText("不会自动执行");
+  await page.goto("/automation");
   // Nothing runs on its own (no worker); once due, the manual check runs it exactly once.
   await page.waitForTimeout(Math.max(0, at.getTime() - Date.now()) + 2_000);
   await page.reload();
@@ -247,6 +254,9 @@ test("10 — schedules state their runtime requirement; the manual path runs due
   await expect(page.getByText("已执行 1 个计划")).toBeVisible();
   await page.getByTestId("health-run-due").click();
   await expect(page.getByText("已执行 0 个计划")).toBeVisible();
+  await expect(ruleRow(page, "一次性提醒")).toContainText("一次性计划已执行完毕");
+  await expect(ruleRow(page, "一次性提醒").getByTestId("rule-awaiting-worker")).toHaveCount(0);
+  await expect(page.getByTestId("health-scheduler")).toContainText("0 条计划规则等待下次运行");
   await page.goto("/automation/notifications");
   await expect(
     page.getByTestId("notification").filter({ hasText: "计划提醒：记录本月余额" }),

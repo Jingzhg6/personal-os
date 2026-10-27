@@ -404,6 +404,11 @@ export function classifyError(error: unknown): { code: string; retryable: boolea
   if (typeof domainCode === "string" && typeof kind === "string") {
     return { code: domainCode, retryable: false };
   }
+  // PostgreSQL data (22xxx) and integrity (23xxx) errors fail again on retry: permanent.
+  const sqlState = (error as { cause?: { code?: unknown } } | null)?.cause?.code ?? domainCode;
+  if (typeof sqlState === "string" && /^2[23][0-9A-Z]{3}$/.test(sqlState)) {
+    return { code: "automation.invalid_data", retryable: false };
+  }
   return { code: "automation.transient", retryable: true };
 }
 
@@ -466,7 +471,13 @@ export interface AutomationNotification {
 
 export interface AutomationHealth {
   /** Events are processed right after each change in the app; pending ones are retried. */
-  events: { pending: number; oldestPendingAt: Date | null; lastProcessedAt: Date | null };
+  events: {
+    pending: number;
+    /** Gave up after repeated engine errors (not processed). */
+    failed: number;
+    oldestPendingAt: Date | null;
+    lastProcessedAt: Date | null;
+  };
   /** The scheduler needs an external worker calling the tick endpoint. */
   scheduler: {
     configured: boolean;

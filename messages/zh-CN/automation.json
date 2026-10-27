@@ -17,7 +17,9 @@
     "nextRun": "下次计划：{time}",
     "invalid": "配置无效，不会执行",
     "showArchived": "已归档的规则（{count}）",
-    "open": "查看「{name}」"
+    "open": "查看「{name}」",
+    "awaitingWorker": "等待后台 worker：不会自动运行",
+    "scheduleFinished": "一次性计划已执行完毕"
   },
   "status": {
     "running": "执行中",
@@ -189,7 +191,8 @@
     "archiveBody": "归档会停用规则并保留全部执行记录。",
     "created": "创建于 {time}",
     "notFound": "这条规则不存在。",
-    "invalidConfig": "保存的配置无法识别，规则不会执行。请重新编辑或归档。"
+    "invalidConfig": "保存的配置无法识别，规则不会执行。请重新编辑或归档。",
+    "awaitingWorker": "后台 worker 未运行：这条计划规则已启用，但不会自动执行。可在自动化页面使用「立即检查」手动处理到期的计划。"
   },
   "history": {
     "title": "执行记录",
@@ -215,7 +218,9 @@
   "errors": {
     "automation": {
       "transient": "临时错误，可以重试",
-      "action_not_applicable": "这个动作不适用于该触发器"
+      "action_not_applicable": "这个动作不适用于该触发器",
+      "invalid_task": "生成的任务不符合任务规则（例如标题为空或过长），请修改模板",
+      "invalid_data": "数据不符合要求，重试不会成功"
     },
     "project": {
       "not_found": "项目不存在或已删除"
@@ -245,13 +250,14 @@
     "schedulerStale": "后台 worker 未在运行（最近一次：{time}）",
     "schedulerNever": "后台 worker 从未运行",
     "schedulerOk": "运行中（最近一次：{time}）",
-    "scheduledRules": "{count} 条已启用的计划规则，{due} 条已到期",
+    "scheduledRules": "{count} 条计划规则等待下次运行，{due} 条已到期",
     "runDue": "立即检查",
     "runDueHint": "手动处理你到期的计划和待处理事件。",
     "ranDue": "已执行 {executed} 个计划，处理 {events} 个事件",
     "failures": "最近的失败",
     "noFailures": "没有失败的执行。",
-    "lastSuccess": "最近一次成功：{time}"
+    "lastSuccess": "最近一次成功：{time}",
+    "eventsFailed": "{count} 个事件多次处理失败，已停止重试"
   },
   "notifications": {
     "title": "通知",

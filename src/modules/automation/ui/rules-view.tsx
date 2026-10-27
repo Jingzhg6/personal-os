@@ -14,7 +14,7 @@ import type { AutomationRule } from "../domain";
 import { HealthCard } from "./health-card";
 import { ExecutionBadge } from "./status-badge";
 import { useDateTime, useRuleSummary } from "./summary";
-import { useAutomationActions, useRules } from "./use-automation";
+import { useAutomationActions, useHealth, useRules } from "./use-automation";
 
 export function RulesView({ title }: { title: string }) {
   const t = useTranslations("automation.list");
@@ -89,7 +89,9 @@ function RuleRow({ rule }: { rule: AutomationRule }) {
   const summary = useRuleSummary();
   const dateTime = useDateTime();
   const { setEnabled } = useAutomationActions();
+  const { data: health } = useHealth();
   const archived = rule.archivedAt !== null;
+  const scheduled = rule.enabled && rule.config?.trigger.type === "schedule";
 
   return (
     <li>
@@ -123,7 +125,16 @@ function RuleRow({ rule }: { rule: AutomationRule }) {
               {rule.enabled && rule.nextRunAt ? (
                 <span>· {t("nextRun", { time: dateTime(rule.nextRunAt) })}</span>
               ) : null}
+              {scheduled && !rule.nextRunAt ? <span>· {t("scheduleFinished")}</span> : null}
             </div>
+            {scheduled && rule.nextRunAt && health && !health.scheduler.operational ? (
+              <span
+                className="w-fit rounded-full bg-warning/20 px-2 py-0.5 text-xs text-foreground"
+                data-testid="rule-awaiting-worker"
+              >
+                {t("awaitingWorker")}
+              </span>
+            ) : null}
           </div>
           {archived ? (
             <span className="text-sm text-muted-foreground">{t("archived")}</span>

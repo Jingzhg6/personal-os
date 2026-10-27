@@ -41,13 +41,15 @@ export function HealthCard() {
       </CardHeader>
       <CardContent className="flex flex-col gap-4 text-sm">
         <Row
-          ok={data.events.pending === 0}
+          ok={data.events.pending === 0 && data.events.failed === 0}
           label={t("events")}
-          value={
-            data.events.pending === 0
-              ? t("eventsOk")
-              : t("eventsPending", { count: data.events.pending })
-          }
+          value={[
+            data.events.pending === 0 && data.events.failed === 0 ? t("eventsOk") : null,
+            data.events.pending > 0 ? t("eventsPending", { count: data.events.pending }) : null,
+            data.events.failed > 0 ? t("eventsFailed", { count: data.events.failed }) : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
           detail={
             data.events.lastProcessedAt
               ? t("lastProcessed", { time: dateTime(data.events.lastProcessedAt) })

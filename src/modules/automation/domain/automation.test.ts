@@ -192,6 +192,23 @@ describe("failures", () => {
     });
   });
 
+  it("treats database data and integrity errors as permanent (M10.1)", () => {
+    // Drizzle wraps the driver error; the SQLSTATE is on the cause.
+    const check = Object.assign(new Error("Failed query"), { cause: { code: "23514" } });
+    expect(classifyError(check)).toEqual({ code: "automation.invalid_data", retryable: false });
+    expect(classifyError({ code: "22001" })).toEqual({
+      code: "automation.invalid_data",
+      retryable: false,
+    });
+    // A cancelled statement (timeout) or a serialization failure may succeed later.
+    expect(
+      classifyError(Object.assign(new Error("x"), { cause: { code: "57014" } })).retryable,
+    ).toBe(true);
+    expect(
+      classifyError(Object.assign(new Error("x"), { cause: { code: "40001" } })).retryable,
+    ).toBe(true);
+  });
+
   it("derives the execution status from per-action outcomes", () => {
     expect(executionStatusOf([{ index: 0, type: "notify", outcome: "succeeded" }])).toBe(
       "succeeded",

@@ -19,6 +19,12 @@ export async function POST(request: Request) {
   if (a.length !== b.length || !timingSafeEqual(a, b)) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
-  const summary = await workerTick({ db: getDb(), bus: getEventBus() });
-  return Response.json({ ok: true, ...summary });
+  try {
+    const summary = await workerTick({ db: getDb(), bus: getEventBus() });
+    return Response.json({ ok: true, ...summary });
+  } catch (error) {
+    // No heartbeat is written: the health view then reports the scheduler as not running.
+    console.error("automation.tick failed", (error as Error).name);
+    return Response.json({ error: "tick_failed" }, { status: 500 });
+  }
 }

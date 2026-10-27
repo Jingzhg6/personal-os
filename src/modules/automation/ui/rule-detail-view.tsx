@@ -24,7 +24,7 @@ import { triggerKeyOf, type AutomationExecution, type AutomationRule } from "../
 import { RuleBuilder } from "./rule-builder";
 import { ExecutionBadge } from "./status-badge";
 import { RuleSummary, useDateTime } from "./summary";
-import { useAutomationActions, useExecutions, useRule } from "./use-automation";
+import { useAutomationActions, useExecutions, useHealth, useRule } from "./use-automation";
 
 export function RuleDetailView({ id }: { id: string }) {
   const t = useTranslations("automation");
@@ -77,7 +77,14 @@ function Detail({ rule, onEdit }: { rule: AutomationRule; onEdit: () => void }) 
   const router = useRouter();
   const actions = useAutomationActions();
   const [confirm, setConfirm] = useState<"archive" | "delete" | null>(null);
+  const { data: health } = useHealth();
   const archived = rule.archivedAt !== null;
+  const awaitingWorker =
+    rule.enabled &&
+    rule.config?.trigger.type === "schedule" &&
+    rule.nextRunAt !== null &&
+    health !== undefined &&
+    !health.scheduler.operational;
 
   return (
     <>
@@ -136,6 +143,14 @@ function Detail({ rule, onEdit }: { rule: AutomationRule; onEdit: () => void }) 
               {rule.enabled ? t("detail.enabledNote") : t("detail.disabledNote")}
             </span>
           </div>
+          {awaitingWorker ? (
+            <p
+              className="w-full rounded-md border border-warning/60 bg-warning/10 px-3 py-2 text-sm sm:order-last"
+              data-testid="rule-awaiting-worker"
+            >
+              {t("detail.awaitingWorker")}
+            </p>
+          ) : null}
           {!archived && rule.config ? (
             <Button
               variant={rule.enabled ? "secondary" : "primary"}

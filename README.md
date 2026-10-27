@@ -48,35 +48,57 @@ To close sign-up after creating your own account, set `AUTH_ALLOW_SIGNUP=false` 
 
 ## Commands
 
-| Command                             | What it does                                                                                        |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                          | Start the dev server on <http://localhost:3000>                                                     |
-| `pnpm build` / `pnpm start`         | Production build / serve it                                                                         |
-| `pnpm db:up` / `pnpm db:down`       | Start / stop PostgreSQL in Docker                                                                   |
-| `pnpm db:generate`                  | Generate a SQL migration after changing a schema in `src/modules/*/db`                              |
-| `pnpm db:migrate`                   | Apply migrations to the dev database (`DATABASE_URL`)                                               |
-| `pnpm db:studio`                    | Browse the database with Drizzle Studio                                                             |
-| `pnpm test`                         | All Vitest suites: unit, component (jsdom) and database integration                                 |
-| `pnpm test:unit`                    | Unit + component tests only (no database needed)                                                    |
-| `pnpm test:db`                      | Database integration tests (uses `TEST_DATABASE_URL`, migrates it automatically)                    |
-| `pnpm test:e2e`                     | Builds the app and runs Playwright against it on port 3100 with the test DB                         |
-| `pnpm lint`                         | ESLint, including module-boundary and no-hard-coded-text rules                                      |
-| `pnpm typecheck`                    | TypeScript                                                                                          |
-| `pnpm format` / `pnpm format:check` | Prettier                                                                                            |
-| `pnpm i18n:check`                   | Translation coverage per namespace (fails on keys unknown to zh-CN); `--verbose` lists missing keys |
-| `pnpm check`                        | Lint + typecheck + format + i18n + all Vitest suites                                                |
+| Command                             | What it does                                                                                          |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                          | Start the dev server on <http://localhost:3000>                                                       |
+| `pnpm build` / `pnpm start`         | Production build / serve it                                                                           |
+| `pnpm db:up` / `pnpm db:down`       | Start / stop PostgreSQL in Docker                                                                     |
+| `pnpm db:generate`                  | Generate a SQL migration after changing a schema in `src/modules/*/db`                                |
+| `pnpm db:migrate`                   | Apply migrations to the dev database (`DATABASE_URL`)                                                 |
+| `pnpm db:studio`                    | Browse the database with Drizzle Studio                                                               |
+| `pnpm test`                         | All Vitest suites: unit, component (jsdom) and database integration                                   |
+| `pnpm test:unit`                    | Unit + component tests only (no database needed)                                                      |
+| `pnpm test:db`                      | Database integration tests (uses `TEST_DATABASE_URL`, migrates it automatically)                      |
+| `pnpm test:e2e`                     | Builds the app and runs Playwright against it on port 3100 with the test DB                           |
+| `pnpm lint`                         | ESLint, including module-boundary and no-hard-coded-text rules                                        |
+| `pnpm typecheck`                    | TypeScript                                                                                            |
+| `pnpm format` / `pnpm format:check` | Prettier                                                                                              |
+| `pnpm i18n:check`                   | Translation coverage per namespace (fails on keys unknown to zh-CN); `--verbose` lists missing keys   |
+| `pnpm check`                        | Lint + typecheck + format + i18n + all Vitest suites                                                  |
+| `pnpm automation:worker`            | Automation worker: calls the tick endpoint every minute (needs `APP_URL`, `AUTOMATION_WORKER_SECRET`) |
 
 First time running E2E tests on a new machine: `pnpm exec playwright install chromium`.
 
 ## Environment variables
 
-| Variable             | Purpose                                             |
-| -------------------- | --------------------------------------------------- |
-| `DATABASE_URL`       | Dev database connection string                      |
-| `TEST_DATABASE_URL`  | Test database (Vitest `db` project and Playwright)  |
-| `BETTER_AUTH_SECRET` | Session signing secret, at least 32 characters      |
-| `BETTER_AUTH_URL`    | Public URL of the app, e.g. `http://localhost:3000` |
-| `AUTH_ALLOW_SIGNUP`  | `true` / `false` — allow creating new accounts      |
+| Variable                   | Purpose                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `DATABASE_URL`             | Dev database connection string                                                 |
+| `TEST_DATABASE_URL`        | Test database (Vitest `db` project and Playwright)                             |
+| `BETTER_AUTH_SECRET`       | Session signing secret, at least 32 characters                                 |
+| `BETTER_AUTH_URL`          | Public URL of the app, e.g. `http://localhost:3000`                            |
+| `AUTH_ALLOW_SIGNUP`        | `true` / `false` — allow creating new accounts                                 |
+| `AUTOMATION_WORKER_SECRET` | Optional (M10). Enables the automation worker endpoint; at least 32 characters |
+
+## Automation worker (scheduled rules)
+
+Event-triggered automation rules run right after the change that triggers them. **Scheduled
+rules run only when a worker calls the tick endpoint**; without one they are saved but not
+executed, and the app says so (自动化 → 运行状态, and "等待后台 worker" on each scheduled rule).
+
+```bash
+# 1. In the app's environment (.env.local or the server's env):
+AUTOMATION_WORKER_SECRET=$(openssl rand -hex 24)
+# 2. Next to the running app (any machine that can reach it):
+APP_URL=http://localhost:3000 AUTOMATION_WORKER_SECRET=<same secret> pnpm automation:worker
+#    or from cron, once a minute:
+#    * * * * * curl -fsS -X POST -H "Authorization: Bearer <secret>" http://localhost:3000/api/automation/tick
+```
+
+The worker runs due schedules (misfires: missed occurrences coalesce into the latest one if it is
+at most 6 h late, otherwise recorded as missed) and processes pending events, and writes a
+heartbeat; the health view reports the scheduler as running only with a heartbeat younger than
+5 minutes. Details and guarantees: [ADR 0020](docs/decisions/0020-automation-engine.md).
 
 ## Project layout
 

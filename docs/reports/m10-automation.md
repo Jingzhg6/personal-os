@@ -152,3 +152,12 @@ not contain dots), numbered steps 3 and 4, full-page capture scrolled to the top
 ## 12. Merge / deployment
 
 No merge and no deployment occurred. M11 is not started; waiting for review and approval.
+
+## Addendum (M10.1 audit)
+
+The M10.1 audit ([report](./m10-1-automation-audit.md)) confirmed and fixed eight defects,
+including a worker script that could not start (`pnpm automation:worker`), a drain that could
+loop forever and blame the wrong event, a tick that one failing rule could block, and a capture
+lookup that could undo the person's change. Current verified counts: automation unit 18, DB
+integration 35, worker script 1, Vitest total 388, E2E 97. Guarantees are restated precisely in
+ADR 0020 §5 and §11.

@@ -44,10 +44,10 @@ async function capture(
   ctx: EventContext,
   facts: (db: DbExecutor) => Promise<Facts | null>,
 ) {
-  if (!(await hasEnabledRule(ctx.db, event.userId, type))) return;
   try {
-    // A savepoint: a failure here must never undo the person's change.
+    // A savepoint: a failure here (even in the rule lookup) must never undo the person's change.
     await ctx.db.transaction(async (sp) => {
+      if (!(await hasEnabledRule(sp, event.userId, type))) return;
       const captured = await facts(sp);
       if (!captured) return;
       await sp

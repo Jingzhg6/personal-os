@@ -325,6 +325,8 @@ export async function drainEvents(
   let failed = 0;
   while (attempted.length < LIMITS.eventsPerDrain) {
     let eventId: string | null = null;
+    // The event this iteration claimed (null until the claim succeeded).
+    let claimed: string | null = null;
     try {
       eventId = await deps.db.transaction(async (tx) => {
         const [event] = await tx
@@ -342,6 +344,7 @@ export async function drainEvents(
           .for("update", { skipLocked: true });
         if (!event) return null;
         attempted.push(event.id);
+        claimed = event.id;
         await setStatementTimeout(tx);
         await processEvent(tx, deps.bus, event);
         await tx
@@ -352,9 +355,11 @@ export async function drainEvents(
       });
     } catch (error) {
       failed += 1;
-      const id = attempted.at(-1);
-      if (id) {
-        const { code } = classifyError(error);
+      // Nothing claimed: the database itself is failing. Stop; the next drain tries again.
+      if (claimed === null) break;
+      const { code } = classifyError(error);
+      console.error(`automation.drain: event failed (${code})`);
+      try {
         await deps.db
           .update(automationEvents)
           .set({
@@ -362,7 +367,9 @@ export async function drainEvents(
             lastError: code,
             status: sql`case when ${automationEvents.attempts} + 1 >= ${MAX_EVENT_ATTEMPTS} then 'failed' else 'pending' end`,
           })
-          .where(eq(automationEvents.id, id));
+          .where(and(eq(automationEvents.id, claimed), eq(automationEvents.status, "pending")));
+      } catch {
+        break;
       }
       continue;
     }
@@ -382,81 +389,131 @@ export async function drainEvents(
 export async function tickSchedules(
   deps: EngineDeps,
   options: { userId?: string; now?: Date } = {},
-): Promise<{ executed: number; missed: number }> {
+): Promise<{ executed: number; missed: number; failed: number }> {
   const now = options.now ?? new Date();
   let executed = 0;
   let missed = 0;
+  let failed = 0;
+  // Rules tried in this tick: a rule that fails stays due, but cannot block the others.
+  const attempted: string[] = [];
   for (let i = 0; i < LIMITS.schedulesPerTick; i += 1) {
-    const handled = await deps.db.transaction(async (tx) => {
-      const [rule] = await tx
-        .select()
-        .from(automationRules)
-        .where(
-          and(
-            eq(automationRules.triggerType, "schedule"),
-            eq(automationRules.enabled, true),
-            lte(automationRules.nextRunAt, now),
-            options.userId ? eq(automationRules.userId, options.userId) : undefined,
-          ),
-        )
-        .orderBy(asc(automationRules.nextRunAt))
-        .limit(1)
-        .for("update", { skipLocked: true });
-      if (!rule) return false;
-      await setStatementTimeout(tx);
-      const zone = await ruleTimeZone(tx, rule);
-      const parsed = parseStoredRule(rule);
-      if (!parsed.ok || parsed.config.trigger.type !== "schedule") {
+    let claimed: string | null = null;
+    let handled: boolean;
+    try {
+      handled = await deps.db.transaction(async (tx) => {
+        const [rule] = await tx
+          .select()
+          .from(automationRules)
+          .where(
+            and(
+              eq(automationRules.triggerType, "schedule"),
+              eq(automationRules.enabled, true),
+              lte(automationRules.nextRunAt, now),
+              options.userId ? eq(automationRules.userId, options.userId) : undefined,
+              attempted.length ? notInArray(automationRules.id, attempted) : undefined,
+            ),
+          )
+          .orderBy(asc(automationRules.nextRunAt))
+          .limit(1)
+          .for("update", { skipLocked: true });
+        if (!rule) return false;
+        attempted.push(rule.id);
+        claimed = rule.id;
+        await setStatementTimeout(tx);
+        const parsed = parseStoredRule(rule);
+        if (!parsed.ok || parsed.config.trigger.type !== "schedule") {
+          // Recorded as skipped (invalid_config) so it is visible, then taken off the schedule.
+          const at = rule.nextRunAt!;
+          const facts: Facts = {
+            kind: "schedule",
+            scheduledFor: at.toISOString(),
+            localDate: at.toISOString().slice(0, 10),
+          };
+          await executeRule(
+            tx,
+            deps.bus,
+            rule,
+            {
+              triggerType: "schedule",
+              key: triggerKey("schedule", { facts }),
+              eventId: null,
+              scheduledFor: at,
+              occurredAt: at,
+              facts,
+              depth: 0,
+              chain: [],
+              missed: 0,
+              skip: "invalid_config",
+            },
+            now,
+          );
+          await tx
+            .update(automationRules)
+            .set({ nextRunAt: null })
+            .where(eq(automationRules.id, rule.id));
+          missed += 1;
+          return true;
+        }
+        const zone = await ruleTimeZone(tx, rule);
+        const schedule: Schedule = parsed.config.trigger.schedule;
+        const plan = planDue(schedule, zone, rule.nextRunAt!.getTime(), now.getTime());
+        const at = new Date(plan.run ?? plan.latest);
+        const facts: Facts = {
+          kind: "schedule",
+          scheduledFor: at.toISOString(),
+          localDate: localDate(at.getTime(), zone),
+        };
+        await executeRule(
+          tx,
+          deps.bus,
+          rule,
+          {
+            triggerType: "schedule",
+            key: triggerKey("schedule", { facts }),
+            eventId: null,
+            scheduledFor: at,
+            occurredAt: at,
+            facts,
+            depth: 0,
+            chain: [],
+            missed: plan.skipped,
+            skip: plan.run === null ? "misfired" : undefined,
+          },
+          now,
+        );
+        if (plan.run === null) missed += 1;
+        else executed += 1;
         await tx
           .update(automationRules)
-          .set({ nextRunAt: null })
+          .set({ nextRunAt: plan.next === null ? null : new Date(plan.next) })
           .where(eq(automationRules.id, rule.id));
         return true;
-      }
-      const schedule: Schedule = parsed.config.trigger.schedule;
-      const plan = planDue(schedule, zone, rule.nextRunAt!.getTime(), now.getTime());
-      const at = new Date(plan.run ?? plan.latest);
-      const facts: Facts = {
-        kind: "schedule",
-        scheduledFor: at.toISOString(),
-        localDate: localDate(at.getTime(), zone),
-      };
-      await executeRule(
-        tx,
-        deps.bus,
-        rule,
-        {
-          triggerType: "schedule",
-          key: triggerKey("schedule", { facts }),
-          eventId: null,
-          scheduledFor: at,
-          occurredAt: at,
-          facts,
-          depth: 0,
-          chain: [],
-          missed: plan.skipped,
-          skip: plan.run === null ? "misfired" : undefined,
-        },
-        now,
+      });
+    } catch (error) {
+      failed += 1;
+      console.error(
+        `automation.schedule: rule ${claimed ?? "?"} failed (${classifyError(error).code})`,
       );
-      if (plan.run === null) missed += 1;
-      else executed += 1;
-      await tx
-        .update(automationRules)
-        .set({ nextRunAt: plan.next === null ? null : new Date(plan.next) })
-        .where(eq(automationRules.id, rule.id));
-      return true;
-    });
+      // Nothing claimed: the database itself is failing; stop this tick.
+      if (claimed === null) break;
+      continue;
+    }
     if (!handled) break;
   }
-  return { executed, missed };
+  return { executed, missed, failed };
 }
 
 /** The worker's tick: schedules of everyone, then pending events, then a heartbeat. */
 export async function workerTick(deps: EngineDeps, now = new Date()) {
   const schedules = await tickSchedules(deps, { now });
   const events = await drainEvents(deps);
-  const summary = { ...schedules, events: events.processed, failedEvents: events.failed };
+  const summary = {
+    executed: schedules.executed,
+    missed: schedules.missed,
+    failed: schedules.failed,
+    events: events.processed,
+    failedEvents: events.failed,
+  };
   await deps.db
     .insert(automationWorkerStatus)
     .values({ id: "worker", lastTickAt: now, lastTickSummary: summary })
