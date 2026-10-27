@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
-import { RadarChart, useAttributeLabel } from "@/modules/character/ui";
+import { RadarChart, useAttributeLabel, XpTrendChart } from "@/modules/character/ui";
 import { cn } from "@/shared/lib/cn";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { ColorDot } from "@/shared/ui/color";
@@ -17,7 +17,6 @@ import {
   type DashboardOverview,
   type DashboardPeriod,
 } from "../domain";
-import { GrowthTrendChart } from "./growth-trend-chart";
 import { useDashboardGrowth } from "./use-dashboard";
 
 /** 我的成长能力: lifetime shape (radar) beside recent movement (ranking + trend). */
@@ -201,7 +200,7 @@ function RecentGrowth({
                 </span>
               ) : null}
             </div>
-            <GrowthTrendChart growth={growth} periodName={periodName} />
+            <XpTrendChart points={growth.points} bucket={growth.bucket} periodName={periodName} />
           </div>
         </>
       )}

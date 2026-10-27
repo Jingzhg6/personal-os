@@ -157,7 +157,7 @@ export async function getOverview(db: DbExecutor, userId: string): Promise<Chara
 export async function getXpActivity(
   db: DbExecutor,
   userId: string,
-  range: { from: string | null; timeZone: string },
+  range: { from: string | null; timeZone: string; attributeId?: string },
 ): Promise<XpActivity> {
   const day = (column: typeof xpLedger.createdAt | typeof xpAttributeCredits.createdAt) =>
     sql<string>`to_char((${column} at time zone ${range.timeZone})::date, 'YYYY-MM-DD')`;
@@ -172,7 +172,26 @@ export async function getXpActivity(
     db
       .select({ date: ledgerDay, xp: sql<number>`sum(${xpLedger.amount})::int` })
       .from(xpLedger)
-      .where(and(eq(xpLedger.userId, userId), since(xpLedger.createdAt)))
+      .where(
+        and(
+          eq(xpLedger.userId, userId),
+          since(xpLedger.createdAt),
+          // One attribute: only the entries that credited it (their full Active XP).
+          range.attributeId
+            ? exists(
+                db
+                  .select({ one: sql`1` })
+                  .from(xpAttributeCredits)
+                  .where(
+                    and(
+                      eq(xpAttributeCredits.ledgerEntryId, xpLedger.id),
+                      eq(xpAttributeCredits.attributeId, range.attributeId),
+                    ),
+                  ),
+              )
+            : undefined,
+        ),
+      )
       // By position: the same expression with fresh bind parameters would not match.
       .groupBy(sql`1`),
     db
@@ -192,6 +211,7 @@ export async function getXpActivity(
           eq(xpAttributeCredits.userId, userId),
           sql`not ${isLegacySql}`,
           since(xpAttributeCredits.createdAt),
+          range.attributeId ? eq(xpAttributeCredits.attributeId, range.attributeId) : undefined,
         ),
       )
       .groupBy(sql`1`, sql`2`),
@@ -219,6 +239,53 @@ export async function getXpActivity(
     byAttribute: [...byAttribute].map(([attributeId, growthXp]) => ({ attributeId, growthXp })),
     days: sorted,
   };
+}
+
+/** When each attribute last received Growth XP (attributes that never grew are absent). */
+export async function getAttributeLastActivity(
+  db: DbExecutor,
+  userId: string,
+): Promise<Map<string, Date>> {
+  const rows = await db
+    .select({
+      attributeId: xpAttributeCredits.attributeId,
+      at: sql<Date>`max(${xpAttributeCredits.createdAt})`.mapWith(xpAttributeCredits.createdAt),
+    })
+    .from(xpAttributeCredits)
+    .where(eq(xpAttributeCredits.userId, userId))
+    .groupBy(xpAttributeCredits.attributeId);
+  return new Map(rows.map((row) => [row.attributeId, row.at]));
+}
+
+/**
+ * Where an attribute's lifetime Growth XP came from: credits summed per source (task, project,
+ * milestone), net of reversals, most first. The title is the latest one the ledger recorded.
+ */
+export async function getAttributeSources(
+  db: DbExecutor,
+  userId: string,
+  attributeId: string,
+  limit = 8,
+): Promise<{ sourceType: string; sourceId: string; title: string | null; growthXp: number }[]> {
+  const rows = await db
+    .select({
+      sourceType: xpLedger.sourceType,
+      sourceId: xpLedger.sourceId,
+      title: sql<
+        string | null
+      >`(array_agg(${xpLedger.sourceTitle} order by ${xpLedger.createdAt} desc))[1]`,
+      growthXp: sql<number>`sum(${xpAttributeCredits.amount})::int`,
+    })
+    .from(xpAttributeCredits)
+    .innerJoin(xpLedger, eq(xpLedger.id, xpAttributeCredits.ledgerEntryId))
+    .where(
+      and(eq(xpAttributeCredits.userId, userId), eq(xpAttributeCredits.attributeId, attributeId)),
+    )
+    .groupBy(xpLedger.sourceType, xpLedger.sourceId)
+    .having(sql`sum(${xpAttributeCredits.amount}) > 0`)
+    .orderBy(sql`sum(${xpAttributeCredits.amount}) desc`, xpLedger.sourceId)
+    .limit(limit);
+  return rows;
 }
 
 /** Newest first, paged with the id of the last entry seen. */

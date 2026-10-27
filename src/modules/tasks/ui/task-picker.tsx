@@ -7,9 +7,13 @@ import type { Task } from "../domain";
 import { useToday } from "./labels";
 import { useTaskList } from "./use-task-data";
 
-/** Searchable list of open tasks (any level), used to pick a parent or a dependency. */
+/**
+ * Searchable list of open tasks (any level), used to pick a parent, a dependency or an action for
+ * a development goal (`includeCompleted`: completed tasks too).
+ */
 export function TaskPicker({
   excludeIds,
+  includeCompleted = false,
   searchLabel,
   resultsLabel,
   emptyLabel,
@@ -17,6 +21,7 @@ export function TaskPicker({
   before,
 }: {
   excludeIds: ReadonlySet<string | null>;
+  includeCompleted?: boolean;
   searchLabel: string;
   resultsLabel: string;
   emptyLabel: string;
@@ -32,7 +37,11 @@ export function TaskPicker({
     search: deferred || undefined,
     sort: "updated",
     includeSubtasks: true,
-    filter: { categories: ["backlog", "unstarted", "started"] },
+    filter: {
+      categories: includeCompleted
+        ? ["backlog", "unstarted", "started", "completed"]
+        : ["backlog", "unstarted", "started"],
+    },
   });
   const options = candidates.filter((c) => !excludeIds.has(c.id)).slice(0, 8);
 

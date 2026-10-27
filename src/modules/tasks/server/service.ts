@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { areaBelongsToUser } from "@/modules/areas/server";
 import { milestones, projects } from "@/modules/projects/db";
-import type { Database, DbExecutor } from "@/shared/db/types";
+import type { DbExecutor } from "@/shared/db/types";
 import type { EventBus } from "@/shared/events/bus";
 import { DomainError } from "@/shared/lib/errors";
 import { keyAfter, keyBetween } from "@/shared/lib/order";
@@ -30,7 +30,8 @@ import { assertTagsOwned } from "./tags";
  */
 
 export interface TaskDeps {
-  db: Database;
+  /** The connection, or a caller's open transaction (commands then run as a savepoint). */
+  db: DbExecutor;
   bus: EventBus;
 }
 

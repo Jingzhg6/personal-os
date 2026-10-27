@@ -24,6 +24,7 @@ import {
   Settings,
   Shield,
   Sparkles,
+  Sprout,
   Target,
   Trash2,
   TrendingUp,
@@ -45,6 +46,7 @@ import type { Messages } from "@/shared/i18n/messages";
 
 export type ModuleId =
   | "dashboard"
+  | "development"
   | "tasks"
   | "projects"
   | "goals"
@@ -89,6 +91,14 @@ export const navigation: NavSection[] = [
         module: "dashboard",
         phase: 1,
         milestone: "M7",
+      },
+      {
+        id: "development",
+        href: "/development",
+        icon: Sprout,
+        module: "development",
+        phase: 1,
+        milestone: "M8",
       },
     ],
   },

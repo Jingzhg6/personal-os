@@ -381,3 +381,36 @@ export async function countCompletedTasks(
     );
   return row?.count ?? 0;
 }
+
+/** The given tasks (Trash excluded), in list order; ids of other users simply match nothing. */
+export function getTasksByIds(db: DbExecutor, userId: string, ids: string[]): Promise<Task[]> {
+  if (ids.length === 0) return Promise.resolve([]);
+  return loadTasks(db, userId, inArray(tasks.id, ids));
+}
+
+/** Open tasks (not completed or cancelled) that name `attributeId` as a development contribution. */
+export function listOpenTasksDeveloping(
+  db: DbExecutor,
+  userId: string,
+  attributeId: string,
+): Promise<Task[]> {
+  return loadTasks(
+    db,
+    userId,
+    and(
+      inArray(taskStatuses.category, ["backlog", "unstarted", "started"]),
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(taskDevelopmentContributions)
+          .where(
+            and(
+              eq(taskDevelopmentContributions.taskId, tasks.id),
+              eq(taskDevelopmentContributions.attributeId, attributeId),
+            ),
+          ),
+      ),
+    ),
+    [desc(tasks.updatedAt), asc(tasks.id)],
+  );
+}

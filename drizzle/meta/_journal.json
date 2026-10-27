@@ -71,6 +71,13 @@
       "when": 1793104983323,
       "tag": "0009_growth_rpg_rewards",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793120401151,
+      "tag": "0010_development_system",
+      "breakpoints": true
     }
   ]
 }

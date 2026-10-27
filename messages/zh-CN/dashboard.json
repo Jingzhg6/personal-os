@@ -70,28 +70,15 @@
     "summary": "成长经验 +{growth} · 升级经验 +{level} · 行动经验 +{active}",
     "rankingPeriod": "· {period}"
   },
-  "trend": {
-    "growth": "成长经验",
-    "active": "行动经验",
-    "chartLabel": "{period}每{bucket}获得的成长经验与行动经验",
-    "buckets": {
-      "day": "天",
-      "week": "周",
-      "month": "月"
-    },
-    "empty": "这段时间还没有经验记录",
-    "tooltipWeek": "{date} 起一周",
-    "tableCaption": "成长趋势数据",
-    "date": "日期",
-    "level": "升级经验"
-  },
   "focus": {
     "title": "当前成长重点",
     "fastest": "最近成长最快",
     "slowest": "最近成长较少",
     "value": "+{xp} XP / {days}天",
     "rule": "依据：雷达图上的成长能力在过去 {days} 天获得的成长经验，取最多和最少的一项。",
-    "empty": "过去 {days} 天还没有成长记录。完成带有成长贡献的任务，这里会显示你的成长重点。"
+    "empty": "过去 {days} 天还没有成长记录。完成带有成长贡献的任务，这里会显示你的成长重点。",
+    "chosen": "我选择的成长重点",
+    "plan": "成长规划"
   },
   "week": {
     "title": "本周",

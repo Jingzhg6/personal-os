@@ -7,7 +7,7 @@ import { cn } from "@/shared/lib/cn";
 
 import { isClosedCategory, type Task } from "../domain";
 import { StatusIcon } from "./status-icon";
-import type { useTaskActions } from "./use-task-data";
+import { useTaskActions } from "./use-task-data";
 
 /** Round checkbox: completes an open task, reopens a closed one. */
 export function StatusToggle({
@@ -43,4 +43,14 @@ export function StatusToggle({
       />
     </button>
   );
+}
+
+/** The same toggle for pages outside the task views (e.g. a goal's actions). */
+export function TaskCompletionToggle({
+  task,
+}: {
+  task: Pick<Task, "id" | "title" | "statusCategory">;
+}) {
+  const actions = useTaskActions();
+  return <StatusToggle task={task} actions={actions} />;
 }

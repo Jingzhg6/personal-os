@@ -13,6 +13,7 @@
   },
   "items": {
     "dashboard": "仪表盘",
+    "development": "成长",
     "allTasks": "全部任务",
     "matrix": "四象限矩阵",
     "trash": "回收站",

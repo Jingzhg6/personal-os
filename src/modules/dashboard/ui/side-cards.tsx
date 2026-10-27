@@ -84,6 +84,7 @@ export function GrowthFocusCard({ data }: { data: DashboardOverview }) {
   const t = useTranslations("dashboard.focus");
   const format = useFormatter();
   const { fastest, slowest } = data.focus;
+  const chosen = data.chosenFocusAttributeIds;
   const rows = [
     { key: "fastest" as const, growth: fastest },
     { key: "slowest" as const, growth: slowest },
@@ -94,7 +95,20 @@ export function GrowthFocusCard({ data }: { data: DashboardOverview }) {
       icon={<Compass className="size-4" aria-hidden />}
       title={t("title")}
       testId="growth-focus"
+      action={<CardLink href="/development">{t("plan")}</CardLink>}
     >
+      {chosen.length > 0 ? (
+        <div className="flex flex-col gap-1.5" data-testid="chosen-focus">
+          <span className="text-xs text-muted-foreground">{t("chosen")}</span>
+          <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+            {chosen.map((attributeId) => (
+              <li key={attributeId}>
+                <AttributeName data={data} growth={{ attributeId, growthXp: 0 }} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("empty", { days: FOCUS_WINDOW_DAYS })}</p>
       ) : (

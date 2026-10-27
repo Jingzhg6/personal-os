@@ -5,6 +5,7 @@ import {
   listAttributes,
   listHistory,
 } from "@/modules/character/server";
+import { getFocus } from "@/modules/development/server";
 import { calculateRewardPurchase } from "@/modules/rewards/domain";
 import { getBalances, listLevelRewards, listRewards } from "@/modules/rewards/server";
 import { getUserSettings } from "@/modules/settings/server";
@@ -47,16 +48,25 @@ export async function getDashboard(db: DbExecutor, userId: string): Promise<Dash
   const week = weekStart(today, weekStartsOn);
   const focusFrom = addDays(today, -(FOCUS_WINDOW_DAYS - 1));
 
-  const [totals, attributes, history, weekActivity, focusActivity, completedTasks, rewards] =
-    await Promise.all([
-      getXpTotals(db, userId),
-      listAttributes(db, userId),
-      listHistory(db, userId, { limit: RECENT_ACTIVITY_SIZE }),
-      getXpActivity(db, userId, { from: week, timeZone }),
-      getXpActivity(db, userId, { from: focusFrom, timeZone }),
-      countCompletedTasks(db, userId, { from: week, timeZone }),
-      listRewards(db, userId),
-    ]);
+  const [
+    totals,
+    attributes,
+    history,
+    weekActivity,
+    focusActivity,
+    completedTasks,
+    rewards,
+    chosenFocus,
+  ] = await Promise.all([
+    getXpTotals(db, userId),
+    listAttributes(db, userId),
+    listHistory(db, userId, { limit: RECENT_ACTIVITY_SIZE }),
+    getXpActivity(db, userId, { from: week, timeZone }),
+    getXpActivity(db, userId, { from: focusFrom, timeZone }),
+    countCompletedTasks(db, userId, { from: week, timeZone }),
+    listRewards(db, userId),
+    getFocus(db, userId),
+  ]);
   const balances = await getBalances(db, userId, totals);
   const levelRewards = await listLevelRewards(db, userId, balances);
 
@@ -84,6 +94,7 @@ export async function getDashboard(db: DbExecutor, userId: string): Promise<Dash
       top: rankGrowth(weekActivity.byAttribute, active, WEEK_TOP_SIZE),
     },
     focus: growthFocus(focusActivity.byAttribute, onRadar),
+    chosenFocusAttributeIds: chosenFocus,
     recentActivity: history.entries,
     nextLevelReward: nextLevelReward(levelRewards, totals.lifetimeLevelXp),
     levelRewardCount: levelRewards.length,

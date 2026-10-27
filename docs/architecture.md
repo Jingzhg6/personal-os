@@ -195,6 +195,12 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 | `rewards`                                        | rewards     | (M6.2) user-defined real-world rewards; value + accepted currencies |
 | `level_rewards`                                  | rewards     | (M6.2) one reward per level; system-key pattern for seeded ones     |
 | `reward_ledger`                                  | rewards     | (M6.2) append-only spending: redemptions and level-reward claims    |
+| `development_profiles`                           | development | (M8) one row per user: the free-text vision                         |
+| `development_focus`                              | development | (M8) chosen focus attributes, ordered, at most 3                    |
+| `development_goals`                              | development | (M8) goals: status, priority 1–3, target date; see below            |
+| `development_goal_attributes`                    | development | (M8) goal → attributes, weights 1–3                                 |
+| `development_goal_tasks`                         | development | (M8) goal → existing tasks (references)                             |
+| `development_goal_projects`                      | development | (M8) goal → existing projects (references)                          |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
@@ -322,7 +328,22 @@ fill and bucket the trend (day ≤ 92 days, week ≤ 2 years, month beyond), ran
 choose the next level reward. Claiming and redeeming stay on `/rewards`. The old `/dashboard`
 address redirects to `/`.
 
-### 5.3 Phase 1 (planned, M8)
+### 5.2.3 Development system (M8, ADR 0017)
+
+`/development` plans personal development: **vision** (one free text) → **goals** (meaningful
+outcomes, `active | paused | completed | archived`) → **development attributes** (the abilities,
+owned by character) ← **tasks** (the only actions, owned by tasks). Goals reference tasks and
+projects; they never copy them and never create XP. Goal progress is the count of linked actions
+(`completed / (linked − cancelled)`); growth of the goal's attributes is shown as evidence only.
+The chosen focus (≤ 3, `MAX_FOCUS_ATTRIBUTES`) is shown next to — never mixed with — the measured
+"最近成长最快". Routes: `/development`, `/development/goals/[id]`, `/development/attributes/[id]`.
+Read models compose the owners' reads (`getXpActivity` with an attribute filter,
+`getAttributeSources`, `getAttributeLastActivity`, `getTasksByIds`, `listOpenTasksDeveloping`,
+`listProjects`); the task panel links goals through the `development` router directly, so the tasks
+UI does not import the development UI. The XP trend chart and series (`buildTrend`,
+`XpTrendChart`) moved to the character module, shared by the dashboard and attribute pages.
+
+### 5.3 Phase 1 (planned, after M8)
 
 ```
 tasks (additive)   + recurrence_id? (M8), actual_minutes? (Phase 2)
@@ -424,6 +445,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M4 Projects** ✅: project CRUD and list, project page (任务 / 看板 / 里程碑 / 说明), status Kanban (global and per project), milestones, computed progress, project filter and fields on tasks.
 - **M5 Dependencies & basic Gantt** ✅: finish-to-start dependencies with cycle checks, 前置 / 后续 lists and 受阻 markers, Gantt chart (global and per project) with day / week / month scales, milestones, dependency arrows with date-conflict highlighting, drag / keyboard rescheduling.
 - **M6.1 Personal development model** ✅: user-defined development attributes, task development contributions (independent of areas), overall XP vs attribute XP (credits), dynamic radar, settings, M6 compatibility.
+- **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.
 - **M6 Character & XP** ✅: event → XP rules, append-only idempotent ledger with reversals (incl. new `milestone.reopened`), levels derived from the ledger, attributes credited through areas, radar, XP history, character page.
 - **M7 Personal RPG dashboard** ✅: `/` shows level, stage and progress, the three XP currencies (lifetime vs spendable), growth radar, recent growth ranking and trend (7 / 30 / 90 days / all), growth focus, this week, next level reward, reward store preview and recent activity — a read model over the character, rewards and tasks modules.

@@ -9,3 +9,4 @@ export * from "@/modules/projects/db";
 export * from "@/modules/tasks/db";
 export * from "@/modules/character/db";
 export * from "@/modules/rewards/db";
+export * from "@/modules/development/db";

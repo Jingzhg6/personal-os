@@ -9,6 +9,8 @@ export {
   countCompletedTasks,
   getTask,
   getTaskDetail,
+  getTasksByIds,
+  listOpenTasksDeveloping,
   listTasks,
   listTimeline,
   listTopLevelTasks,

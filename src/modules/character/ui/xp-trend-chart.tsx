@@ -5,7 +5,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { cn } from "@/shared/lib/cn";
 
-import type { DashboardGrowth, TrendBucket, TrendPoint } from "../domain";
+import type { TrendBucket, TrendPoint } from "../domain";
 
 const HEIGHT = 168;
 const MARGIN = { top: 10, right: 8, bottom: 24, left: 36 };
@@ -52,20 +52,24 @@ function useWidth() {
 
 /**
  * Growth XP per day (or week / month) as columns — the primary series — with Active XP as a thin
- * line for context. One y-axis: both are XP. Values are reachable without hover in the hidden table.
+ * line for context (`showActive`). One y-axis: both are XP. Values are reachable without hover in
+ * the hidden table.
  */
-export function GrowthTrendChart({
-  growth,
+export function XpTrendChart({
+  points,
+  bucket,
   periodName,
+  showActive = true,
 }: {
-  growth: DashboardGrowth;
+  points: TrendPoint[];
+  bucket: TrendBucket;
   periodName: string;
+  showActive?: boolean;
 }) {
-  const t = useTranslations("dashboard.trend");
+  const t = useTranslations("character.trend");
   const format = useFormatter();
   const { ref, width } = useWidth();
   const [hover, setHover] = useState<number | null>(null);
-  const { points, bucket } = growth;
 
   const dateLabel = (point: TrendPoint, kind: TrendBucket = bucket) => {
     const date = new Date(`${point.start}T00:00:00Z`);
@@ -74,7 +78,7 @@ export function GrowthTrendChart({
     return format.dateTime(date, DAY);
   };
 
-  const empty = points.every((p) => p.growthXp === 0 && p.activeXp === 0);
+  const empty = points.every((p) => p.growthXp === 0 && (!showActive || p.activeXp === 0));
   if (empty) {
     return (
       <p
@@ -88,7 +92,7 @@ export function GrowthTrendChart({
 
   const innerWidth = Math.max(0, width - MARGIN.left - MARGIN.right);
   const innerHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
-  const values = points.flatMap((p) => [p.growthXp, p.activeXp]);
+  const values = points.flatMap((p) => (showActive ? [p.growthXp, p.activeXp] : [p.growthXp]));
   const yMax = niceCeil(Math.max(...values, 1));
   const yMin = -niceCeil(Math.max(0, -Math.min(...values, 0)));
   const y = (value: number) => MARGIN.top + ((yMax - value) / (yMax - yMin)) * innerHeight;
@@ -107,23 +111,29 @@ export function GrowthTrendChart({
 
   return (
     <figure className="flex flex-col gap-2" data-testid="growth-trend">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-primary" aria-hidden />
-          {t("growth")}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-0.5 w-3.5 rounded-full bg-chart-active" aria-hidden />
-          {t("active")}
-        </span>
-      </div>
+      {/* A single series needs no legend: the heading names it. */}
+      {showActive ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm bg-primary" aria-hidden />
+            {t("growth")}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-0.5 w-3.5 rounded-full bg-chart-active" aria-hidden />
+            {t("active")}
+          </span>
+        </div>
+      ) : null}
       <div ref={ref} className="relative w-full" onPointerLeave={() => setHover(null)}>
         {width > 0 ? (
           <svg
             width={width}
             height={HEIGHT}
             role="img"
-            aria-label={t("chartLabel", { period: periodName, bucket: t(`buckets.${bucket}`) })}
+            aria-label={t(showActive ? "chartLabel" : "chartLabelGrowth", {
+              period: periodName,
+              bucket: t(`buckets.${bucket}`),
+            })}
             className="block overflow-visible"
           >
             {ticks.map((tick) => (
@@ -157,15 +167,17 @@ export function GrowthTrendChart({
                 />
               ),
             )}
-            <polyline
-              points={line}
-              fill="none"
-              className="stroke-chart-active"
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            {hover !== null ? (
+            {showActive ? (
+              <polyline
+                points={line}
+                fill="none"
+                className="stroke-chart-active"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            ) : null}
+            {showActive && hover !== null ? (
               <circle
                 cx={center(hover)}
                 cy={y(points[hover]!.activeXp)}
@@ -215,7 +227,9 @@ export function GrowthTrendChart({
             <div className="mb-1 text-muted-foreground">{dateLabel(hovered)}</div>
             <TooltipRow swatch="bg-primary" label={t("growth")} value={hovered.growthXp} />
             <TooltipRow swatch={null} label={t("level")} value={hovered.levelXp} />
-            <TooltipRow swatch="bg-chart-active" label={t("active")} value={hovered.activeXp} />
+            {showActive ? (
+              <TooltipRow swatch="bg-chart-active" label={t("active")} value={hovered.activeXp} />
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -226,7 +240,7 @@ export function GrowthTrendChart({
             <th scope="col">{t("date")}</th>
             <th scope="col">{t("growth")}</th>
             <th scope="col">{t("level")}</th>
-            <th scope="col">{t("active")}</th>
+            {showActive ? <th scope="col">{t("active")}</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -235,7 +249,7 @@ export function GrowthTrendChart({
               <th scope="row">{dateLabel(point)}</th>
               <td>{point.growthXp}</td>
               <td>{point.levelXp}</td>
-              <td>{point.activeXp}</td>
+              {showActive ? <td>{point.activeXp}</td> : null}
             </tr>
           ))}
         </tbody>

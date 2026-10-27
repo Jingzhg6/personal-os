@@ -28,6 +28,7 @@ import {
 import { useDurationLabel, useStatusLabel, useToday } from "./labels";
 import { ContributionsField } from "./contributions-field";
 import { DependenciesField } from "./dependencies-field";
+import { GoalsField } from "./goals-field";
 import { ParentField } from "./parent-field";
 import { useProjectOptions } from "./project-chip";
 import { SortableList } from "./sortable-list";
@@ -408,6 +409,8 @@ function TaskDetailContent({
           </dl>
 
           <ContributionsField task={task} />
+
+          <GoalsField task={task} />
 
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between">

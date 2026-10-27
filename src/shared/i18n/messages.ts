@@ -3,6 +3,7 @@ import auth from "../../../messages/zh-CN/auth.json";
 import character from "../../../messages/zh-CN/character.json";
 import common from "../../../messages/zh-CN/common.json";
 import dashboard from "../../../messages/zh-CN/dashboard.json";
+import development from "../../../messages/zh-CN/development.json";
 import editor from "../../../messages/zh-CN/editor.json";
 import errors from "../../../messages/zh-CN/errors.json";
 import nav from "../../../messages/zh-CN/nav.json";
@@ -27,6 +28,7 @@ export const sourceMessages = {
   character,
   rewards,
   dashboard,
+  development,
 };
 
 export type Messages = typeof sourceMessages;

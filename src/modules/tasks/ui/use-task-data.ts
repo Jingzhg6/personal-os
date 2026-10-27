@@ -106,11 +106,13 @@ export function useTaskActions() {
   const timelineQueries = () =>
     queryClient.getQueriesData<Timeline>({ queryKey: trpc.tasks.timeline.pathKey() });
 
-  // Project progress is computed from tasks, so task changes refresh project queries too.
+  // Project and development-goal progress are computed from tasks, so task changes refresh
+  // those queries too.
   const invalidate = () =>
     Promise.all([
       queryClient.invalidateQueries(trpc.tasks.pathFilter()),
       queryClient.invalidateQueries(trpc.projects.pathFilter()),
+      queryClient.invalidateQueries(trpc.development.pathFilter()),
     ]);
   const onError = (error: unknown) => toast.show(errorMessage(error), "error");
 

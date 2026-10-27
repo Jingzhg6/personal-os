@@ -154,5 +154,21 @@
     "outstanding": "卓越者",
     "master": "大师",
     "legend": "传奇"
+  },
+  "trend": {
+    "growth": "成长经验",
+    "active": "行动经验",
+    "chartLabel": "{period}每{bucket}获得的成长经验与行动经验",
+    "buckets": {
+      "day": "天",
+      "week": "周",
+      "month": "月"
+    },
+    "empty": "这段时间还没有经验记录",
+    "tooltipWeek": "{date} 起一周",
+    "tableCaption": "成长趋势数据",
+    "date": "日期",
+    "level": "升级经验",
+    "chartLabelGrowth": "{period}每{bucket}获得的成长经验"
   }
 }

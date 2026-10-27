@@ -6,13 +6,13 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: M7 — Personal RPG dashboard.** The home page (`/`) shows the character at a glance:
-> level, growth stage and progress; Active, Growth and Level XP kept apart (lifetime vs spendable);
-> the user's own development attributes as a radar; what grew fastest recently and the growth trend;
-> this week; the next level reward and a reward store preview; recent activity. It is a read-only
-> view over the M6.2 XP economy (Active XP for every completion, Growth → Level XP for development,
-> real-world rewards). Other modules show a “即将推出” placeholder until their milestone. See
-> [`docs/architecture.md`](docs/architecture.md) and the milestone screenshots in
+> **Status: M8 — Personal development system.** `/development` turns development attributes into a
+> plan: a written vision, development goals (each developing one or more attributes, with existing
+> tasks and projects linked as its actions and progress counted as 已完成 X / Y 项行动), a chosen
+> focus of up to three attributes shown apart from what grew fastest, and a page per attribute.
+> Goals are planning only — XP still comes from completing tasks under the M6.2 rules. The home
+> page (`/`) is the M7 RPG dashboard. Other modules show a “即将推出” placeholder until their
+> milestone. See [`docs/architecture.md`](docs/architecture.md) and the milestone screenshots in
 > [`docs/screenshots/`](docs/screenshots/README.md).
 
 ## Requirements

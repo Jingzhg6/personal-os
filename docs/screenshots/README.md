@@ -131,3 +131,23 @@ one (real) day of data.
 | `06-empty-dashboard.png`   | `/` (new user)  | Empty states: no growth yet, no rewards, no activity                                         |
 | `07-week-and-activity.png` | `/` (element)   | 本周 summary and 最近活动 (ordinary, growth, reversal entries)                               |
 | `08-tablet-dashboard.png`  | `/` (iPad Mini) | Tablet portrait                                                                              |
+
+## M8 — Personal development system (`m8/`)
+
+Data made through the app's API only: two custom attributes (SQL, 专注力), a vision, five goals
+(two active with high priority, one active, one paused, one archived), tasks created from goals and
+one existing task linked, completions, a project linked to the SQL goal, English and cardio tasks
+that make those the fastest-growing attributes, and the chosen focus 法语 · SQL · 专注力.
+
+| File                         | Page                              | Shows                                                                                   |
+| ---------------------------- | --------------------------------- | --------------------------------------------------------------------------------------- |
+| `01-development-desktop.png` | `/development`                    | Vision, 我的成长重点 next to 最近成长最快, goal cards (已完成 X / Y 项行动), attributes |
+| `02-development-dark.png`    | `/development` (dark)             | Dark theme                                                                              |
+| `03-development-mobile.png`  | `/development` (phone)            | iPhone 13, single column, no horizontal scroll                                          |
+| `04-goal-detail.png`         | `/development/goals/[id]`         | Status actions, 行动进展 with the formula, linked actions, create-task form, attributes |
+| `05-attribute-detail.png`    | `/development/attributes/[id]`    | Lifetime / 30-day Growth XP, 90-day trend, goals, open tasks, recent records, sources   |
+| `06-goal-linked-tasks.png`   | `/development/goals/[id]?task=…`  | A linked task's panel: contributions from the goal, and its 成长目标                    |
+| `07-empty-state.png`         | `/development` (new user)         | Empty states for vision, focus, recent growth and goals                                 |
+| `08-focus-selection.png`     | `/development` (dialog)           | Choosing the focus: 3 / 3 selected, the rest disabled                                   |
+| `09-dashboard-focus.png`     | `/` (element)                     | M7 dashboard card: chosen focus added above the measured focus, link to 成长规划        |
+| `10-goal-detail-mobile.png`  | `/development/goals/[id]` (phone) | Goal detail on a phone                                                                  |
