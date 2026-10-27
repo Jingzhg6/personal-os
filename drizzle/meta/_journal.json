@@ -50,6 +50,20 @@
       "when": 1793089248674,
       "tag": "0006_character_xp",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793097682863,
+      "tag": "0007_development_attributes",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793097716522,
+      "tag": "0008_drop_area_attributes",
+      "breakpoints": true
     }
   ]
 }

@@ -1,35 +1,39 @@
 {
   "overview": {
-    "description": "完成任务、里程碑和项目会获得经验值；经验按领域计入对应属性。",
+    "description": "完成任务会获得经验值；只有标注了「成长贡献」的任务，才会让对应的成长能力成长。",
     "level": "等级 {level}",
     "totalXp": "累计经验",
+    "developmentXp": "其中 {xp} XP 计入成长能力",
     "progressLabel": "升级进度：{current} / {needed} XP",
     "toNext": "再获得 {xp} XP 升到 {level} 级",
     "counts": "获得 {grants} 次 · 撤销 {reversals} 次",
     "viewHistory": "查看全部记录"
   },
   "attributes": {
-    "title": "属性",
-    "radar": "属性雷达图",
-    "radarHint": "半径表示属性等级（含当前等级进度）。",
+    "title": "成长能力",
+    "radar": "成长能力雷达图",
+    "radarHint": "半径表示成长能力等级（含当前等级进度）。只显示已启用且选择在雷达图显示的能力。",
+    "radarTooFew": "至少需要 3 项在雷达图显示的成长能力才能画出雷达图。",
     "level": "Lv {level}",
     "xp": "{xp} XP",
     "progressLabel": "{name} 升级进度",
-    "areas": "来源：{areas}",
-    "noAreas": "未关联领域",
-    "edit": "设置来源领域",
-    "editTitle": "领域与属性",
-    "editDescription": "已完成的事项按其领域计入属性。修改只影响之后获得的经验，历史记录保持不变。",
-    "areaLabel": "「{area}」计入",
-    "none": "仅计入总经验",
-    "saved": "已保存",
+    "empty": "还没有启用的成长能力。",
+    "manage": "成长能力设置",
+    "archivedSuffix": "已停用",
     "keys": {
-      "learning": "学习",
-      "work": "工作",
-      "fitness": "健身",
-      "business": "业务",
-      "admin": "行政",
-      "life": "生活"
+      "french": "法语",
+      "english": "英语",
+      "reading": "阅读",
+      "strength": "力量",
+      "cardio": "有氧",
+      "legacy": {
+        "learning": "学习（M6 旧属性）",
+        "work": "工作（M6 旧属性）",
+        "fitness": "健身（M6 旧属性）",
+        "business": "业务（M6 旧属性）",
+        "admin": "行政（M6 旧属性）",
+        "life": "生活（M6 旧属性）"
+      }
     }
   },
   "recent": {
@@ -46,16 +50,17 @@
       "grant": "获得",
       "reversal": "撤销"
     },
-    "attribute": "属性",
-    "allAttributes": "全部属性",
-    "noAttribute": "仅总经验",
+    "attribute": "成长能力",
+    "allAttributes": "全部成长能力",
     "list": "经验记录",
     "empty": "没有符合条件的记录。",
     "loadMore": "加载更多",
     "reversed": "已撤销",
     "reversalOf": "撤销 {amount} XP 的获得记录",
     "untitled": "（无标题）",
-    "openSource": "打开「{title}」"
+    "openSource": "打开「{title}」",
+    "credits": "计入成长能力",
+    "overallOnly": "仅计入总经验"
   },
   "reasons": {
     "task": {
@@ -83,6 +88,34 @@
     "project": "完成项目：{base} XP，优先级每高一级 +{perPriority}",
     "milestone": "完成里程碑：{amount} XP",
     "reversal": "重新打开或取消已完成的事项，会撤销当次获得的经验。删除、恢复不影响经验：经验记录的是你曾经完成过。",
-    "levels": "升级：从 n 级升到 n+1 级需要 n × {step} XP；属性每级需要 n × {attributeStep} XP。"
+    "levels": "升级：从 n 级升到 n+1 级需要 n × {step} XP；属性每级需要 n × {attributeStep} XP。",
+    "contributions": "经验先按上述规则计算一次（总经验）；任务标注了成长贡献时，这份经验按权重（主要 3 · 一般 2 · 少量 1）分配给对应的成长能力，不会重复计算。没有成长贡献的任务只计入总经验。"
+  },
+  "settings": {
+    "title": "成长能力设置",
+    "description": "成长能力是你正在培养的能力或发展方向，例如语言、阅读、力量、编程。它们与任务的领域无关：在任务详情的「成长贡献」中选择任务帮助你发展什么。",
+    "active": "已启用",
+    "archived": "已停用",
+    "archivedHint": "停用的成长能力不再出现在雷达图和任务选择中，已获得的经验和历史记录保持不变。",
+    "legacyHint": "M6 旧属性是按领域自动计算的历史经验，保留以便查看历史，不再获得新经验。",
+    "name": "名称",
+    "namePlaceholder": "新成长能力，例如 Python",
+    "icon": "图标（emoji）",
+    "color": "颜色",
+    "add": "添加",
+    "added": "已添加",
+    "saved": "已保存",
+    "moveUp": "上移「{name}」",
+    "moveDown": "下移「{name}」",
+    "onRadar": "在雷达图显示",
+    "archive": "停用",
+    "unarchive": "重新启用",
+    "delete": "删除「{name}」",
+    "deleteTitle": "删除成长能力「{name}」？",
+    "deleteBody": "它还没有任何经验记录。任务上对它的成长贡献会一并移除。",
+    "deleted": "已删除",
+    "noArchived": "没有停用的成长能力。",
+    "xp": "{xp} XP",
+    "back": "返回角色"
   }
 }

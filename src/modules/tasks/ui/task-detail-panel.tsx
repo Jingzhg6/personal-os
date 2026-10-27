@@ -26,6 +26,7 @@ import {
   type UpdateTaskInput,
 } from "../domain";
 import { useDurationLabel, useStatusLabel, useToday } from "./labels";
+import { ContributionsField } from "./contributions-field";
 import { DependenciesField } from "./dependencies-field";
 import { ParentField } from "./parent-field";
 import { useProjectOptions } from "./project-chip";
@@ -345,9 +346,11 @@ function TaskDetailContent({
             </Property>
 
             <Property label={t("fields.dueDate")}>
-              <div className="flex gap-2">
+              {/* Wraps the time below the date on narrow screens instead of overflowing. */}
+              <div className="flex flex-wrap gap-2">
                 <Input
                   type="date"
+                  className="min-w-36 flex-1"
                   aria-label={t("fields.dueDate")}
                   value={task.dueDate ?? ""}
                   min={task.startDate ?? undefined}
@@ -403,6 +406,8 @@ function TaskDetailContent({
               />
             </Property>
           </dl>
+
+          <ContributionsField task={task} />
 
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between">

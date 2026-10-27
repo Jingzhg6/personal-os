@@ -7,6 +7,8 @@ declare module "@/shared/events/types" {
       /** Title when completed (the XP history shows what was done at the time). */
       title: string;
       parentTaskId: string | null;
+      /** Development attributes the task grows, with weights (independent of its area). */
+      contributions: { attributeId: string; weight: number }[];
       areaId: string | null;
       priority: number;
       isUrgent: boolean | null;

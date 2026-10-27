@@ -34,6 +34,7 @@ const baseTask: Task = {
   tagIds: ["tag1"],
   subtaskCount: 3,
   completedSubtaskCount: 1,
+  contributions: [],
   openBlockerCount: 0,
   completedAt: null,
   cancelledAt: null,

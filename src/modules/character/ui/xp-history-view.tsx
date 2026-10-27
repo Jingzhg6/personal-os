@@ -18,7 +18,7 @@ import {
   TASK_XP,
   type XpEntryKind,
 } from "../domain";
-import { useAttributeLabel, useCharacterOverview, useXpHistory } from "./use-character";
+import { useAttributeLabel, useDevelopmentAttributes, useXpHistory } from "./use-character";
 import { XpEntryRow } from "./xp-entry";
 
 const kinds = ["all", "grant", "reversal"] as const;
@@ -30,16 +30,15 @@ export function XpHistoryView({ title }: { title: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const attributeLabel = useAttributeLabel();
+  const archivedLabel = useTranslations("character.attributes")("archivedSuffix");
   const kindParam = searchParams.get("kind");
   const kind: XpEntryKind | undefined =
     kindParam === "grant" || kindParam === "reversal" ? kindParam : undefined;
   const attributeId = searchParams.get("attribute") ?? undefined;
 
-  const { data: overview } = useCharacterOverview();
-  const attributes = useMemo(
-    () => new Map((overview?.attributes ?? []).map((a) => [a.id, a])),
-    [overview],
-  );
+  const { data: allAttributes = [] } = useDevelopmentAttributes();
+  // Archived attributes keep their history, so they stay available here.
+  const attributes = useMemo(() => new Map(allAttributes.map((a) => [a.id, a])), [allAttributes]);
   const history = useXpHistory({ kind, attributeId });
   const entries = history.data?.pages.flatMap((page) => page.entries) ?? [];
 
@@ -84,12 +83,14 @@ export function XpHistoryView({ title }: { title: string }) {
                 aria-label={t("attribute")}
                 value={attributeId ?? ""}
                 onChange={(event) => setParam("attribute", event.target.value || undefined)}
-                className="w-40"
+                className="w-48"
               >
                 <option value="">{t("allAttributes")}</option>
-                {[...attributes.values()].map((attribute) => (
+                {allAttributes.map((attribute) => (
                   <option key={attribute.id} value={attribute.id}>
-                    {attributeLabel(attribute)}
+                    {attribute.archivedAt
+                      ? `${attributeLabel(attribute)} · ${archivedLabel}`
+                      : attributeLabel(attribute)}
                   </option>
                 ))}
               </Select>
@@ -136,6 +137,7 @@ function RulesCard() {
           <li>{t("task", { ...TASK_XP })}</li>
           <li>{t("milestone", { amount: MILESTONE_XP })}</li>
           <li>{t("project", { ...PROJECT_XP })}</li>
+          <li>{t("contributions")}</li>
           <li>{t("reversal")}</li>
           <li>
             {t("levels", { step: CHARACTER_LEVEL_STEP, attributeStep: ATTRIBUTE_LEVEL_STEP })}

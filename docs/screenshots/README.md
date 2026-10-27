@@ -56,6 +56,9 @@ Desktop shots are 1440 × 900; phone shots use the Pixel 7 profile (touch, no ho
 
 ## M6 — Character & XP (`m6/`)
 
+Historical: these show M6's area-derived attributes, replaced in M6.1. The M6 capture script
+(`e2e/screenshots/m6.shots.ts`) is in the `m6-character-xp` branch history.
+
 All XP shown was produced by real completions, reopenings, a completed → cancelled change, a
 milestone un-completed and a deleted completed task, made through the app's API.
 
@@ -70,3 +73,21 @@ milestone un-completed and a deleted completed task, made through the app's API.
 | `07-character-dark.png`      | `/character` (dark)           | Dark theme, desktop                                                                         |
 | `08-mobile-character.png`    | `/character` (phone)          | Phone layout: level card and radar                                                          |
 | `09-mobile-history-dark.png` | `/character/xp` (phone, dark) | Phone, dark: XP history                                                                     |
+
+## M6.1 — Personal development model (`m6-1/`)
+
+Data made through the app's API only: attributes created / archived, tasks with an area **and**
+development contributions, completions and one reopen. Total 205 XP, of which 170 XP credited to
+development attributes (two admin tasks earn overall XP only).
+
+| File                                    | Page                          | Shows                                                                                     |
+| --------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `01-character-overview.png`             | `/character`                  | Level and overall XP with "其中 … 计入成长能力", dynamic radar, 成长能力 list             |
+| `02-dynamic-radar.png`                  | `/character`                  | Radar of the user's current attributes incl. the custom "Python", hover tooltip           |
+| `03-attribute-settings.png`             | `/character/attributes`       | 成长能力设置: emoji, name, color, order, 在雷达图显示, 停用; archived section             |
+| `04-task-contribution.png`              | `/tasks?task=…`               | Task in area 工作 contributing to Python only; attribute picker open                      |
+| `05-task-multiple-contributions.png`    | `/tasks?task=…`               | Task in area 学习 contributing to 法语 (主要) and 阅读 (少量): 30 XP → 法语 +23 · 阅读 +7 |
+| `06-xp-history.png`                     | `/character/xp`               | Per-entry split, "仅计入总经验" entries, a reversal, the rules incl. the split rule       |
+| `07-character-dark.png`                 | `/character` (dark)           | Dark theme, desktop                                                                       |
+| `08-mobile-character.png`               | `/character` (phone)          | Phone layout                                                                              |
+| `09-mobile-task-contributions-dark.png` | `/tasks?task=…` (phone, dark) | Phone, dark: task detail with contributions (due time now wraps below the date)           |

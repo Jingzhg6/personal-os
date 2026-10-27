@@ -28,6 +28,15 @@ export function RadarChart({ attributes }: { attributes: AttributeValue[] }) {
   const label = useAttributeLabel();
   const [hover, setHover] = useState<string | null>(null);
 
+  // A radar needs at least three axes; the list beside it still shows every value.
+  if (attributes.length < 3) {
+    return (
+      <p className="py-10 text-center text-sm text-muted-foreground" data-testid="radar-too-few">
+        {t("radarTooFew")}
+      </p>
+    );
+  }
+
   const values = attributes.map((a) => fractionalLevel(a.xp));
   // Rings at whole levels; at least 5 so a new character is not a full-size shape.
   const rings = Math.max(5, Math.ceil(Math.max(...values, 1)));
@@ -108,7 +117,7 @@ export function RadarChart({ attributes }: { attributes: AttributeValue[] }) {
                   hover === a.id && "fill-foreground font-medium",
                 )}
               >
-                {label(a)}
+                {a.icon ? `${a.icon} ${label(a)}` : label(a)}
               </text>
             </g>
           );

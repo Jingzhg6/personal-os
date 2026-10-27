@@ -34,6 +34,11 @@ export interface Task {
   estimatedMinutes: number | null;
   sortKey: string;
   tagIds: string[];
+  /**
+   * Development attributes this task helps grow, with relative weights (1–3). Independent of
+   * `areaId`; empty for most tasks.
+   */
+  contributions: TaskContribution[];
   subtaskCount: number;
   completedSubtaskCount: number;
   /** Open (not completed / cancelled) tasks this one is waiting for. */
@@ -42,6 +47,11 @@ export interface Task {
   cancelledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface TaskContribution {
+  attributeId: string;
+  weight: number;
 }
 
 export interface TaskDetail extends Task {
@@ -73,6 +83,12 @@ const editableFields = z.object({
   dueTime: time.nullable(),
   estimatedMinutes: z.number().int().min(1).max(MAX_ESTIMATE_MINUTES).nullable(),
   tagIds: z.array(z.uuid()).max(20),
+  contributions: z
+    .array(z.object({ attributeId: z.uuid(), weight: z.number().int().min(1).max(3) }))
+    .max(8)
+    .refine((list) => new Set(list.map((c) => c.attributeId)).size === list.length, {
+      message: "Duplicate attribute",
+    }),
 });
 
 export type TaskSchedule = Pick<Task, "startDate" | "dueDate" | "dueTime">;

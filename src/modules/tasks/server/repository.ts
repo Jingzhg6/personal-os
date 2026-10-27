@@ -19,7 +19,13 @@ import { alias } from "drizzle-orm/pg-core";
 import type { DbExecutor } from "@/shared/db/types";
 import { DomainError } from "@/shared/lib/errors";
 
-import { taskDependencies, tasks, taskStatuses, taskTags } from "../db";
+import {
+  taskDependencies,
+  taskDevelopmentContributions,
+  tasks,
+  taskStatuses,
+  taskTags,
+} from "../db";
 import {
   addDays,
   type DependencyRef,
@@ -44,6 +50,7 @@ function toTask(
   category: string,
   parentTitle: string | null,
   tagIds: string[],
+  contributions: Task["contributions"],
   counts: { total: number; done: number } | undefined,
   openBlockerCount: number,
 ): Task {
@@ -67,6 +74,7 @@ function toTask(
     estimatedMinutes: row.estimatedMinutes,
     sortKey: row.sortKey,
     tagIds,
+    contributions,
     subtaskCount: counts?.total ?? 0,
     completedSubtaskCount: counts?.done ?? 0,
     openBlockerCount,
@@ -99,11 +107,19 @@ export async function loadTasks(
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.task.id);
-  const [tagRows, countRows, blockerRows] = await Promise.all([
+  const [tagRows, contributionRows, countRows, blockerRows] = await Promise.all([
     db
       .select({ taskId: taskTags.taskId, tagId: taskTags.tagId })
       .from(taskTags)
       .where(inArray(taskTags.taskId, ids)),
+    db
+      .select()
+      .from(taskDevelopmentContributions)
+      .where(inArray(taskDevelopmentContributions.taskId, ids))
+      .orderBy(
+        desc(taskDevelopmentContributions.weight),
+        asc(taskDevelopmentContributions.attributeId),
+      ),
     db
       .select({
         parentId: tasks.parentTaskId,
@@ -138,6 +154,13 @@ export async function loadTasks(
   );
 
   const blockersByTask = new Map(blockerRows.map((b) => [b.taskId, b.open]));
+  const contributionsByTask = new Map<string, Task["contributions"]>();
+  for (const { taskId, attributeId, weight } of contributionRows) {
+    contributionsByTask.set(taskId, [
+      ...(contributionsByTask.get(taskId) ?? []),
+      { attributeId, weight },
+    ]);
+  }
 
   return rows.map(({ task, category, parentTitle }) =>
     toTask(
@@ -145,6 +168,7 @@ export async function loadTasks(
       category,
       parentTitle,
       tagsByTask.get(task.id) ?? [],
+      contributionsByTask.get(task.id) ?? [],
       countsByTask.get(task.id),
       blockersByTask.get(task.id) ?? 0,
     ),

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Attribute } from "./attributes";
+import type { DevelopmentAttribute } from "./attributes";
 import type { LevelProgress } from "./levels";
 import type { XpSourceType } from "./rules";
 
@@ -18,7 +18,8 @@ export interface XpEntry {
   sourceType: XpSourceType;
   sourceId: string;
   sourceTitle: string | null;
-  attributeId: string | null;
+  /** How this entry's XP was split across development attributes (may be empty). */
+  credits: { attributeId: string; amount: number }[];
   /** The grant this entry cancels (reversals only). */
   reversalOf: string | null;
   /** Grants only: a later reversal cancelled it. */
@@ -26,15 +27,18 @@ export interface XpEntry {
   createdAt: Date;
 }
 
-export interface AttributeValue extends Attribute {
-  xp: number;
+export interface AttributeValue extends DevelopmentAttribute {
   progress: LevelProgress;
 }
 
 export interface CharacterOverview {
+  /** Overall XP and level: every completion counts once. */
   progress: LevelProgress;
+  /** Part of the overall XP credited to development attributes (archived ones included). */
+  developmentXp: number;
   grantCount: number;
   reversalCount: number;
+  /** Active development attributes, in the user's order. */
   attributes: AttributeValue[];
   recentGrants: XpEntry[];
   recentReversals: XpEntry[];

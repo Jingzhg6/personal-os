@@ -21,6 +21,7 @@ import {
 } from "../domain";
 import { getTask } from "./repository";
 import { getOwnedStatus, listStatuses } from "./statuses";
+import { assertContributionsUsable, replaceContributions } from "./contributions";
 import { assertTagsOwned } from "./tags";
 
 /*
@@ -163,6 +164,7 @@ async function publishCompletion(
           taskId: task.id,
           title: task.title,
           parentTaskId: task.parentTaskId,
+          contributions: task.contributions,
           areaId: task.areaId,
           priority: task.priority,
           isUrgent: task.isUrgent,
@@ -188,6 +190,7 @@ export function createTask(
     if (parentTaskId) await getTask(tx, userId, parentTaskId);
     await assertAreaOwned(tx, userId, input.areaId);
     await assertTagsOwned(tx, userId, input.tagIds ?? []);
+    await assertContributionsUsable(tx, userId, input.contributions ?? []);
     const refs = await resolveProjectRefs(tx, userId, {
       projectId: input.projectId ?? null,
       milestoneId: input.milestoneId ?? null,
@@ -235,6 +238,7 @@ export function createTask(
       })
       .returning({ id: tasks.id });
     await replaceTags(tx, row!.id, input.tagIds ?? []);
+    await replaceContributions(tx, row!.id, input.contributions ?? []);
 
     const task = await getTask(tx, userId, row!.id);
     await bus.publish(
@@ -253,7 +257,7 @@ export function updateTask(
 ): Promise<Task> {
   return db.transaction(async (tx) => {
     const current = await getTask(tx, userId, input.id);
-    const { tagIds, ...rest } = input.patch;
+    const { tagIds, contributions, ...rest } = input.patch;
     const fields: typeof rest = { ...rest };
     if (rest.projectId !== undefined || rest.milestoneId !== undefined) {
       const projectId = rest.projectId !== undefined ? rest.projectId : current.projectId;
@@ -277,6 +281,9 @@ export function updateTask(
 
     await assertAreaOwned(tx, userId, fields.areaId);
     if (tagIds) await assertTagsOwned(tx, userId, tagIds);
+    if (contributions) {
+      await assertContributionsUsable(tx, userId, contributions, current.contributions);
+    }
     assertSchedule({
       startDate: fields.startDate !== undefined ? fields.startDate : current.startDate,
       dueDate: fields.dueDate !== undefined ? fields.dueDate : current.dueDate,
@@ -296,6 +303,7 @@ export function updateTask(
       await tx.update(tasks).set({ updatedAt: new Date() }).where(eq(tasks.id, current.id));
     }
     if (tagIds) await replaceTags(tx, current.id, tagIds);
+    if (contributions) await replaceContributions(tx, current.id, contributions);
     return getTask(tx, userId, current.id);
   });
 }

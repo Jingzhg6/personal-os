@@ -175,7 +175,7 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 - Each module owns its tables in `src/modules/<m>/db`; `src/server/db-schema.ts` aggregates them
   for drizzle-kit and Better Auth.
 
-### 5.2 Implemented (M0–M6)
+### 5.2 Implemented (M0–M6.1)
 
 | Table                                            | Owner       | Notes                                                              |
 | ------------------------------------------------ | ----------- | ------------------------------------------------------------------ |
@@ -190,7 +190,9 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 | `projects`                                       | projects    | (M4) see below                                                     |
 | `milestones`                                     | projects    | (M4) belong to one project; cascade with it                        |
 | `task_dependencies`                              | tasks       | (M5) finish-to-start edges; see below                              |
-| `attributes`, `attribute_areas`                  | character   | (M6) ability dimensions; which area credits which attribute        |
+| `development_attributes`                         | character   | (M6.1) user-defined growth directions (法语, 阅读, Python …)       |
+| `xp_attribute_credits`                           | character   | (M6.1) append-only split of a ledger entry across attributes       |
+| `task_development_contributions`                 | tasks       | (M6.1) which attributes a task grows, with weights 1–3             |
 | `xp_ledger`                                      | character   | (M6) append-only XP ledger; see below                              |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
@@ -221,13 +223,26 @@ in the detail panel are read from this one table. See ADR 0010.
 
 `xp_ledger` (M6): `id, user_id, kind (grant|reversal), amount (signed), rule_key,
 source_event_id, source_event_type, source_type (task|project|milestone), source_id (no FK —
-history outlives the source), source_title (title at the time), attribute_id?, cycle,
-reversal_of?, created_at`. Append-only: a trigger rejects UPDATE and direct DELETE (only the user
-cascade removes rows). Unique indexes make it idempotent: one entry per (source event, rule), one
-grant per (rule, source, cycle), one reversal per grant. Total XP, the level and every attribute
-value are sums over it at read time; nothing is stored as a counter. `attributes` (system-key
-pattern, six seeded) and `attribute_areas` (area → attribute) decide which attribute a grant
-credits; changing a link only affects later grants. See ADR 0012.
+history outlives the source), source_title (title at the time), attribute_id? (legacy, see
+below), cycle, reversal_of?, created_at`. Append-only: a trigger rejects UPDATE and direct
+DELETE (only the user cascade removes rows). Unique indexes make it idempotent: one entry per
+(source event, rule), one grant per (rule, source, cycle), one reversal per grant. One row = the
+**overall XP** of one completion or reversal, counted once. Total XP and the level are sums over
+it at read time. See ADR 0012.
+
+Development model (M6.1, ADR 0013). **Areas organise life** (which part of my life is this
+task in?); **development attributes describe growth** (what am I becoming better at?). They are
+independent: a task has one area and zero or more `task_development_contributions`
+(`task_id, attribute_id, weight 1–3`). On completion, the task's overall XP is split by weight
+into `xp_attribute_credits` (`ledger_entry_id, attribute_id, signed amount`, append-only, unique
+per entry and attribute); a reversal copies the grant's credits negated. **Attribute XP** = sum
+of an attribute's credits; the credits of one entry never exceed its amount, so nothing is
+counted twice. Tasks without contributions, projects and milestones earn overall XP only.
+`development_attributes` (`system_key?` for seeded examples, `name?`, `icon?`, `color`,
+`on_radar`, `archived_at`, `sort_key`) are user data; archiving hides an attribute from the radar
+and pickers but keeps its XP. The radar shows active attributes with `on_radar`; it stores
+nothing. M6's area-derived attributes survive as archived `legacy.*` attributes with their
+original ids; `xp_ledger.attribute_id` keeps what M6 recorded and is no longer written.
 
 Rules enforced in the service layer (`src/modules/tasks/server/service.ts`):
 
@@ -372,6 +387,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M3 Eisenhower matrix** ✅: quadrants + 未分类 tray derived from the flags, drag-and-drop and a 「移到」 menu, quick add per quadrant, shared detail panel, filters.
 - **M4 Projects** ✅: project CRUD and list, project page (任务 / 看板 / 里程碑 / 说明), status Kanban (global and per project), milestones, computed progress, project filter and fields on tasks.
 - **M5 Dependencies & basic Gantt** ✅: finish-to-start dependencies with cycle checks, 前置 / 后续 lists and 受阻 markers, Gantt chart (global and per project) with day / week / month scales, milestones, dependency arrows with date-conflict highlighting, drag / keyboard rescheduling.
+- **M6.1 Personal development model** ✅: user-defined development attributes, task development contributions (independent of areas), overall XP vs attribute XP (credits), dynamic radar, settings, M6 compatibility.
 - **M6 Character & XP** ✅: event → XP rules, append-only idempotent ledger with reversals (incl. new `milestone.reopened`), levels derived from the ledger, attributes credited through areas, radar, XP history, character page.
 - **M7 Dashboard.**
 - **M8 Recurring tasks, settings polish, JSON export, deployment (Dockerfile), E2E sweep, polish.**

@@ -1,12 +1,11 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { DbExecutor } from "@/shared/db/types";
 import type { DomainEvent } from "@/shared/events/types";
 
-import { xpLedger } from "../db";
-import { xpRules, type XpGrant, type XpRule } from "../domain";
-import { attributeForArea } from "./attributes";
+import { developmentAttributes, xpAttributeCredits, xpLedger } from "../db";
+import { splitByWeight, xpRules, type XpGrant, type XpRule } from "../domain";
 
 /*
  * The XP engine: turns domain events into ledger entries, in the publisher's transaction.
@@ -14,6 +13,10 @@ import { attributeForArea } from "./attributes";
  * Idempotency does not rely on callers: every insert is `ON CONFLICT DO NOTHING` against the
  * ledger's unique indexes, so delivering the same event twice — or a second event for a
  * completion that is already granted — adds nothing.
+ *
+ * Two layers: the ledger row carries the overall XP of a completion (counted once); its
+ * attribute credits split that same amount across the development attributes the source
+ * contributes to. Credits are written only together with a newly inserted ledger row.
  */
 
 const reversal = alias(xpLedger, "reversal");
@@ -41,7 +44,7 @@ async function grant(db: DbExecutor, event: DomainEvent, rule: XpRule, xp: XpGra
     .from(xpLedger)
     .where(and(sameSource, eq(xpLedger.kind, "reversal")))) as [{ cycle: number }];
 
-  await db
+  const [entry] = await db
     .insert(xpLedger)
     .values({
       userId: event.userId,
@@ -53,11 +56,49 @@ async function grant(db: DbExecutor, event: DomainEvent, rule: XpRule, xp: XpGra
       sourceType: xp.sourceType,
       sourceId: xp.sourceId,
       sourceTitle: xp.title,
-      attributeId: await attributeForArea(db, event.userId, xp.areaId),
       cycle,
       createdAt: event.occurredAt,
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: xpLedger.id });
+  if (!entry) return; // already granted: no credits either
+
+  // Only the user's own attributes can be credited (archived ones still count: the task named
+  // them when it was completed).
+  const ids = xp.contributions.map((c) => c.attributeId);
+  const owned = ids.length
+    ? new Set(
+        (
+          await db
+            .select({ id: developmentAttributes.id })
+            .from(developmentAttributes)
+            .where(
+              and(
+                eq(developmentAttributes.userId, event.userId),
+                inArray(developmentAttributes.id, ids),
+              ),
+            )
+        ).map((row) => row.id),
+      )
+    : new Set<string>();
+  const credits = splitByWeight(
+    xp.amount,
+    xp.contributions.filter((c) => owned.has(c.attributeId)),
+  );
+  if (credits.length > 0) {
+    await db
+      .insert(xpAttributeCredits)
+      .values(
+        credits.map((credit) => ({
+          userId: event.userId,
+          ledgerEntryId: entry.id,
+          attributeId: credit.attributeId,
+          amount: credit.amount,
+          createdAt: event.occurredAt,
+        })),
+      )
+      .onConflictDoNothing();
+  }
 }
 
 async function reverse(db: DbExecutor, event: DomainEvent, rule: XpRule, sourceId: string) {
@@ -81,7 +122,7 @@ async function reverse(db: DbExecutor, event: DomainEvent, rule: XpRule, sourceI
     .limit(1);
   if (!open) return;
 
-  await db
+  const [entry] = await db
     .insert(xpLedger)
     .values({
       userId: event.userId,
@@ -93,10 +134,33 @@ async function reverse(db: DbExecutor, event: DomainEvent, rule: XpRule, sourceI
       sourceType: open.grant.sourceType,
       sourceId: open.grant.sourceId,
       sourceTitle: open.grant.sourceTitle,
+      // Legacy M6 grants recorded one attribute here; the reversal mirrors it as recorded.
       attributeId: open.grant.attributeId,
       cycle: open.grant.cycle,
       reversalOf: open.grant.id,
       createdAt: event.occurredAt,
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: xpLedger.id });
+  if (!entry) return;
+
+  // Undo exactly what the grant credited, whatever the task's contributions are now.
+  const credits = await db
+    .select({ attributeId: xpAttributeCredits.attributeId, amount: xpAttributeCredits.amount })
+    .from(xpAttributeCredits)
+    .where(eq(xpAttributeCredits.ledgerEntryId, open.grant.id));
+  if (credits.length > 0) {
+    await db
+      .insert(xpAttributeCredits)
+      .values(
+        credits.map((credit) => ({
+          userId: event.userId,
+          ledgerEntryId: entry.id,
+          attributeId: credit.attributeId,
+          amount: -credit.amount,
+          createdAt: event.occurredAt,
+        })),
+      )
+      .onConflictDoNothing();
+  }
 }

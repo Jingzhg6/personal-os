@@ -1,9 +1,9 @@
-import { and, desc, eq, lt, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, exists, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { DbExecutor } from "@/shared/db/types";
 
-import { xpLedger } from "../db";
+import { xpAttributeCredits, xpLedger } from "../db";
 import {
   ATTRIBUTE_LEVEL_STEP,
   levelProgress,
@@ -34,6 +34,22 @@ async function loadEntries(
     .where(and(eq(xpLedger.userId, userId), where))
     .orderBy(desc(xpLedger.createdAt), desc(xpLedger.id))
     .limit(limit);
+  const ids = rows.map((row) => row.entry.id);
+  const creditRows = ids.length
+    ? await db
+        .select({
+          entryId: xpAttributeCredits.ledgerEntryId,
+          attributeId: xpAttributeCredits.attributeId,
+          amount: xpAttributeCredits.amount,
+        })
+        .from(xpAttributeCredits)
+        .where(inArray(xpAttributeCredits.ledgerEntryId, ids))
+    : [];
+  const creditsOf = new Map<string, XpEntry["credits"]>();
+  for (const { entryId, attributeId, amount } of creditRows) {
+    creditsOf.set(entryId, [...(creditsOf.get(entryId) ?? []), { attributeId, amount }]);
+  }
+
   return rows.map(({ entry, reversedBy }) => ({
     id: entry.id,
     kind: entry.kind as XpEntryKind,
@@ -44,7 +60,9 @@ async function loadEntries(
     sourceType: entry.sourceType as XpSourceType,
     sourceId: entry.sourceId,
     sourceTitle: entry.sourceTitle,
-    attributeId: entry.attributeId,
+    credits: (creditsOf.get(entry.id) ?? []).sort(
+      (a, b) => Math.abs(b.amount) - Math.abs(a.amount),
+    ),
     reversalOf: entry.reversalOf,
     reversed: reversedBy !== null,
     createdAt: entry.createdAt,
@@ -61,7 +79,7 @@ export async function totalXp(db: DbExecutor, userId: string): Promise<number> {
 }
 
 export async function getOverview(db: DbExecutor, userId: string): Promise<CharacterOverview> {
-  const [attributes, totals, byAttribute, recentGrants, recentReversals] = await Promise.all([
+  const [attributes, totals, recentGrants, recentReversals] = await Promise.all([
     listAttributes(db, userId),
     db
       .select({
@@ -71,27 +89,21 @@ export async function getOverview(db: DbExecutor, userId: string): Promise<Chara
       })
       .from(xpLedger)
       .where(eq(xpLedger.userId, userId)),
-    db
-      .select({
-        attributeId: xpLedger.attributeId,
-        xp: sql<number>`coalesce(sum(${xpLedger.amount}), 0)::int`,
-      })
-      .from(xpLedger)
-      .where(eq(xpLedger.userId, userId))
-      .groupBy(xpLedger.attributeId),
     loadEntries(db, userId, eq(xpLedger.kind, "grant"), 6),
     loadEntries(db, userId, eq(xpLedger.kind, "reversal"), 4),
   ]);
-  const xpOf = new Map(byAttribute.map((row) => [row.attributeId, row.xp]));
   const total = totals[0]!;
   return {
     progress: levelProgress(total.total),
+    developmentXp: attributes.reduce((sum, a) => sum + a.xp, 0),
     grantCount: total.grants,
     reversalCount: total.reversals,
-    attributes: attributes.map((attribute) => {
-      const xp = xpOf.get(attribute.id) ?? 0;
-      return { ...attribute, xp, progress: levelProgress(xp, ATTRIBUTE_LEVEL_STEP) };
-    }),
+    attributes: attributes
+      .filter((attribute) => !attribute.archivedAt)
+      .map((attribute) => ({
+        ...attribute,
+        progress: levelProgress(attribute.xp, ATTRIBUTE_LEVEL_STEP),
+      })),
     recentGrants,
     recentReversals,
   };
@@ -121,7 +133,19 @@ export async function listHistory(
     userId,
     and(
       input.kind ? eq(xpLedger.kind, input.kind) : undefined,
-      input.attributeId ? eq(xpLedger.attributeId, input.attributeId) : undefined,
+      input.attributeId
+        ? exists(
+            db
+              .select({ one: sql`1` })
+              .from(xpAttributeCredits)
+              .where(
+                and(
+                  eq(xpAttributeCredits.ledgerEntryId, xpLedger.id),
+                  eq(xpAttributeCredits.attributeId, input.attributeId),
+                ),
+              ),
+          )
+        : undefined,
       after,
     ),
     input.limit + 1,

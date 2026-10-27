@@ -1,5 +1,7 @@
 import type { DomainEventMap, DomainEventType } from "@/shared/events/types";
 
+import type { Contribution } from "./attributes";
+
 /*
  * Event → XP rules, defined once. Each rule turns one domain event into at most one XP grant and
  * names the events that reverse it. A new module joins by declaring its events and adding a rule
@@ -14,9 +16,13 @@ export type XpSourceType = (typeof xpSourceTypes)[number];
 export interface XpGrant {
   sourceType: XpSourceType;
   sourceId: string;
+  /** Overall XP of the completion. */
   amount: number;
-  /** Area of the completed item; decides which attribute is credited. */
-  areaId: string | null;
+  /**
+   * Development attributes the completed item grows. The amount is split across them; with none,
+   * the completion earns overall XP only. Areas play no part here.
+   */
+  contributions: readonly Contribution[];
   /** Title / name at the time (shown in the history). */
   title: string;
 }
@@ -60,7 +66,7 @@ export const xpRules: readonly XpRule[] = [
       amount: p.parentTaskId
         ? TASK_XP.subtask
         : TASK_XP.base + p.priority * TASK_XP.perPriority + (p.isImportant ? TASK_XP.important : 0),
-      areaId: p.areaId,
+      contributions: p.contributions,
       title: p.title,
     }),
     reverseOn: "task.reopened",
@@ -74,7 +80,7 @@ export const xpRules: readonly XpRule[] = [
       sourceType: "project",
       sourceId: p.projectId,
       amount: PROJECT_XP.base + p.priority * PROJECT_XP.perPriority,
-      areaId: p.areaId,
+      contributions: [],
       title: p.name,
     }),
     reverseOn: "project.reopened",
@@ -88,7 +94,7 @@ export const xpRules: readonly XpRule[] = [
       sourceType: "milestone",
       sourceId: p.milestoneId,
       amount: MILESTONE_XP,
-      areaId: p.areaId,
+      contributions: [],
       title: p.name,
     }),
     reverseOn: "milestone.reopened",

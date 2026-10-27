@@ -18,6 +18,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { areas } from "@/modules/areas/db";
+import { developmentAttributes } from "@/modules/character/db";
 import { milestones, projects } from "@/modules/projects/db";
 import { users } from "@/shared/auth/schema";
 import { primaryId, sortKey, timestamps } from "@/shared/db/columns";
@@ -178,5 +179,27 @@ export const taskDependencies = pgTable(
     primaryKey({ columns: [t.blockingTaskId, t.blockedTaskId] }),
     index("task_dependencies_blocked_idx").on(t.blockedTaskId),
     check("task_dependencies_not_self", sql`${t.blockingTaskId} <> ${t.blockedTaskId}`),
+  ],
+);
+
+/**
+ * Which development attributes a task helps grow, with a relative weight (1 少量, 2 一般,
+ * 3 主要). Independent of the task's area. On completion the task's XP is split across them.
+ */
+export const taskDevelopmentContributions = pgTable(
+  "task_development_contributions",
+  {
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    attributeId: uuid("attribute_id")
+      .notNull()
+      .references(() => developmentAttributes.id, { onDelete: "cascade" }),
+    weight: smallint("weight").notNull().default(2),
+  },
+  (t) => [
+    primaryKey({ columns: [t.taskId, t.attributeId] }),
+    index("task_development_contributions_attribute_idx").on(t.attributeId),
+    check("task_development_contributions_weight_range", sql`${t.weight} between 1 and 3`),
   ],
 );

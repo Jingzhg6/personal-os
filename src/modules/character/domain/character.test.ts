@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { splitByWeight } from "./attributes";
 import { ATTRIBUTE_LEVEL_STEP, fractionalLevel, levelProgress, xpForLevel } from "./levels";
 import { TASK_XP, xpEventTypes, xpRules } from "./rules";
 
@@ -25,6 +26,7 @@ describe("xp rules", () => {
     taskId: "t",
     title: "写报告",
     parentTaskId: null,
+    contributions: [{ attributeId: "fr", weight: 3 }],
     areaId: "a",
     priority: 2,
     isUrgent: null,
@@ -38,7 +40,7 @@ describe("xp rules", () => {
       sourceType: "task",
       sourceId: "t",
       amount: TASK_XP.base + 2 * TASK_XP.perPriority + TASK_XP.important,
-      areaId: "a",
+      contributions: [{ attributeId: "fr", weight: 3 }],
       title: "写报告",
     });
     expect(rule("task.completion").grant({ ...task, parentTaskId: "p" }).amount).toBe(
@@ -53,5 +55,33 @@ describe("xp rules", () => {
       ["milestone.completed", "milestone.reopened"],
     ]);
     expect(xpEventTypes).toHaveLength(6);
+  });
+});
+
+describe("splitByWeight", () => {
+  const c = (attributeId: string, weight: number) => ({ attributeId, weight });
+
+  it("splits in proportion and always adds up to the total", () => {
+    expect(splitByWeight(20, [c("fr", 3), c("read", 2)])).toEqual([
+      { attributeId: "fr", amount: 12 },
+      { attributeId: "read", amount: 8 },
+    ]);
+    expect(splitByWeight(10, [c("a", 1), c("b", 1), c("c", 1)]).map((p) => p.amount)).toEqual([
+      4, 3, 3,
+    ]);
+    for (const total of [5, 7, 13, 30, 145]) {
+      const parts = splitByWeight(total, [c("a", 3), c("b", 2), c("c", 1)]);
+      expect(parts.reduce((sum, p) => sum + p.amount, 0)).toBe(total);
+    }
+  });
+
+  it("gives the whole amount to a single contribution and nothing without any", () => {
+    expect(splitByWeight(15, [c("a", 1)])).toEqual([{ attributeId: "a", amount: 15 }]);
+    expect(splitByWeight(15, [])).toEqual([]);
+    expect(splitByWeight(0, [c("a", 2)])).toEqual([]);
+  });
+
+  it("drops parts that round to zero", () => {
+    expect(splitByWeight(1, [c("a", 1), c("b", 1)])).toEqual([{ attributeId: "a", amount: 1 }]);
   });
 });

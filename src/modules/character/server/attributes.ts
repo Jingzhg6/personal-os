@@ -1,104 +1,158 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
-import { listAreas } from "@/modules/areas/server";
 import type { DbExecutor } from "@/shared/db/types";
 import type { ColorId } from "@/shared/lib/colors";
 import { DomainError } from "@/shared/lib/errors";
-import { keysForNewItems } from "@/shared/lib/order";
+import { keyAfter, keyForMove, keysForNewItems } from "@/shared/lib/order";
 
-import { attributeAreas, attributes } from "../db";
+import { developmentAttributes, xpAttributeCredits } from "../db";
 import {
-  defaultAttributeForArea,
-  defaultAttributes,
-  type Attribute,
-  type AttributeKey,
-  type SetAttributeAreaInput,
+  defaultDevelopmentAttributes,
+  type AttributeLabelKey,
+  type CreateAttributeInput,
+  type DevelopmentAttribute,
+  type UpdateAttributeInput,
 } from "../domain";
 
-/** Seeds the attributes and links the seeded areas to them (new accounts). */
-export async function seedAttributes(db: DbExecutor, userId: string): Promise<void> {
-  const keys = keysForNewItems(defaultAttributes.length);
-  await db
-    .insert(attributes)
-    .values(defaultAttributes.map((a, i) => ({ userId, ...a, sortKey: keys[i]! })))
-    .onConflictDoNothing();
+/*
+ * Development attributes are user data. Renaming or archiving one never touches the XP ledger or
+ * its credits: history keeps pointing at the same attribute id.
+ */
 
-  const [areas, rows] = await Promise.all([
-    listAreas(db, userId),
-    db.select().from(attributes).where(eq(attributes.userId, userId)),
-  ]);
-  const byKey = new Map(rows.map((row) => [row.systemKey, row.id]));
-  const links = areas.flatMap((area) => {
-    const key = area.systemKey ? defaultAttributeForArea[area.systemKey] : undefined;
-    const attributeId = key ? byKey.get(key) : undefined;
-    return attributeId ? [{ areaId: area.id, userId, attributeId }] : [];
-  });
-  if (links.length > 0) await db.insert(attributeAreas).values(links).onConflictDoNothing();
+type Row = typeof developmentAttributes.$inferSelect;
+
+function toAttribute(row: Row, xp: number): DevelopmentAttribute {
+  return {
+    id: row.id,
+    systemKey: row.systemKey as AttributeLabelKey | null,
+    name: row.name,
+    icon: row.icon,
+    color: row.color as ColorId,
+    onRadar: row.onRadar,
+    archivedAt: row.archivedAt,
+    sortKey: row.sortKey,
+    xp,
+  };
 }
 
-export async function listAttributes(db: DbExecutor, userId: string): Promise<Attribute[]> {
-  const [rows, links] = await Promise.all([
+/** Seeds the example attributes for a new account. */
+export async function seedDevelopmentAttributes(db: DbExecutor, userId: string): Promise<void> {
+  const keys = keysForNewItems(defaultDevelopmentAttributes.length);
+  await db
+    .insert(developmentAttributes)
+    .values(defaultDevelopmentAttributes.map((a, i) => ({ userId, ...a, sortKey: keys[i]! })))
+    .onConflictDoNothing();
+}
+
+/** All of the user's attributes (archived included), in display order, with their XP. */
+export async function listAttributes(
+  db: DbExecutor,
+  userId: string,
+): Promise<DevelopmentAttribute[]> {
+  const [rows, totals] = await Promise.all([
     db
       .select()
-      .from(attributes)
-      .where(eq(attributes.userId, userId))
-      .orderBy(asc(attributes.sortKey), asc(attributes.id)),
-    db.select().from(attributeAreas).where(eq(attributeAreas.userId, userId)),
+      .from(developmentAttributes)
+      .where(eq(developmentAttributes.userId, userId))
+      .orderBy(asc(developmentAttributes.sortKey), asc(developmentAttributes.id)),
+    db
+      .select({
+        attributeId: xpAttributeCredits.attributeId,
+        xp: sql<number>`coalesce(sum(${xpAttributeCredits.amount}), 0)::int`,
+      })
+      .from(xpAttributeCredits)
+      .where(eq(xpAttributeCredits.userId, userId))
+      .groupBy(xpAttributeCredits.attributeId),
   ]);
-  return rows.map((row) => ({
-    id: row.id,
-    systemKey: row.systemKey as AttributeKey,
-    name: row.name,
-    color: row.color as ColorId,
-    areaIds: links.filter((l) => l.attributeId === row.id).map((l) => l.areaId),
-  }));
+  const xpOf = new Map(totals.map((t) => [t.attributeId, t.xp]));
+  return rows.map((row) => toAttribute(row, xpOf.get(row.id) ?? 0));
 }
 
-/** The attribute an area credits, if any. */
-export async function attributeForArea(
-  db: DbExecutor,
-  userId: string,
-  areaId: string | null,
-): Promise<string | null> {
-  if (!areaId) return null;
+async function getOwned(db: DbExecutor, userId: string, id: string): Promise<Row> {
   const [row] = await db
-    .select({ attributeId: attributeAreas.attributeId })
-    .from(attributeAreas)
-    .where(and(eq(attributeAreas.areaId, areaId), eq(attributeAreas.userId, userId)));
-  return row?.attributeId ?? null;
+    .select()
+    .from(developmentAttributes)
+    .where(and(eq(developmentAttributes.id, id), eq(developmentAttributes.userId, userId)));
+  if (!row) throw new DomainError("not_found", "attribute.not_found");
+  return row;
 }
 
-/**
- * Changes which attribute an area credits from now on. Existing ledger entries keep the attribute
- * they were credited to: history is never rewritten.
- */
-export async function setAttributeArea(
+export async function createAttribute(
   db: DbExecutor,
   userId: string,
-  input: SetAttributeAreaInput,
+  input: CreateAttributeInput,
+): Promise<DevelopmentAttribute> {
+  const [last] = await db
+    .select({ sortKey: developmentAttributes.sortKey })
+    .from(developmentAttributes)
+    .where(eq(developmentAttributes.userId, userId))
+    .orderBy(desc(developmentAttributes.sortKey))
+    .limit(1);
+  const [row] = await db
+    .insert(developmentAttributes)
+    .values({
+      userId,
+      name: input.name,
+      icon: input.icon ?? null,
+      color: input.color ?? "indigo",
+      sortKey: keyAfter(last?.sortKey ?? null),
+    })
+    .returning();
+  return toAttribute(row!, 0);
+}
+
+export async function updateAttribute(
+  db: DbExecutor,
+  userId: string,
+  input: UpdateAttributeInput,
 ): Promise<void> {
-  const areas = await listAreas(db, userId);
-  if (!areas.some((area) => area.id === input.areaId)) {
-    throw new DomainError("not_found", "area.not_found");
+  const row = await getOwned(db, userId, input.id);
+  const { archived, ...patch } = input.patch;
+  if (patch.name === null && !row.systemKey) {
+    throw new DomainError("invalid", "attribute.name_required");
   }
-  if (input.attributeId) {
-    const [owned] = await db
-      .select({ id: attributes.id })
-      .from(attributes)
-      .where(and(eq(attributes.id, input.attributeId), eq(attributes.userId, userId)));
-    if (!owned) throw new DomainError("not_found", "attribute.not_found");
+  await db
+    .update(developmentAttributes)
+    .set({
+      ...patch,
+      ...(archived === undefined ? {} : { archivedAt: archived ? new Date() : null }),
+    })
+    .where(and(eq(developmentAttributes.id, input.id), eq(developmentAttributes.userId, userId)));
+}
+
+/** Moves an active attribute one place up or down among the active ones. */
+export async function moveAttribute(
+  db: DbExecutor,
+  userId: string,
+  id: string,
+  direction: "up" | "down",
+): Promise<void> {
+  const row = await getOwned(db, userId, id);
+  if (row.archivedAt) return;
+  const active = (await listAttributes(db, userId)).filter((a) => !a.archivedAt);
+  const key = keyForMove(
+    active.map((a) => a.sortKey),
+    active.findIndex((a) => a.id === id),
+    direction,
+  );
+  if (key) {
     await db
-      .insert(attributeAreas)
-      .values({ areaId: input.areaId, userId, attributeId: input.attributeId })
-      .onConflictDoUpdate({
-        target: attributeAreas.areaId,
-        set: { attributeId: input.attributeId },
-      });
-  } else {
-    await db
-      .delete(attributeAreas)
-      .where(
-        and(eq(attributeAreas.userId, userId), inArray(attributeAreas.areaId, [input.areaId])),
-      );
+      .update(developmentAttributes)
+      .set({ sortKey: key })
+      .where(and(eq(developmentAttributes.id, id), eq(developmentAttributes.userId, userId)));
   }
+}
+
+/** Deletes an attribute that never earned XP; one with history can only be archived. */
+export async function deleteAttribute(db: DbExecutor, userId: string, id: string): Promise<void> {
+  await getOwned(db, userId, id);
+  const [used] = await db
+    .select({ id: xpAttributeCredits.id })
+    .from(xpAttributeCredits)
+    .where(eq(xpAttributeCredits.attributeId, id))
+    .limit(1);
+  if (used) throw new DomainError("conflict", "attribute.has_xp");
+  await db
+    .delete(developmentAttributes)
+    .where(and(eq(developmentAttributes.id, id), eq(developmentAttributes.userId, userId)));
 }

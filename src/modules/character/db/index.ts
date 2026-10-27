@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   integer,
@@ -11,7 +12,6 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { areas } from "@/modules/areas/db";
 import { users } from "@/shared/auth/schema";
 import { primaryId, sortKey, timestamps } from "@/shared/db/columns";
 
@@ -20,34 +20,36 @@ const userId = () =>
     .notNull()
     .references(() => users.id, { onDelete: "cascade" });
 
-/** The character's ability dimensions (system-key pattern, like areas and statuses). */
-export const attributes = pgTable(
-  "attributes",
+/**
+ * Development attributes: what the user is growing (法语, 阅读, 有氧, …). User data, not an
+ * enum: seeded examples carry a `system_key` (translated label until renamed); everything else has
+ * a `name`. Archived attributes keep their XP history and leave the radar.
+ */
+export const developmentAttributes = pgTable(
+  "development_attributes",
   {
     id: primaryId(),
     userId: userId(),
-    systemKey: text("system_key").notNull(),
+    systemKey: text("system_key"),
     name: text("name"),
+    /** Optional emoji shown before the name. */
+    icon: text("icon"),
     color: text("color").notNull(),
+    onRadar: boolean("on_radar").notNull().default(true),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     sortKey: sortKey(),
     ...timestamps(),
   },
-  (t) => [uniqueIndex("attributes_user_system_key_uq").on(t.userId, t.systemKey)],
-);
-
-/** Which attribute an area's completed items credit. An unmapped area credits overall XP only. */
-export const attributeAreas = pgTable(
-  "attribute_areas",
-  {
-    areaId: uuid("area_id")
-      .primaryKey()
-      .references(() => areas.id, { onDelete: "cascade" }),
-    userId: userId(),
-    attributeId: uuid("attribute_id")
-      .notNull()
-      .references(() => attributes.id, { onDelete: "cascade" }),
-  },
-  (t) => [index("attribute_areas_attribute_idx").on(t.attributeId)],
+  (t) => [
+    uniqueIndex("development_attributes_user_system_key_uq")
+      .on(t.userId, t.systemKey)
+      .where(sql`${t.systemKey} is not null`),
+    index("development_attributes_user_sort_idx").on(t.userId, t.sortKey),
+    check(
+      "development_attributes_label_present",
+      sql`${t.systemKey} is not null or length(btrim(${t.name})) > 0`,
+    ),
+  ],
 );
 
 /**
@@ -71,7 +73,13 @@ export const xpLedger = pgTable(
     sourceType: text("source_type").notNull(),
     sourceId: uuid("source_id").notNull(),
     sourceTitle: text("source_title"),
-    attributeId: uuid("attribute_id").references(() => attributes.id, { onDelete: "set null" }),
+    /**
+     * Legacy (M6, area-derived) single attribute, kept as recorded. Not written since M6.1: the
+     * attribute split of new entries lives in `xp_attribute_credits`.
+     */
+    attributeId: uuid("attribute_id").references(() => developmentAttributes.id, {
+      onDelete: "restrict",
+    }),
     /** Completion cycle of the source for this rule: 0, then +1 after each reversal. */
     cycle: integer("cycle").notNull(),
     reversalOf: uuid("reversal_of").references((): AnyPgColumn => xpLedger.id),
@@ -91,5 +99,32 @@ export const xpLedger = pgTable(
       "xp_ledger_kind_shape",
       sql`(${t.kind} = 'grant' and ${t.amount} > 0 and ${t.reversalOf} is null) or (${t.kind} = 'reversal' and ${t.amount} < 0 and ${t.reversalOf} is not null)`,
     ),
+  ],
+);
+
+/**
+ * Append-only split of a ledger entry's overall XP across development attributes. The credits of
+ * one entry add up to at most its amount, so overall XP is never counted twice; attribute XP is
+ * the sum of an attribute's credits. A reversal carries the negated credits of the grant it
+ * cancels.
+ */
+export const xpAttributeCredits = pgTable(
+  "xp_attribute_credits",
+  {
+    id: primaryId(),
+    userId: userId(),
+    ledgerEntryId: uuid("ledger_entry_id")
+      .notNull()
+      .references(() => xpLedger.id, { onDelete: "cascade" }),
+    attributeId: uuid("attribute_id")
+      .notNull()
+      .references(() => developmentAttributes.id, { onDelete: "restrict" }),
+    amount: integer("amount").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("xp_attribute_credits_entry_attribute_uq").on(t.ledgerEntryId, t.attributeId),
+    index("xp_attribute_credits_user_attribute_idx").on(t.userId, t.attributeId),
+    check("xp_attribute_credits_amount_nonzero", sql`${t.amount} <> 0`),
   ],
 );

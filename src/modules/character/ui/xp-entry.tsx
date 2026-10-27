@@ -7,7 +7,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/shared/lib/cn";
 import { ColorDot } from "@/shared/ui/color";
 
-import type { Attribute, XpEntry, XpSourceType } from "../domain";
+import type { DevelopmentAttribute, XpEntry, XpSourceType } from "../domain";
 import { sourceHref, useAttributeLabel } from "./use-character";
 
 const DATE_TIME = { dateStyle: "medium", timeStyle: "short" } as const;
@@ -24,7 +24,7 @@ export function XpEntryRow({
   attributes,
 }: {
   entry: XpEntry;
-  attributes: ReadonlyMap<string, Attribute>;
+  attributes: ReadonlyMap<string, DevelopmentAttribute>;
 }) {
   const t = useTranslations("character");
   const format = useFormatter();
@@ -33,7 +33,6 @@ export function XpEntryRow({
   const Icon = reversal ? Undo2 : sourceIcons[entry.sourceType];
   const title = entry.sourceTitle || t("history.untitled");
   const href = sourceHref(entry.sourceType, entry.sourceId);
-  const attribute = entry.attributeId ? attributes.get(entry.attributeId) : undefined;
   const reason = t(`reasons.${entry.sourceEventType}` as "reasons.task.completed");
 
   return (
@@ -69,12 +68,27 @@ export function XpEntryRow({
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
           <span>{t(`sources.${entry.sourceType}`)}</span>
-          {attribute ? (
-            <span className="inline-flex items-center gap-1">
-              <ColorDot color={attribute.color} />
-              {attributeLabel(attribute)}
-            </span>
-          ) : null}
+          {entry.credits.length === 0 ? (
+            <span>{t("history.overallOnly")}</span>
+          ) : (
+            entry.credits.map((credit) => {
+              const attribute = attributes.get(credit.attributeId);
+              return attribute ? (
+                <span
+                  key={credit.attributeId}
+                  data-testid="xp-credit"
+                  className="inline-flex items-center gap-1"
+                >
+                  <ColorDot color={attribute.color} />
+                  {attribute.icon ? <span aria-hidden>{attribute.icon}</span> : null}
+                  {attributeLabel(attribute)}
+                  <span className="tabular-nums">
+                    {credit.amount > 0 ? `+${credit.amount}` : credit.amount}
+                  </span>
+                </span>
+              ) : null;
+            })
+          )}
           <time dateTime={entry.createdAt.toISOString()} className="tabular-nums">
             {format.dateTime(entry.createdAt, DATE_TIME)}
           </time>
