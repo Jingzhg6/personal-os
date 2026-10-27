@@ -155,10 +155,11 @@ test("M5 visual check", async ({ page, browser, baseURL }) => {
   await expect(page.getByTestId("gantt-bar")).toHaveCount(7);
   await shot(page, `${OUT}/04-project-gantt-day.png`);
 
-  // 5. Month scale with the unscheduled tasks listed below.
+  // 5. Month scale, scrolled down to the unscheduled tasks listed below the chart.
   await page.goto("/projects/gantt?zoom=month");
   await page.getByRole("button", { name: "未排期（2）" }).click();
-  await shot(page, `${OUT}/05-gantt-month.png`, { fullPage: true });
+  await page.getByRole("button", { name: "研究新相机" }).scrollIntoViewIfNeeded();
+  await shot(page, `${OUT}/05-gantt-month.png`);
 
   // 6. Task list: blocked tasks carry a 受阻 marker.
   await page.goto("/tasks");
