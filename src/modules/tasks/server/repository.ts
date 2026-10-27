@@ -359,3 +359,25 @@ export async function listTimeline(db: DbExecutor, userId: string, query: TaskLi
   );
   return { tasks: list, dependencies };
 }
+
+/**
+ * Tasks (subtasks included) completed on or after the local date `from` in `timeZone` and still
+ * completed; the Trash is excluded.
+ */
+export async function countCompletedTasks(
+  db: DbExecutor,
+  userId: string,
+  range: { from: string; timeZone: string },
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.userId, userId),
+        isNull(tasks.deletedAt),
+        sql`${tasks.completedAt} >= (${range.from}::date::timestamp at time zone ${range.timeZone})`,
+      ),
+    );
+  return row?.count ?? 0;
+}

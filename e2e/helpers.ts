@@ -12,5 +12,5 @@ export async function register(page: Page, { name, email }: { name: string; emai
   await page.getByLabel("邮箱").fill(email);
   await page.getByLabel("密码").fill(PASSWORD);
   await page.getByRole("button", { name: "注册" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/$/);
 }

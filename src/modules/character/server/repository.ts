@@ -7,7 +7,9 @@ import { developmentAttributes, xpAttributeCredits, xpLedger } from "../db";
 import {
   getLevelProgress,
   getStageProgress,
-  isLegacyAttribute,
+  isActiveAttribute,
+  type XpActivity,
+  type XpDay,
   type XpTotals,
   type CharacterOverview,
   type XpEntry,
@@ -22,7 +24,8 @@ import { listAttributes } from "./attributes";
  * credits here; nothing is stored as a counter.
  */
 
-const isLegacySql = sql`${developmentAttributes.systemKey} like 'legacy.%'`;
+/** Never NULL: user-created attributes have no system key and are not legacy. */
+const isLegacySql = sql`coalesce(${developmentAttributes.systemKey} like 'legacy.%', false)`;
 /** Stored Level XP, or `historicLevelXp` for credits recorded before M6.2 (see economy.ts). */
 const creditLevelXpSql = sql`coalesce(${xpAttributeCredits.levelXp}, case when ${isLegacySql} then 0 else ${xpAttributeCredits.amount} end)`;
 
@@ -140,10 +143,81 @@ export async function getOverview(db: DbExecutor, userId: string): Promise<Chara
     grantCount: counts[0]?.grants ?? 0,
     reversalCount: counts[0]?.reversals ?? 0,
     attributes: attributes
-      .filter((attribute) => !attribute.archivedAt && !isLegacyAttribute(attribute))
+      .filter(isActiveAttribute)
       .map((attribute) => ({ ...attribute, progress: getLevelProgress(attribute.xp) })),
     recentGrants,
     recentReversals,
+  };
+}
+
+/**
+ * XP earned from the local date `from` (inclusive; null = all time) in `timeZone`, by local day and
+ * by attribute. Two grouped queries over the existing ledger and credits — no counters, no copies.
+ */
+export async function getXpActivity(
+  db: DbExecutor,
+  userId: string,
+  range: { from: string | null; timeZone: string },
+): Promise<XpActivity> {
+  const day = (column: typeof xpLedger.createdAt | typeof xpAttributeCredits.createdAt) =>
+    sql<string>`to_char((${column} at time zone ${range.timeZone})::date, 'YYYY-MM-DD')`;
+  const since = (column: typeof xpLedger.createdAt | typeof xpAttributeCredits.createdAt) =>
+    range.from === null
+      ? undefined
+      : sql`${column} >= (${range.from}::date::timestamp at time zone ${range.timeZone})`;
+
+  const ledgerDay = day(xpLedger.createdAt);
+  const creditDay = day(xpAttributeCredits.createdAt);
+  const [activeRows, creditRows] = await Promise.all([
+    db
+      .select({ date: ledgerDay, xp: sql<number>`sum(${xpLedger.amount})::int` })
+      .from(xpLedger)
+      .where(and(eq(xpLedger.userId, userId), since(xpLedger.createdAt)))
+      // By position: the same expression with fresh bind parameters would not match.
+      .groupBy(sql`1`),
+    db
+      .select({
+        date: creditDay,
+        attributeId: xpAttributeCredits.attributeId,
+        growth: sql<number>`sum(${xpAttributeCredits.amount})::int`,
+        level: sql<number>`sum(${creditLevelXpSql})::int`,
+      })
+      .from(xpAttributeCredits)
+      .innerJoin(
+        developmentAttributes,
+        eq(developmentAttributes.id, xpAttributeCredits.attributeId),
+      )
+      .where(
+        and(
+          eq(xpAttributeCredits.userId, userId),
+          sql`not ${isLegacySql}`,
+          since(xpAttributeCredits.createdAt),
+        ),
+      )
+      .groupBy(sql`1`, sql`2`),
+  ]);
+
+  const days = new Map<string, XpDay>();
+  const dayOf = (date: string) => {
+    let entry = days.get(date);
+    if (!entry) days.set(date, (entry = { date, activeXp: 0, growthXp: 0, levelXp: 0 }));
+    return entry;
+  };
+  const byAttribute = new Map<string, number>();
+  for (const row of activeRows) dayOf(row.date).activeXp += row.xp;
+  for (const row of creditRows) {
+    const entry = dayOf(row.date);
+    entry.growthXp += row.growth;
+    entry.levelXp += row.level;
+    byAttribute.set(row.attributeId, (byAttribute.get(row.attributeId) ?? 0) + row.growth);
+  }
+  const sorted = [...days.values()].sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    activeXp: sorted.reduce((sum, d) => sum + d.activeXp, 0),
+    growthXp: sorted.reduce((sum, d) => sum + d.growthXp, 0),
+    levelXp: sorted.reduce((sum, d) => sum + d.levelXp, 0),
+    byAttribute: [...byAttribute].map(([attributeId, growthXp]) => ({ attributeId, growthXp })),
+    days: sorted,
   };
 }
 

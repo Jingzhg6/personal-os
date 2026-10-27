@@ -84,7 +84,7 @@ export const navigation: NavSection[] = [
     items: [
       {
         id: "dashboard",
-        href: "/dashboard",
+        href: "/",
         icon: LayoutDashboard,
         module: "dashboard",
         phase: 1,

@@ -6,13 +6,14 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: M6.2 — Growth RPG & real-world rewards.** On top of M0–M6.1: every completion
-> earns **Active XP**; tasks that develop an attribute also earn **Growth XP**, which converts to
-> **Level XP** — the only thing that raises the character's level and growth stage (启程者 →
-> 传奇). Spendable Active / Level XP buys user-defined real-world rewards at `/rewards` (mixed
-> payment, level rewards, early claims); spending never lowers the level. Other modules show a
-> “即将推出” placeholder until their milestone. See [`docs/architecture.md`](docs/architecture.md)
-> and the milestone screenshots in [`docs/screenshots/`](docs/screenshots/README.md).
+> **Status: M7 — Personal RPG dashboard.** The home page (`/`) shows the character at a glance:
+> level, growth stage and progress; Active, Growth and Level XP kept apart (lifetime vs spendable);
+> the user's own development attributes as a radar; what grew fastest recently and the growth trend;
+> this week; the next level reward and a reward store preview; recent activity. It is a read-only
+> view over the M6.2 XP economy (Active XP for every completion, Growth → Level XP for development,
+> real-world rewards). Other modules show a “即将推出” placeholder until their milestone. See
+> [`docs/architecture.md`](docs/architecture.md) and the milestone screenshots in
+> [`docs/screenshots/`](docs/screenshots/README.md).
 
 ## Requirements
 
@@ -40,7 +41,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Open <http://localhost:3000>, create an account at `/register`, and you land on the dashboard.
+Open <http://localhost:3000>, create an account at `/register`, and you land on the dashboard (`/`).
 
 To close sign-up after creating your own account, set `AUTH_ALLOW_SIGNUP=false` in `.env.local`.
 

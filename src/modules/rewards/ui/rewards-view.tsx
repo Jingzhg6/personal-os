@@ -15,7 +15,7 @@ import { Input } from "@/shared/ui/input";
 import { PageHeader } from "@/shared/ui/page-header";
 import { useToast } from "@/shared/ui/toast";
 
-import { maxEarlyClaimLevel, type LevelReward, type Reward, type XpBalances } from "../domain";
+import { firstEarlyClaimLevel, type LevelReward, type Reward, type XpBalances } from "../domain";
 import { RedeemDialog } from "./redeem-dialog";
 import { RewardFormDialog, type RewardFormValues } from "./reward-form-dialog";
 import {
@@ -441,7 +441,7 @@ function LevelRewards({ balances }: { balances: XpBalances }) {
               ) : (
                 <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                   <Lock className="size-3.5" aria-hidden />
-                  {t("locked", { level: Math.max(2, firstEarlyLevel(reward.level)) })}
+                  {t("locked", { level: firstEarlyClaimLevel(reward.level) })}
                 </span>
               )}
               {reward.state !== "claimed" ? (
@@ -504,14 +504,6 @@ function LevelRewards({ balances }: { balances: XpBalances }) {
       />
     </div>
   );
-}
-
-/** The lowest current level from which a level's reward can be claimed early (display only). */
-function firstEarlyLevel(rewardLevel: number): number {
-  // maxEarlyClaimLevel(level) = end of the stage of level + 1; find the first level reaching it.
-  let level = 1;
-  while (level < rewardLevel && maxEarlyClaimLevel(level) < rewardLevel) level++;
-  return level;
 }
 
 function History() {

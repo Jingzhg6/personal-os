@@ -6,6 +6,7 @@ import {
   calculateRewardPurchase,
   earlyClaimCost,
   levelRewardState,
+  firstEarlyClaimLevel,
   maxEarlyClaimLevel,
   remainingRedemptions,
   rewardCosts,
@@ -121,6 +122,17 @@ describe("level rewards", () => {
     expect(maxEarlyClaimLevel(4)).toBe(5);
     expect(maxEarlyClaimLevel(5)).toBe(10);
     expect(maxEarlyClaimLevel(61)).toBe(71);
+  });
+
+  it("finds the first level from which a reward can be claimed early", () => {
+    expect(firstEarlyClaimLevel(30)).toBe(20);
+    expect(firstEarlyClaimLevel(20)).toBe(10);
+    expect(firstEarlyClaimLevel(5)).toBe(2);
+    for (const level of [5, 10, 20, 30, 45]) {
+      const first = firstEarlyClaimLevel(level);
+      expect(maxEarlyClaimLevel(first)).toBeGreaterThanOrEqual(level);
+      if (first > 2) expect(maxEarlyClaimLevel(first - 1)).toBeLessThan(level);
+    }
   });
 
   it("derives the state of a level reward", () => {

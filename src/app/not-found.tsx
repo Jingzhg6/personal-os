@@ -10,10 +10,7 @@ export default async function NotFound() {
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-center">
       <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
       <p className="text-sm text-muted-foreground">{t("description")}</p>
-      <Link
-        href="/dashboard"
-        className={buttonVariants({ variant: "secondary", className: "mt-3" })}
-      >
+      <Link href="/" className={buttonVariants({ variant: "secondary", className: "mt-3" })}>
         {t("back")}
       </Link>
     </div>

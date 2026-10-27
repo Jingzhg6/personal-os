@@ -298,7 +298,31 @@ The Eisenhower placement is derived in the domain (`src/modules/tasks/domain/eis
 both flags set ⇒ one of four quadrants, any flag `null` ⇒ 未分类. No matrix-specific column or
 table exists.
 
-### 5.3 Phase 1 (planned, M7–M8)
+### 5.2.2 Dashboard (M7, read model only)
+
+The dashboard (`/`, module `dashboard`, ADR 0016) answers "what level am I, what am I developing,
+have I grown, how far to the next level, which reward is next" — and owns **no tables and no
+rules**. `dashboard.overview` and `dashboard.growth({ period })` are two queries that call the
+owning modules' read functions and only arrange the results:
+
+| Shown                              | Source (module → function)                                              |
+| ---------------------------------- | ----------------------------------------------------------------------- |
+| Level, stage, progress             | character → `getXpTotals` + `getLevelProgress` / `getStageProgress`     |
+| Active / Growth / Level XP cards   | character → `getXpTotals`; rewards → `getBalances` (lifetime − spent)   |
+| Radar                              | character → `listAttributes` (Growth XP per attribute), `RadarChart` UI |
+| 本周, ranking, trend, growth focus | character → `getXpActivity` (ledger + credits grouped by local day)     |
+| Completed tasks this week          | tasks → `countCompletedTasks`                                           |
+| Recent activity                    | character → `listHistory` (ledger lines; the task stays the source)     |
+| Next level reward, store preview   | rewards → `listLevelRewards`, `listRewards`, `calculateRewardPurchase`  |
+
+Periods are local calendar days in the user's timezone (`user_settings.time_zone`, week start
+`week_starts_on`); SQL converts the local start date to an instant (`date::timestamp at time zone
+tz`) and groups by the local date. The pure helpers in `dashboard/domain` only pick periods,
+fill and bucket the trend (day ≤ 92 days, week ≤ 2 years, month beyond), rank attributes and
+choose the next level reward. Claiming and redeeming stay on `/rewards`. The old `/dashboard`
+address redirects to `/`.
+
+### 5.3 Phase 1 (planned, M8)
 
 ```
 tasks (additive)   + recurrence_id? (M8), actual_minutes? (Phase 2)
@@ -402,7 +426,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M6.1 Personal development model** ✅: user-defined development attributes, task development contributions (independent of areas), overall XP vs attribute XP (credits), dynamic radar, settings, M6 compatibility.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.
 - **M6 Character & XP** ✅: event → XP rules, append-only idempotent ledger with reversals (incl. new `milestone.reopened`), levels derived from the ledger, attributes credited through areas, radar, XP history, character page.
-- **M7 Dashboard.**
+- **M7 Personal RPG dashboard** ✅: `/` shows level, stage and progress, the three XP currencies (lifetime vs spendable), growth radar, recent growth ranking and trend (7 / 30 / 90 days / all), growth focus, this week, next level reward, reward store preview and recent activity — a read model over the character, rewards and tasks modules.
 - **M8 Recurring tasks, settings polish, JSON export, deployment (Dockerfile), E2E sweep, polish.**
 
 **Phase 2**: activities & timer → skills & learning → goals → schedule blocks + internal

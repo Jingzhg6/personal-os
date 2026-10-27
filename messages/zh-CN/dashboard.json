@@ -1,0 +1,149 @@
+{
+  "description": "我是谁、正在成长什么、离下一级还有多远。",
+  "links": {
+    "label": "快速入口",
+    "tasks": "任务",
+    "projects": "项目",
+    "character": "角色",
+    "rewards": "奖励",
+    "settings": "设置"
+  },
+  "header": {
+    "level": "Lv.{level}",
+    "stageRange": "Lv {start}–{end}",
+    "stageRangeOpen": "Lv {start}+",
+    "levelXp": "{current} / {needed} 升级经验",
+    "toNext": "距离 Lv.{level} 还需要 {xp} XP",
+    "percent": "{percent}%",
+    "progressLabel": "升到 Lv.{level} 的进度",
+    "lifetime": "累计升级经验 {xp}",
+    "toNextStage": "距离「{stage}」还需 {xp} 升级经验",
+    "lastStage": "已到达最高成长阶段"
+  },
+  "currencies": {
+    "lifetime": "累计",
+    "spendable": "可用",
+    "thisWeek": "本周",
+    "active": {
+      "title": "行动经验",
+      "badge": "可消费",
+      "hint": "我做了多少事。每完成一件事都会获得，可在奖励商店兑换。"
+    },
+    "growth": {
+      "title": "成长经验",
+      "badge": "不可消费",
+      "hint": "哪些能力真正获得了成长，只来自带有成长贡献的任务。"
+    },
+    "level": {
+      "title": "升级经验",
+      "badge": "可消费",
+      "hint": "决定角色等级。1 升级经验 = {rate} 行动经验的购买力；消费只减少可用值，不会降低等级。"
+    }
+  },
+  "growth": {
+    "title": "我的成长能力",
+    "manage": "成长能力设置",
+    "radar": "累计成长",
+    "radarEmpty": "还没有成长经验。完成带有成长贡献的任务后，雷达图会显示你的成长。",
+    "noAttributes": "还没有设置成长能力",
+    "noAttributesHint": "成长能力是你想变得更擅长的方向，例如法语、阅读、有氧。",
+    "setup": "设置成长能力",
+    "ranking": "最近成长最快",
+    "rankingEmpty": "最近还没有成长记录",
+    "rankingEmptyHint": "完成带有成长贡献的任务，成长经验会出现在这里。",
+    "rankingLabel": "{name}：{period}成长经验 {xp}",
+    "trend": "成长趋势",
+    "periodLabel": "时间范围",
+    "periods": {
+      "7d": "7天",
+      "30d": "30天",
+      "90d": "90天",
+      "all": "全部"
+    },
+    "periodNames": {
+      "7d": "过去 7 天",
+      "30d": "过去 30 天",
+      "90d": "过去 90 天",
+      "all": "全部时间"
+    },
+    "xp": "+{xp} XP",
+    "summary": "成长经验 +{growth} · 升级经验 +{level} · 行动经验 +{active}",
+    "rankingPeriod": "· {period}"
+  },
+  "trend": {
+    "growth": "成长经验",
+    "active": "行动经验",
+    "chartLabel": "{period}每{bucket}获得的成长经验与行动经验",
+    "buckets": {
+      "day": "天",
+      "week": "周",
+      "month": "月"
+    },
+    "empty": "这段时间还没有经验记录",
+    "tooltipWeek": "{date} 起一周",
+    "tableCaption": "成长趋势数据",
+    "date": "日期",
+    "level": "升级经验"
+  },
+  "focus": {
+    "title": "当前成长重点",
+    "fastest": "最近成长最快",
+    "slowest": "最近成长较少",
+    "value": "+{xp} XP / {days}天",
+    "rule": "依据：雷达图上的成长能力在过去 {days} 天获得的成长经验，取最多和最少的一项。",
+    "empty": "过去 {days} 天还没有成长记录。完成带有成长贡献的任务，这里会显示你的成长重点。"
+  },
+  "week": {
+    "title": "本周",
+    "since": "自 {date} 起",
+    "completedTasks": "完成任务",
+    "active": "行动经验",
+    "growth": "成长经验",
+    "level": "升级经验",
+    "top": "成长最多",
+    "topEmpty": "本周还没有成长记录"
+  },
+  "levelReward": {
+    "title": "下一个等级奖励",
+    "target": "Lv.{level}",
+    "current": "当前 Lv.{level}",
+    "progress": "{current} / {required} 升级经验",
+    "progressLabel": "达到 Lv.{level} 的进度",
+    "missing": "还需 {xp} 升级经验",
+    "claimable": "已达到，可以免费领取",
+    "claim": "去领取",
+    "early": "可提前领取：{xp} 可用升级经验",
+    "earlyAction": "查看提前领取",
+    "locked": "Lv.{level} 后可提前领取",
+    "allClaimed": "所有等级奖励都已领取",
+    "empty": "暂时没有可显示的等级奖励",
+    "setup": "设置等级奖励",
+    "viewAll": "全部等级奖励"
+  },
+  "store": {
+    "title": "奖励商店",
+    "enter": "进入奖励商店",
+    "empty": "还没有设置奖励",
+    "emptyHint": "给自己定几个现实奖励，用经验兑换。",
+    "create": "去设置奖励",
+    "costActive": "{xp} 行动经验",
+    "costLevel": "{xp} 升级经验",
+    "or": "或",
+    "affordable": "可兑换",
+    "count": "共 {count} 个可兑换的奖励"
+  },
+  "activity": {
+    "title": "最近活动",
+    "empty": "还没有活动记录。完成第一件任务后，这里会出现你的经验。",
+    "viewAll": "查看全部记录",
+    "today": "今天",
+    "yesterday": "昨天",
+    "completed": "完成",
+    "reversed": "撤销",
+    "untitled": "（无标题）",
+    "active": "{xp} 行动",
+    "growth": "{xp} 成长",
+    "level": "{xp} 升级",
+    "cancelled": "已撤销"
+  }
+}

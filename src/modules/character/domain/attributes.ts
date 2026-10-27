@@ -49,6 +49,12 @@ export interface DevelopmentAttribute {
 export const isLegacyAttribute = (attribute: { systemKey: string | null }) =>
   attribute.systemKey?.startsWith("legacy.") ?? false;
 
+/** Shown on the character page and dashboard: not archived and not M6 legacy history. */
+export const isActiveAttribute = (attribute: {
+  systemKey: string | null;
+  archivedAt: Date | null;
+}) => !attribute.archivedAt && !isLegacyAttribute(attribute);
+
 const attributeName = z.string().trim().min(1).max(40);
 const attributeIcon = z.string().trim().min(1).max(8).nullable();
 

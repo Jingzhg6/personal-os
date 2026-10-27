@@ -39,6 +39,8 @@
   --danger-foreground: oklch(0.99 0 0);
   /* Gamification accent (XP, levels). */
   --xp: oklch(0.74 0.15 75);
+  /* Secondary chart series (Active XP beside Growth XP); validated against both surfaces. */
+  --chart-active: oklch(0.66 0.15 70);
 
   --shadow-color: 275 20% 20%;
 }
@@ -73,6 +75,7 @@
   --danger: oklch(0.66 0.19 25);
   --danger-foreground: oklch(0.16 0.012 275);
   --xp: oklch(0.8 0.14 78);
+  --chart-active: oklch(0.66 0.15 70);
 
   --shadow-color: 275 30% 2%;
 }
@@ -88,6 +91,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-primary: var(--primary);
+  --color-chart-active: var(--chart-active);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);

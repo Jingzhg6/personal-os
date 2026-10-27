@@ -20,3 +20,4 @@ changes; never rewrite history — supersede instead.
 | [0013](./0013-development-attributes.md)             | Areas organise, development attributes grow (supersedes 0012 attributes) | Accepted                                |
 | [0014](./0014-xp-economy-and-rewards.md)             | XP economy: Active / Growth / Level XP, real-world rewards               | Accepted                                |
 | [0015](./0015-zh-cn-only.md)                         | UI is Simplified Chinese only (supersedes 0003 languages)                | Accepted                                |
+| [0016](./0016-dashboard-read-model.md)               | The dashboard is a read-only composition of other modules, served at `/` | Accepted                                |

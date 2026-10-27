@@ -248,6 +248,13 @@ export function maxEarlyClaimLevel(level: number): number {
   return getStage(level + 1).endLevel ?? level + 10;
 }
 
+/** The lowest current level from which the reward of `rewardLevel` may be claimed early. */
+export function firstEarlyClaimLevel(rewardLevel: number): number {
+  let level = 1;
+  while (level < rewardLevel && maxEarlyClaimLevel(level) < rewardLevel) level++;
+  return Math.max(2, level);
+}
+
 /** Level XP still needed to reach `targetLevel`: the price of claiming its reward early. */
 export function earlyClaimCost(lifetimeLevelXp: number, targetLevel: number): number {
   return Math.max(0, xpForLevel(targetLevel) - Math.max(0, Math.floor(lifetimeLevelXp)));

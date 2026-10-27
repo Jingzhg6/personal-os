@@ -17,7 +17,7 @@ type Mode = "login" | "register";
 
 /** Only allow same-site relative redirects after login. */
 function safeNext(value: string | null): string {
-  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/dashboard";
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/";
 }
 
 export function AuthForm({ mode }: { mode: Mode }) {

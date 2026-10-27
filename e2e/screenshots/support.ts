@@ -14,7 +14,7 @@ export async function registerDemoUser(page: Page, name = "晋") {
   await page.getByLabel("邮箱").fill(`demo-${Date.now()}@example.test`);
   await page.getByLabel("密码").fill(PASSWORD);
   await page.getByRole("button", { name: "注册" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/$/);
 }
 
 /** Calls a tRPC mutation with the page's session cookie. */

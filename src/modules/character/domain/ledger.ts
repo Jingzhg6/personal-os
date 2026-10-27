@@ -56,3 +56,26 @@ export const xpHistoryInput = z.object({
   limit: z.number().int().min(1).max(100).default(30),
 });
 export type XpHistoryInput = z.infer<typeof xpHistoryInput>;
+
+/** XP earned on one local calendar day (net of reversals made that day). */
+export interface XpDay {
+  /** "YYYY-MM-DD" in the user's timezone. */
+  date: string;
+  activeXp: number;
+  growthXp: number;
+  levelXp: number;
+}
+
+/**
+ * XP earned over a period, read from the ledger and its credits (net of reversals; spending is
+ * not part of it). Growth excludes legacy attributes, like the lifetime totals.
+ */
+export interface XpActivity {
+  activeXp: number;
+  growthXp: number;
+  levelXp: number;
+  /** Growth XP per attribute in the period (archived attributes included, legacy excluded). */
+  byAttribute: { attributeId: string; growthXp: number }[];
+  /** Days with any entry, oldest first. */
+  days: XpDay[];
+}

@@ -112,3 +112,22 @@ lifetime Level XP 3,300, Active XP 3,900, Growth XP 2,717.
 | `09-reward-history.png`    | `/rewards?tab=history`  | Redemptions, early claim and free level rewards; spendable reduced, lifetime unchanged        |
 | `10-mobile-rewards.png`    | `/rewards` (phone)      | Phone layout: balances, tabs, reward cards                                                    |
 | `11-dark-character.png`    | `/character` (dark)     | Dark theme, desktop                                                                           |
+
+## M7 — Personal RPG dashboard (`m7/`)
+
+Data made through the app's API only: a custom "Python" attribute, 6 rounds of growth tasks with
+development contributions interleaved with ordinary tasks, five rewards (one redeemed with Level
+XP), the Lv 5 level reward claimed, then an ordinary task, a completed-and-reopened run and a task
+growing two attributes. Result: Lv 9 探索者. All XP is earned at capture time, so the trend shows
+one (real) day of data.
+
+| File                       | Page            | Shows                                                                                        |
+| -------------------------- | --------------- | -------------------------------------------------------------------------------------------- |
+| `01-dashboard-desktop.png` | `/`             | Full dashboard: character header, three XP cards, growth, focus, rewards, week, activity     |
+| `02-growth-radar.png`      | `/` (element)   | 我的成长能力: radar, 最近成长最快 (7 天), trend with tooltip (Growth, Level and Active XP)   |
+| `03-reward-section.png`    | `/` (element)   | 当前成长重点, 下一个等级奖励 (early claim available), 奖励商店 preview with prices           |
+| `04-mobile-dashboard.png`  | `/` (phone)     | iPhone 13: character → XP → growth → focus → rewards → week → activity, no horizontal scroll |
+| `05-dark-dashboard.png`    | `/` (dark)      | Dark theme, desktop, charts included                                                         |
+| `06-empty-dashboard.png`   | `/` (new user)  | Empty states: no growth yet, no rewards, no activity                                         |
+| `07-week-and-activity.png` | `/` (element)   | 本周 summary and 最近活动 (ordinary, growth, reversal entries)                               |
+| `08-tablet-dashboard.png`  | `/` (iPad Mini) | Tablet portrait                                                                              |

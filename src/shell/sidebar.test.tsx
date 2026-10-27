@@ -38,7 +38,7 @@ describe("Sidebar", () => {
     ]) {
       expect(within(nav).getByRole("heading", { name: label })).toBeInTheDocument();
     }
-    expect(within(nav).getByRole("link", { name: /仪表盘/ })).toHaveAttribute("href", "/dashboard");
+    expect(within(nav).getByRole("link", { name: /仪表盘/ })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: /设置/ })).toHaveAttribute("href", "/settings");
   });
 

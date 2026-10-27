@@ -248,6 +248,22 @@ describe("overall XP vs attribute XP", () => {
     ]);
   });
 
+  it("counts user-created attributes (no system key) in lifetime Growth XP", async () => {
+    // Regression: the legacy test was NULL for attributes without a system key, which dropped
+    // their growth from the Growth XP total while Level XP still counted it.
+    const { api } = await seeded();
+    const python = await api.character.attributes.create({ name: "Python", color: "teal" });
+    const task = await api.tasks.create({
+      title: "用 Python 写周报脚本",
+      contributions: [{ attributeId: python.id, weight: 2 }],
+    });
+    await api.tasks.complete({ id: task.id });
+
+    const { totals } = await api.character.overview();
+    expect(totals).toMatchObject({ growthXp: TASK_XP.base, lifetimeLevelXp: TASK_XP.base });
+    expect(totals.legacyGrowthXp).toBe(0);
+  });
+
   it("accumulates attribute XP separately over several tasks", async () => {
     const { api, attr } = await seeded();
     const make = (title: string, contributions: { attributeId: string; weight: number }[]) =>

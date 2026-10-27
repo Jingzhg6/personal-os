@@ -6,6 +6,7 @@ export { registerTasksEventHandlers } from "./events";
 export { milestoneProgress, projectProgress } from "./progress";
 export { addDependency, removeDependency } from "./dependencies";
 export {
+  countCompletedTasks,
   getTask,
   getTaskDetail,
   listTasks,

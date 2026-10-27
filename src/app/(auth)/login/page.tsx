@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LoginPage() {
-  if (await getSession()) redirect("/dashboard");
+  if (await getSession()) redirect("/");
   const t = await getTranslations("auth.login");
 
   return (

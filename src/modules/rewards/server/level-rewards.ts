@@ -13,6 +13,7 @@ import {
   type LevelRewardKey,
   type RewardLedgerEntry,
   type UpdateLevelRewardInput,
+  type XpBalances,
 } from "../domain";
 import { getBalances } from "./balances";
 import { findByIdempotencyKey, lockSpending, toEntry } from "./store";
@@ -26,14 +27,18 @@ export async function seedLevelRewards(db: DbExecutor, userId: string): Promise<
     .onConflictDoNothing();
 }
 
-export async function listLevelRewards(db: DbExecutor, userId: string): Promise<LevelReward[]> {
+export async function listLevelRewards(
+  db: DbExecutor,
+  userId: string,
+  knownBalances?: XpBalances,
+): Promise<LevelReward[]> {
   const [rows, balances] = await Promise.all([
     db
       .select()
       .from(levelRewards)
       .where(eq(levelRewards.userId, userId))
       .orderBy(asc(levelRewards.level)),
-    getBalances(db, userId),
+    knownBalances ?? getBalances(db, userId),
   ]);
   const claims = rows.length
     ? await db
