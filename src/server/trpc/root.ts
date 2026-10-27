@@ -1,4 +1,5 @@
 import { areasRouter } from "@/modules/areas/server";
+import { characterRouter } from "@/modules/character/server";
 import { projectsRouter } from "@/modules/projects/server";
 import { settingsRouter } from "@/modules/settings/server";
 import { tasksRouter } from "@/modules/tasks/server";
@@ -10,6 +11,7 @@ export const appRouter = router({
   areas: areasRouter,
   tasks: tasksRouter,
   projects: projectsRouter,
+  character: characterRouter,
 });
 
 export type AppRouter = typeof appRouter;

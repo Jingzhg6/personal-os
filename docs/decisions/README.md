@@ -16,3 +16,4 @@ changes; never rewrite history — supersede instead.
 | [0009](./0009-projects.md)                           | Projects own tasks by reference; progress is computed         | Accepted |
 | [0010](./0010-dependencies-and-gantt.md)             | Dependencies are finish-to-start edges; Gantt is a date view  | Accepted |
 | [0011](./0011-event-publishing-locks.md)             | Commands that publish events lock their row first             | Accepted |
+| [0012](./0012-xp-ledger.md)                          | XP: append-only idempotent ledger fed by domain events        | Accepted |

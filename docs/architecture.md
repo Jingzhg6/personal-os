@@ -175,7 +175,7 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 - Each module owns its tables in `src/modules/<m>/db`; `src/server/db-schema.ts` aggregates them
   for drizzle-kit and Better Auth.
 
-### 5.2 Implemented (M0–M5)
+### 5.2 Implemented (M0–M6)
 
 | Table                                            | Owner       | Notes                                                              |
 | ------------------------------------------------ | ----------- | ------------------------------------------------------------------ |
@@ -190,6 +190,8 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 | `projects`                                       | projects    | (M4) see below                                                     |
 | `milestones`                                     | projects    | (M4) belong to one project; cascade with it                        |
 | `task_dependencies`                              | tasks       | (M5) finish-to-start edges; see below                              |
+| `attributes`, `attribute_areas`                  | character   | (M6) ability dimensions; which area credits which attribute        |
+| `xp_ledger`                                      | character   | (M6) append-only XP ledger; see below                              |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
@@ -216,6 +218,16 @@ the blocked task should not start before the blocking task is done. The service 
 (recursive CTE under a per-user advisory lock); edges to tasks in the Trash are hidden, not
 deleted, and come back with a restore. `openBlockerCount` on every task and the 前置 / 后续 lists
 in the detail panel are read from this one table. See ADR 0010.
+
+`xp_ledger` (M6): `id, user_id, kind (grant|reversal), amount (signed), rule_key,
+source_event_id, source_event_type, source_type (task|project|milestone), source_id (no FK —
+history outlives the source), source_title (title at the time), attribute_id?, cycle,
+reversal_of?, created_at`. Append-only: a trigger rejects UPDATE and direct DELETE (only the user
+cascade removes rows). Unique indexes make it idempotent: one entry per (source event, rule), one
+grant per (rule, source, cycle), one reversal per grant. Total XP, the level and every attribute
+value are sums over it at read time; nothing is stored as a counter. `attributes` (system-key
+pattern, six seeded) and `attribute_areas` (area → attribute) decide which attribute a grant
+credits; changing a link only affects later grants. See ADR 0012.
 
 Rules enforced in the service layer (`src/modules/tasks/server/service.ts`):
 
@@ -259,17 +271,11 @@ The Eisenhower placement is derived in the domain (`src/modules/tasks/domain/eis
 both flags set ⇒ one of four quadrants, any flag `null` ⇒ 未分类. No matrix-specific column or
 table exists.
 
-### 5.3 Phase 1 (planned, M6–M8)
+### 5.3 Phase 1 (planned, M7–M8)
 
 ```
 tasks (additive)   + recurrence_id? (M8), actual_minutes? (Phase 2)
 task_recurrences   id, user_id, rrule, mode(fixed|after_completion), timezone, next_due_at, ended_at
-characters         user_id, name, avatar
-attributes         id, user_id, system_key?, name?, color, icon, sort_key
-xp_rules           id, user_id, event_type, conditions(jsonb), target_type, target_id, amount(jsonb), daily_cap?, enabled
-xp_ledger          id, user_id, target_type, target_id, amount, source_type, source_id, rule_id?, reversal_of?,
-                   reason_key, reason_params(jsonb), occurred_at   UNIQUE(source_type, source_id, rule_id, reversal_of)
-xp_totals          cache rebuilt from the ledger
 ```
 
 Key decisions: `priority` is independent of `is_urgent`/`is_important` (null = not yet sorted
@@ -366,7 +372,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M3 Eisenhower matrix** ✅: quadrants + 未分类 tray derived from the flags, drag-and-drop and a 「移到」 menu, quick add per quadrant, shared detail panel, filters.
 - **M4 Projects** ✅: project CRUD and list, project page (任务 / 看板 / 里程碑 / 说明), status Kanban (global and per project), milestones, computed progress, project filter and fields on tasks.
 - **M5 Dependencies & basic Gantt** ✅: finish-to-start dependencies with cycle checks, 前置 / 后续 lists and 受阻 markers, Gantt chart (global and per project) with day / week / month scales, milestones, dependency arrows with date-conflict highlighting, drag / keyboard rescheduling.
-- **M6 Character & XP**: attributes, rules, ledger with reversals, levels, radar, history.
+- **M6 Character & XP** ✅: event → XP rules, append-only idempotent ledger with reversals (incl. new `milestone.reopened`), levels derived from the ledger, attributes credited through areas, radar, XP history, character page.
 - **M7 Dashboard.**
 - **M8 Recurring tasks, settings polish, JSON export, deployment (Dockerfile), E2E sweep, polish.**
 

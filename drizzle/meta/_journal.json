@@ -43,6 +43,13 @@
       "when": 1793085650421,
       "tag": "0005_task_dependencies",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793089248674,
+      "tag": "0006_character_xp",
+      "breakpoints": true
     }
   ]
 }

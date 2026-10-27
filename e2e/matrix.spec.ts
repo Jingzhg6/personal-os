@@ -68,13 +68,19 @@ test("moves a card by dragging it to another quadrant", async ({ page }) => {
   await addTo(page, "未分类", title);
   const source = card(page, title).locator("[data-row-main]");
   const target = zone(page, "eliminate");
+  // Other tests share this user, so the 未分类 tray can be long: start from the middle of the
+  // screen, and re-aim at the target because dnd-kit may auto-scroll while dragging.
+  await page.waitForLoadState("networkidle");
+  await source.evaluate((element) => element.scrollIntoView({ block: "center" }));
   const from = (await source.boundingBox())!;
-  const to = (await target.boundingBox())!;
 
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(from.x + from.width / 2 + 20, from.y + from.height / 2 + 20, { steps: 5 });
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 20 });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const to = (await target.boundingBox())!;
+    await page.mouse.move(to.x + to.width / 2, to.y + Math.min(to.height / 2, 40), { steps: 10 });
+  }
   await expect(target).toHaveClass(/border-primary/);
   await page.mouse.up();
 

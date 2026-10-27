@@ -1,0 +1,88 @@
+{
+  "overview": {
+    "description": "完成任务、里程碑和项目会获得经验值；经验按领域计入对应属性。",
+    "level": "等级 {level}",
+    "totalXp": "累计经验",
+    "progressLabel": "升级进度：{current} / {needed} XP",
+    "toNext": "再获得 {xp} XP 升到 {level} 级",
+    "counts": "获得 {grants} 次 · 撤销 {reversals} 次",
+    "viewHistory": "查看全部记录"
+  },
+  "attributes": {
+    "title": "属性",
+    "radar": "属性雷达图",
+    "radarHint": "半径表示属性等级（含当前等级进度）。",
+    "level": "Lv {level}",
+    "xp": "{xp} XP",
+    "progressLabel": "{name} 升级进度",
+    "areas": "来源：{areas}",
+    "noAreas": "未关联领域",
+    "edit": "设置来源领域",
+    "editTitle": "领域与属性",
+    "editDescription": "已完成的事项按其领域计入属性。修改只影响之后获得的经验，历史记录保持不变。",
+    "areaLabel": "「{area}」计入",
+    "none": "仅计入总经验",
+    "saved": "已保存",
+    "keys": {
+      "learning": "学习",
+      "work": "工作",
+      "fitness": "健身",
+      "business": "业务",
+      "admin": "行政",
+      "life": "生活"
+    }
+  },
+  "recent": {
+    "grants": "最近获得",
+    "reversals": "最近撤销",
+    "emptyGrants": "还没有获得经验。完成一个任务试试吧！",
+    "emptyReversals": "没有撤销记录。"
+  },
+  "history": {
+    "description": "每一笔经验都来自一次完成或撤销。记录只增不改：撤销会新增一笔负数记录。",
+    "filter": "类型",
+    "kinds": {
+      "all": "全部",
+      "grant": "获得",
+      "reversal": "撤销"
+    },
+    "attribute": "属性",
+    "allAttributes": "全部属性",
+    "noAttribute": "仅总经验",
+    "list": "经验记录",
+    "empty": "没有符合条件的记录。",
+    "loadMore": "加载更多",
+    "reversed": "已撤销",
+    "reversalOf": "撤销 {amount} XP 的获得记录",
+    "untitled": "（无标题）",
+    "openSource": "打开「{title}」"
+  },
+  "reasons": {
+    "task": {
+      "completed": "完成任务",
+      "reopened": "任务重新打开或取消"
+    },
+    "project": {
+      "completed": "完成项目",
+      "reopened": "项目重新打开或取消"
+    },
+    "milestone": {
+      "completed": "完成里程碑",
+      "reopened": "里程碑取消完成"
+    }
+  },
+  "sources": {
+    "task": "任务",
+    "project": "项目",
+    "milestone": "里程碑"
+  },
+  "rules": {
+    "title": "经验规则",
+    "description": "规则统一定义：无论在列表、矩阵、看板、甘特图还是项目页完成，结果都一样。",
+    "task": "完成任务：{base} XP，优先级每高一级 +{perPriority}，标为重要 +{important}；子任务 {subtask} XP",
+    "project": "完成项目：{base} XP，优先级每高一级 +{perPriority}",
+    "milestone": "完成里程碑：{amount} XP",
+    "reversal": "重新打开或取消已完成的事项，会撤销当次获得的经验。删除、恢复不影响经验：经验记录的是你曾经完成过。",
+    "levels": "升级：从 n 级升到 n+1 级需要 n × {step} XP；属性每级需要 n × {attributeStep} XP。"
+  }
+}

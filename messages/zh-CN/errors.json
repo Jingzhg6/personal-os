@@ -36,5 +36,8 @@
   "dependency": {
     "self": "任务不能依赖自己",
     "cycle": "不能添加：这会形成循环依赖"
+  },
+  "attribute": {
+    "not_found": "属性不存在。"
   }
 }

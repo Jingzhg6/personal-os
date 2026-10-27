@@ -43,6 +43,7 @@ export const namespaces = [
   "areas",
   "tasks",
   "projects",
+  "character",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

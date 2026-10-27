@@ -1,5 +1,6 @@
 import areas from "../../../messages/zh-CN/areas.json";
 import auth from "../../../messages/zh-CN/auth.json";
+import character from "../../../messages/zh-CN/character.json";
 import common from "../../../messages/zh-CN/common.json";
 import editor from "../../../messages/zh-CN/editor.json";
 import errors from "../../../messages/zh-CN/errors.json";
@@ -22,6 +23,7 @@ export const sourceMessages = {
   areas,
   tasks,
   projects,
+  character,
 };
 
 export type Messages = typeof sourceMessages;

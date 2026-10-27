@@ -4,6 +4,9 @@ declare module "@/shared/events/types" {
     /** A task entered the "completed" category. */
     "task.completed": {
       taskId: string;
+      /** Title when completed (the XP history shows what was done at the time). */
+      title: string;
+      parentTaskId: string | null;
       areaId: string | null;
       priority: number;
       isUrgent: boolean | null;

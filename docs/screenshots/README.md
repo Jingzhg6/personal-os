@@ -53,3 +53,20 @@ Desktop shots are 1440 × 900; phone shots use the Pixel 7 profile (touch, no ho
 | `05-gantt-month.png`        | `/projects/gantt?zoom=month` (full page)  | Month scale; short bars labelled beside them; 未排期 list expanded                                                                                      |
 | `06-tasks-blocked.png`      | `/tasks`                                  | Task list with 受阻 markers on tasks waiting for open prerequisites                                                                                     |
 | `07-mobile-gantt-dark.png`  | `/projects/[id]?view=gantt` (phone, dark) | Phone layout: task names pinned, timeline scrolled to today                                                                                             |
+
+## M6 — Character & XP (`m6/`)
+
+All XP shown was produced by real completions, reopenings, a completed → cancelled change, a
+milestone un-completed and a deleted completed task, made through the app's API.
+
+| File                         | Page                          | Shows                                                                                       |
+| ---------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `01-character-overview.png`  | `/character`                  | Level, total XP, progress to the next level, radar, attributes with levels and source areas |
+| `02-recent-xp.png`           | `/character` (scrolled)       | 最近获得 (with 已撤销 grants struck through) and 最近撤销                                   |
+| `03-attributes-radar.png`    | `/character`                  | Radar tooltip on hover (attribute level and XP)                                             |
+| `04-xp-history.png`          | `/character/xp`               | Full ledger with grants and reversals, filters, and the XP rules                            |
+| `05-xp-reversals.png`        | `/character/xp?kind=reversal` | Reversals only: reopened task, cancelled task, milestone un-completed                       |
+| `06-area-mapping.png`        | `/character`                  | 领域与属性 dialog: which attribute each area credits                                        |
+| `07-character-dark.png`      | `/character` (dark)           | Dark theme, desktop                                                                         |
+| `08-mobile-character.png`    | `/character` (phone)          | Phone layout: level card and radar                                                          |
+| `09-mobile-history-dark.png` | `/character/xp` (phone, dark) | Phone, dark: XP history                                                                     |

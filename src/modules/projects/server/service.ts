@@ -161,6 +161,7 @@ async function publishStatusChange(
         userId,
         payload: {
           projectId: row.id,
+          name: row.name,
           priority: row.priority,
           areaId: row.areaId,
           completedAt: row.completedAt!,
@@ -331,6 +332,7 @@ export function setMilestoneCompleted(
       .where(eq(milestones.id, current.id))
       .returning();
     if (input.completed) {
+      const project = await getOwnedRow(tx, userId, row!.projectId);
       await bus.publish(
         {
           type: "milestone.completed",
@@ -338,8 +340,19 @@ export function setMilestoneCompleted(
           payload: {
             milestoneId: row!.id,
             projectId: row!.projectId,
+            name: row!.name,
+            areaId: project.areaId,
             completedAt: row!.completedAt!,
           },
+        },
+        { db: tx },
+      );
+    } else {
+      await bus.publish(
+        {
+          type: "milestone.reopened",
+          userId,
+          payload: { milestoneId: row!.id, projectId: row!.projectId },
         },
         { db: tx },
       );

@@ -161,6 +161,8 @@ async function publishCompletion(
         userId,
         payload: {
           taskId: task.id,
+          title: task.title,
+          parentTaskId: task.parentTaskId,
           areaId: task.areaId,
           priority: task.priority,
           isUrgent: task.isUrgent,
