@@ -23,7 +23,11 @@ export function AiStatusNotice() {
           <CircleAlert className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden />
           <div className="flex flex-col gap-1">
             <p className="font-medium">{t("unavailableTitle")}</p>
-            <p className="text-muted-foreground">{t("unavailableBody")}</p>
+            <p className="text-muted-foreground">
+              {data.unavailableReason === "missing_key"
+                ? t("missingKeyBody")
+                : t("unavailableBody")}
+            </p>
           </div>
         </CardContent>
       </Card>

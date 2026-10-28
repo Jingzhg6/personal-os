@@ -1,13 +1,13 @@
 import "server-only";
 
 import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 
 import type { Env } from "@/shared/config/env";
 
 import type { AiCapability, AiErrorCode, AiProviderId } from "../domain";
 import { mockGenerate } from "./mock-provider";
+import { structuredOutputSchema } from "./output-schema";
 
 /*
  * The provider boundary. A provider turns (instructions, data) into raw JSON or a closed error
@@ -26,6 +26,13 @@ export interface GenerateRequest {
   userText: string | null;
   /** The JSON schema the output must follow (structured output). */
   schema: z.ZodType;
+  /** Aborted when the app's deadline passes: the provider must stop (and stop billing) then. */
+  signal?: AbortSignal;
+}
+
+export interface Usage {
+  inputTokens: number | null;
+  outputTokens: number | null;
 }
 
 export type GenerateResult =
@@ -33,9 +40,9 @@ export type GenerateResult =
       ok: true;
       /** Unvalidated JSON. */
       raw: unknown;
-      usage: { inputTokens: number | null; outputTokens: number | null };
+      usage: Usage;
     }
-  | { ok: false; code: AiErrorCode };
+  | { ok: false; code: AiErrorCode; usage?: Usage };
 
 export interface AiProvider {
   id: Exclude<AiProviderId, "off">;
@@ -43,7 +50,7 @@ export interface AiProvider {
   generate(request: GenerateRequest): Promise<GenerateResult>;
 }
 
-type AiEnv = Pick<
+export type AiEnv = Pick<
   Env,
   | "AI_PROVIDER"
   | "AI_API_KEY"
@@ -54,10 +61,20 @@ type AiEnv = Pick<
   | "AI_MAX_OUTPUT_TOKENS"
 >;
 
+/** Why AI is unavailable (shown to the user without revealing configuration values). */
+export function unavailableReason(env: Pick<Env, "AI_PROVIDER" | "AI_API_KEY">) {
+  if (env.AI_PROVIDER === "off") return "off" as const;
+  if (env.AI_PROVIDER === "anthropic" && !env.AI_API_KEY) return "missing_key" as const;
+  return null;
+}
+
 /** The configured provider, or null when AI is off or not configured (no key). */
-export function providerFromEnv(env: AiEnv): AiProvider | null {
+export function providerFromEnv(
+  env: AiEnv,
+  options: { fetch?: typeof fetch } = {},
+): AiProvider | null {
   if (env.AI_PROVIDER === "mock") return mockProvider;
-  if (env.AI_PROVIDER === "anthropic" && env.AI_API_KEY) return anthropicProvider(env);
+  if (env.AI_PROVIDER === "anthropic" && env.AI_API_KEY) return anthropicProvider(env, options);
   return null;
 }
 
@@ -67,73 +84,147 @@ export const mockProvider: AiProvider = {
   generate: async (request) => mockGenerate(request),
 };
 
-/** Maps SDK failures to the closed set of codes. Never logs or returns the provider's message. */
+/**
+ * Maps SDK failures to the closed set of codes. Never returns the provider's message (it may echo
+ * request content); only the HTTP status and error type are logged.
+ */
 export function classifyProviderError(error: unknown): AiErrorCode {
+  if (error instanceof Anthropic.APIUserAbortError) return "ai.timeout";
   if (error instanceof Anthropic.APIConnectionTimeoutError) return "ai.timeout";
   if (error instanceof Anthropic.RateLimitError) return "ai.rate_limited";
-  if (error instanceof Anthropic.AuthenticationError) return "ai.not_configured";
-  if (error instanceof Anthropic.PermissionDeniedError) return "ai.not_configured";
-  if (error instanceof Anthropic.BadRequestError) return "ai.provider_error";
-  if (error instanceof Anthropic.APIError) return "ai.provider_error";
+  if (error instanceof Anthropic.AuthenticationError) return "ai.auth_failed";
+  if (error instanceof Anthropic.PermissionDeniedError) return "ai.auth_failed";
+  // An unknown or unavailable model id answers 404 (not_found_error).
+  if (error instanceof Anthropic.NotFoundError) return "ai.model_unavailable";
+  if (error instanceof Anthropic.BadRequestError) return "ai.request_rejected";
+  if (error instanceof Anthropic.UnprocessableEntityError) return "ai.request_rejected";
   return "ai.provider_error";
 }
+
+/** Transient failures worth one more attempt: rate limits, overload, 5xx, lost connections. */
+export function isRetryable(error: unknown): boolean {
+  if (error instanceof Anthropic.APIUserAbortError) return false;
+  if (error instanceof Anthropic.APIConnectionTimeoutError) return false;
+  if (error instanceof Anthropic.APIConnectionError) return true;
+  if (error instanceof Anthropic.APIError) {
+    return error.status === 429 || (typeof error.status === "number" && error.status >= 500);
+  }
+  return false;
+}
+
+function logFailure(error: unknown) {
+  const e = error as { status?: unknown; error?: { error?: { type?: unknown } }; name?: unknown };
+  console.error("ai.provider failed", {
+    name: e?.name,
+    status: e?.status ?? null,
+    type: e?.error?.error?.type ?? null,
+  });
+}
+
+/** Seconds to wait before the single retry: the server's hint, capped, else one second. */
+function retryDelayMs(error: unknown): number {
+  const header = (error as { headers?: Headers })?.headers?.get?.("retry-after");
+  const seconds = header ? Number(header) : NaN;
+  return Number.isFinite(seconds) && seconds >= 0 ? Math.min(seconds, 5) * 1000 : 1000;
+}
+
+const sleep = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
 
 /**
  * Claude via the official SDK. The key, base URL and model come only from server env vars, passed
  * explicitly so that no ambient credential (ANTHROPIC_* variables, CLI profiles) is ever used.
- * One retry for transient failures; bounded time and output; structured JSON output.
+ *
+ * Time and retries are bounded by the app, not the SDK: one deadline (AI_TIMEOUT_MS) covers the
+ * whole call, the request is aborted when it passes, and at most one retry is made — only for
+ * transient failures (429, 5xx, lost connection), never for 4xx errors or timeouts.
  */
-function anthropicProvider(env: AiEnv): AiProvider {
+function anthropicProvider(env: AiEnv, options: { fetch?: typeof fetch }): AiProvider {
   const client = new Anthropic({
     apiKey: env.AI_API_KEY!,
     authToken: null,
     baseURL: env.AI_BASE_URL,
     timeout: env.AI_TIMEOUT_MS,
-    maxRetries: 1,
+    maxRetries: 0,
+    ...(options.fetch ? { fetch: options.fetch } : {}),
   });
+  const call = (request: GenerateRequest, signal: AbortSignal) =>
+    client.beta.messages.create(
+      {
+        model: env.AI_MODEL,
+        max_tokens: env.AI_MAX_OUTPUT_TOKENS,
+        system: request.system,
+        messages: [{ role: "user", content: request.prompt }],
+        output_config: {
+          effort: env.AI_EFFORT,
+          format: { type: "json_schema", schema: structuredOutputSchema(request.schema) },
+        },
+        // A request declined by a safety classifier is retried on a fallback model chosen by
+        // the API; if the whole chain declines, the result is shown as refused.
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+      },
+      { signal },
+    );
+
   return {
     id: "anthropic",
     model: env.AI_MODEL,
     async generate(request) {
+      const deadline = AbortSignal.timeout(env.AI_TIMEOUT_MS);
+      const signal = request.signal ? AbortSignal.any([deadline, request.signal]) : deadline;
+      let response: Awaited<ReturnType<typeof call>>;
       try {
-        const response = await client.beta.messages.create({
-          model: env.AI_MODEL,
-          max_tokens: env.AI_MAX_OUTPUT_TOKENS,
-          system: request.system,
-          messages: [{ role: "user", content: request.prompt }],
-          output_config: {
-            effort: env.AI_EFFORT,
-            format: zodOutputFormat(request.schema),
-          },
-          // A request declined by a safety classifier is retried on a fallback model chosen by
-          // the API; if the whole chain declines, the result is shown as refused.
-          betas: ["server-side-fallback-2026-07-01"],
-          fallbacks: "default",
-        });
-        if (response.stop_reason === "refusal") return { ok: false, code: "ai.refused" };
-        if (response.stop_reason === "max_tokens")
-          return { ok: false, code: "ai.malformed_output" };
-        const text = response.content.flatMap((block) =>
-          block.type === "text" ? [block.text] : [],
-        );
-        if (text.length === 0) return { ok: false, code: "ai.malformed_output" };
-        let raw: unknown;
         try {
-          raw = JSON.parse(text.join(""));
-        } catch {
-          return { ok: false, code: "ai.malformed_output" };
+          response = await call(request, signal);
+        } catch (error) {
+          if (!isRetryable(error) || signal.aborted) throw error;
+          await sleep(retryDelayMs(error), signal);
+          if (signal.aborted) throw error;
+          response = await call(request, signal);
         }
-        return {
-          ok: true,
-          raw,
-          usage: {
-            inputTokens: response.usage.input_tokens ?? null,
-            outputTokens: response.usage.output_tokens ?? null,
-          },
-        };
       } catch (error) {
-        return { ok: false, code: classifyProviderError(error) };
+        logFailure(error);
+        return { ok: false, code: signal.aborted ? "ai.timeout" : classifyProviderError(error) };
       }
+      return readResponse(response);
     },
   };
+}
+
+interface ResponseLike {
+  stop_reason: string | null;
+  content: { type: string; text?: string }[];
+  usage: { input_tokens?: number | null; output_tokens?: number | null };
+}
+
+/** Turns a provider response into raw JSON, or a precise failure code. */
+export function readResponse(response: ResponseLike): GenerateResult {
+  const usage: Usage = {
+    inputTokens: response.usage.input_tokens ?? null,
+    outputTokens: response.usage.output_tokens ?? null,
+  };
+  if (response.stop_reason === "refusal") return { ok: false, code: "ai.refused", usage };
+  // Cut off by the output budget (thinking counts against it) or the context window.
+  if (
+    response.stop_reason === "max_tokens" ||
+    response.stop_reason === "model_context_window_exceeded"
+  ) {
+    return { ok: false, code: "ai.incomplete_output", usage };
+  }
+  const text = response.content
+    .flatMap((block) => (block.type === "text" && block.text ? [block.text] : []))
+    .join("");
+  if (text.trim() === "") return { ok: false, code: "ai.incomplete_output", usage };
+  try {
+    return { ok: true, raw: JSON.parse(text), usage };
+  } catch {
+    return { ok: false, code: "ai.malformed_output", usage };
+  }
 }

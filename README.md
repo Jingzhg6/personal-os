@@ -121,6 +121,15 @@ AI_API_KEY=<your Anthropic API key>
 
 **Costs:** each call is billed by the provider. The per-user limits above cap usage.
 
+**Verifying a real key** (M11.1):
+
+- `AI_LIVE_VERIFY=auth pnpm ai:verify` makes one free call with a deliberately invalid key.
+- `AI_LIVE_VERIFY=1 pnpm ai:verify` runs the bounded real smoke test against the test database.
+  It needs `AI_PROVIDER=anthropic` and `AI_API_KEY` in `.env.local`, and makes at most 7 calls, of
+  which 5 are billed.
+- Results (status codes, tokens and estimated cost; no content, no key) are written to
+  `test-results/ai-live.json`. `pnpm test` never runs these.
+
 **To disable:** set `AI_PROVIDER=off` (or remove it) and restart.
 
 Tests and screenshots use `AI_PROVIDER=mock`, a deterministic stand-in labelled 模拟 in the UI;

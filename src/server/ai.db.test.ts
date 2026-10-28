@@ -135,6 +135,7 @@ describe("provider configuration", () => {
     const status = await api.ai.status();
     expect(status).toEqual({
       available: true,
+      unavailableReason: null,
       provider: "mock",
       model: "mock",
       simulated: true,
@@ -191,6 +192,60 @@ describe("provider failures", () => {
       generate(deps(mockProvider, { dailyLimit: 0 }), other.id, { capability: "review" }),
       "ai.quota_exceeded",
     );
+  });
+
+  it("holds the per-minute limit under concurrent requests (M11.1)", async () => {
+    const { user } = await setup();
+    const slow: AiProvider = {
+      id: "anthropic",
+      model: "m",
+      generate: async (request) => {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        return mockProvider.generate(request);
+      },
+    };
+    const results = await Promise.allSettled(
+      Array.from({ length: 6 }, () =>
+        generate(deps(slow, { perMinuteLimit: 2 }), user.id, { capability: "review" }),
+      ),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(2);
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(4);
+    for (const r of rejected) {
+      expect((r as PromiseRejectedResult).reason).toMatchObject({ code: "ai.quota_exceeded" });
+    }
+    expect(await db.select().from(aiRequests).where(eq(aiRequests.userId, user.id))).toHaveLength(
+      2,
+    );
+  });
+
+  it("records the tokens of failed calls, which may still be billed (M11.1)", async () => {
+    const { user } = await setup();
+    const { provider } = scripted({
+      ok: false,
+      code: "ai.incomplete_output",
+      usage: { inputTokens: 2100, outputTokens: 8000 },
+    });
+    await rejects(
+      generate(deps(provider), user.id, { capability: "review" }),
+      "ai.incomplete_output",
+    );
+    const [row] = await db.select().from(aiRequests).where(eq(aiRequests.userId, user.id));
+    expect(row).toMatchObject({
+      status: "failed",
+      errorCode: "ai.incomplete_output",
+      inputTokens: 2100,
+      outputTokens: 8000,
+    });
+  });
+
+  it("does not count a request refused before the call (unknown goal) against the limits", async () => {
+    const { api } = await setup();
+    await expect(
+      api.ai.generate({ capability: "goal_plan", goalId: FOREIGN_ID, note: null }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect((await api.ai.status()).limits.usedToday).toBe(0);
   });
 
   it("does not break other workflows (15)", async () => {

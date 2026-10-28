@@ -22,6 +22,11 @@ development, automation) and ledgers that must never be touched by anything but 
      - The key (`AI_API_KEY`), base URL and model (`AI_MODEL`, default `claude-opus-5-5`) are
        passed explicitly, never taken from ambient credentials.
      - Structured JSON output; bounded `max_tokens`, timeout and one retry.
+     - M11.1: the JSON schema is built by the app, not the SDK helper, so `enum` and `const` are
+       kept and enforced by the API.
+     - M11.1: the retry is for 429, 5xx and connection failures only, and one deadline aborts the
+       request.
+     - M11.1: the limits are checked and the call reserved under a per-user lock.
      - Server-side refusal fallback is enabled.
    - `mock`: deterministic, test-only, opt-in and labelled 模拟 in the UI.
 

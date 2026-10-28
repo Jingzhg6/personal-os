@@ -13,7 +13,7 @@ describe("provider errors", () => {
     );
     expect(
       classifyProviderError(new Anthropic.AuthenticationError(401, {}, "bad key sk-…", headers)),
-    ).toBe("ai.not_configured");
+    ).toBe("ai.auth_failed");
     expect(classifyProviderError(new Anthropic.APIConnectionTimeoutError())).toBe("ai.timeout");
     expect(classifyProviderError(new Anthropic.InternalServerError(500, {}, "x", headers))).toBe(
       "ai.provider_error",

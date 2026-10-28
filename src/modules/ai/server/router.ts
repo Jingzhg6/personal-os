@@ -14,7 +14,7 @@ import {
   listProposals,
   markStaleProposals,
 } from "./proposals";
-import { providerFromEnv } from "./provider";
+import { providerFromEnv, unavailableReason } from "./provider";
 
 /** Provider and limits from the server environment, per request (nothing is cached client-side). */
 function advisorDeps(ctx: TrpcContext): AdvisorDeps {
@@ -22,6 +22,7 @@ function advisorDeps(ctx: TrpcContext): AdvisorDeps {
   return {
     db: ctx.db,
     provider: providerFromEnv(env),
+    unavailableReason: unavailableReason(env),
     dailyLimit: env.AI_DAILY_LIMIT,
     perMinuteLimit: env.AI_PER_MINUTE_LIMIT,
     timeoutMs: env.AI_TIMEOUT_MS,

@@ -23,7 +23,7 @@ export default defineConfig({
           name: "unit",
           environment: "node",
           include: ["src/**/*.test.ts"],
-          exclude: ["src/**/*.db.test.ts"],
+          exclude: ["src/**/*.db.test.ts", "src/**/*.live.test.ts"],
         },
       },
       {
@@ -44,6 +44,24 @@ export default defineConfig({
           globalSetup: ["src/test/global-setup-db.ts"],
           // Tests share one database and truncate it between tests.
           fileParallelism: false,
+          env: {
+            DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
+            BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret-123",
+            BETTER_AUTH_URL: "http://localhost:3000",
+          },
+        },
+      },
+      {
+        // M11.1 real-provider verification. Every test is skipped unless AI_LIVE_VERIFY is set
+        // (see src/server/ai.live.test.ts), so `pnpm test` never makes a paid call.
+        extends: true,
+        test: {
+          name: "live",
+          environment: "node",
+          include: ["src/**/*.live.test.ts"],
+          globalSetup: ["src/test/global-setup-db.ts"],
+          fileParallelism: false,
+          testTimeout: 180_000,
           env: {
             DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
             BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret-123",

@@ -50,6 +50,10 @@ export const aiErrorCodes = [
   "ai.malformed_output",
   "ai.invalid_reference",
   "ai.refused",
+  "ai.auth_failed",
+  "ai.model_unavailable",
+  "ai.request_rejected",
+  "ai.incomplete_output",
   "ai.provider_error",
   "ai.input_too_large",
 ] as const;
@@ -61,6 +65,8 @@ export type AiProviderId = (typeof aiProviderIds)[number];
 /** What the UI may know about the provider: never a key, URL or prompt. */
 export interface AiStatus {
   available: boolean;
+  /** "off": not enabled; "missing_key": a provider is chosen but its key is not set. */
+  unavailableReason: "off" | "missing_key" | null;
   provider: AiProviderId;
   /** Model id (anthropic) or "mock". Null when unavailable. */
   model: string | null;

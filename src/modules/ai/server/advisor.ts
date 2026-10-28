@@ -1,10 +1,10 @@
 import "server-only";
 
-import { and, count, eq, gte } from "drizzle-orm";
+import { and, count, eq, gte, sql } from "drizzle-orm";
 
 import { ruleConfigSchema } from "@/modules/automation/domain";
 import { addDays, type Task } from "@/modules/tasks/domain";
-import type { Database } from "@/shared/db/types";
+import type { Database, DbExecutor } from "@/shared/db/types";
 import { DomainError } from "@/shared/lib/errors";
 
 import { aiProposals, aiRequests } from "../db";
@@ -37,8 +37,9 @@ import {
   reviewContext,
   type Allowed,
 } from "./context";
+import { normalizeEnumCase } from "./output-schema";
 import { buildPrompt, serializeData, SYSTEM_PROMPT } from "./prompts";
-import type { AiProvider } from "./provider";
+import type { AiProvider, Usage } from "./provider";
 import { getProposal, purgeExpiredHistory } from "./proposals";
 
 /*
@@ -51,6 +52,8 @@ export interface AdvisorDeps {
   db: Database;
   provider: AiProvider | null;
   dailyLimit: number;
+  /** Why the provider is null, when it is (shown to the user; no configuration values). */
+  unavailableReason?: "off" | "missing_key" | null;
   perMinuteLimit: number;
   timeoutMs: number;
   schedulerConfigured: boolean;
@@ -67,7 +70,7 @@ function aiError(code: AiErrorCode): DomainError {
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 
-async function usage(db: Database, userId: string, now: Date) {
+async function usage(db: DbExecutor, userId: string, now: Date) {
   const [minute] = await db
     .select({ n: count() })
     .from(aiRequests)
@@ -91,6 +94,7 @@ export async function getAiStatus(deps: AdvisorDeps, userId: string): Promise<Ai
   const used = await usage(deps.db, userId, now);
   return {
     available: deps.provider !== null,
+    unavailableReason: deps.provider ? null : (deps.unavailableReason ?? "off"),
     provider: deps.provider?.id ?? "off",
     model: deps.provider?.model ?? null,
     simulated: deps.provider?.id === "mock",
@@ -161,10 +165,6 @@ export async function generate(
   const provider = deps.provider;
   if (!provider) throw aiError("ai.not_configured");
   const now = deps.now?.() ?? new Date();
-  const used = await usage(deps.db, userId, now);
-  if (used.minute >= deps.perMinuteLimit || used.day >= deps.dailyLimit) {
-    throw aiError("ai.quota_exceeded");
-  }
 
   // Context (ownership of goalId / taskId is checked by the owning modules' reads).
   const ctx = await contextFor(deps, userId, input, now);
@@ -172,17 +172,27 @@ export async function generate(
   if (serialized.length > AI_LIMITS.contextChars) throw aiError("ai.input_too_large");
 
   const capability: AiCapability = input.capability;
-  const [request] = await deps.db
-    .insert(aiRequests)
-    .values({
-      userId,
-      capability,
-      provider: provider.id,
-      status: "running",
-      inputChars: serialized.length,
-      createdAt: now,
-    })
-    .returning({ id: aiRequests.id });
+  // Check the limits and reserve this call atomically: concurrent requests of one user queue on
+  // an advisory lock, so they cannot all pass the check before any of them is counted (M11.1).
+  const request = await deps.db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`ai-quota:${userId}`}))`);
+    const used = await usage(tx, userId, now);
+    if (used.minute >= deps.perMinuteLimit || used.day >= deps.dailyLimit) {
+      throw aiError("ai.quota_exceeded");
+    }
+    const [row] = await tx
+      .insert(aiRequests)
+      .values({
+        userId,
+        capability,
+        provider: provider.id,
+        status: "running",
+        inputChars: serialized.length,
+        createdAt: now,
+      })
+      .returning({ id: aiRequests.id });
+    return row;
+  });
   const started = Date.now();
   const finish = (values: Partial<typeof aiRequests.$inferInsert>) =>
     deps.db
@@ -190,6 +200,9 @@ export async function generate(
       .set({ ...values, durationMs: Date.now() - started })
       .where(eq(aiRequests.id, request!.id));
 
+  // The provider enforces AI_TIMEOUT_MS itself; this backstop also aborts it if it does not.
+  const abort = new AbortController();
+  let spent: Usage | undefined;
   try {
     const result = await withTimeout(
       provider.generate({
@@ -199,11 +212,16 @@ export async function generate(
         data: ctx.data,
         userText: userTextOf(input),
         schema: outputSchemas[capability],
+        signal: abort.signal,
       }),
       deps.timeoutMs + 5_000,
+      abort,
     );
+    spent = result.usage;
     if (!result.ok) throw aiError(result.code);
-    const parsed = outputSchemas[capability].safeParse(result.raw);
+    const parsed = outputSchemas[capability].safeParse(
+      normalizeEnumCase(outputSchemas[capability], result.raw),
+    );
     if (!parsed.success) throw aiError("ai.malformed_output");
     const draft = ctx.draft(parsed.data as never);
     const [row] = await deps.db
@@ -233,7 +251,13 @@ export async function generate(
     return getProposal(deps.db, userId, row!.id, now);
   } catch (error) {
     const code = error instanceof DomainError ? error.code : "ai.provider_error";
-    await finish({ status: "failed", errorCode: code });
+    // Failed calls may still have been billed: their usage is recorded too.
+    await finish({
+      status: "failed",
+      errorCode: code,
+      inputTokens: spent?.inputTokens ?? null,
+      outputTokens: spent?.outputTokens ?? null,
+    });
     if (error instanceof DomainError) throw error;
     // Unexpected: log the class only — never prompts, outputs or personal data.
     console.error("ai.generate failed", (error as Error).name);
@@ -254,13 +278,16 @@ function userTextOf(input: GenerateInput): string | null {
   }
 }
 
-async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+async function withTimeout<T>(promise: Promise<T>, ms: number, abort: AbortController): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(aiError("ai.timeout")), ms);
+        timer = setTimeout(() => {
+          abort.abort();
+          reject(aiError("ai.timeout"));
+        }, ms);
       }),
     ]);
   } finally {

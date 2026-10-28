@@ -23,7 +23,11 @@ const envSchema = z.object({
    */
   AI_PROVIDER: z.enum(["off", "anthropic", "mock"]).default("off"),
   AI_API_KEY: z.string().min(1).optional(),
-  AI_MODEL: z.string().min(1).max(100).default("claude-opus-5-5"),
+  /** A model id as the provider spells it (no spaces or quotes); checked by the provider on use. */
+  AI_MODEL: z
+    .string()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,99}$/, "AI_MODEL must be a model id")
+    .default("claude-opus-5-5"),
   AI_BASE_URL: z.url().default("https://api.anthropic.com"),
   AI_EFFORT: z.enum(["low", "medium", "high"]).default("medium"),
   AI_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(300_000).default(60_000),

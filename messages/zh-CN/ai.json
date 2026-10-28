@@ -8,7 +8,8 @@
     "principle": "AI 只提出建议；是否采纳由你决定，确认后由应用自己的服务执行。",
     "usage": "今天已用 {used}/{daily} 次 · 每分钟最多 {perMinute} 次",
     "failedTitle": "AI 请求失败，没有生成任何内容",
-    "generating": "正在生成，可能需要一分钟…"
+    "generating": "正在生成，可能需要一分钟…",
+    "missingKeyBody": "服务器选择了 AI 提供方，但没有设置 AI_API_KEY，所以不会生成任何 AI 分析或建议。回顾页上由应用计算的数据事实仍然可以查看。请管理员设置密钥后重启。"
   },
   "capability": {
     "review": "回顾分析",

@@ -26,6 +26,19 @@ The UI labels them 模拟; they are not AI output.
 - the quality of the Chinese output;
 - refusal-fallback behaviour.
 
+> **M11.1 update** ([verification report](./m11-1-real-provider-verification.md)): still no
+> successful live call (no key was available). Offline checks against the SDK source and the
+> official docs found and fixed five defects in the integration:
+>
+> - closed value sets were not enforced in the schema;
+> - enum capitalisation was not tolerated;
+> - the per-minute limit was not atomic under concurrency;
+> - a timed-out request was not aborted;
+> - error codes were too coarse.
+>
+> The invalid-key path was verified against the real API. Run `AI_LIVE_VERIFY=1 pnpm ai:verify`
+> with a key to finish verification.
+
 ## What was built
 
 ### Module and data
@@ -196,15 +209,18 @@ not a screenshot, because the e2e server runs the mock.
 ## Deferred and limitations
 
 - **Real provider verification** (above). If the API rejects a generated schema, calls fail
-  visibly with `ai.provider_error`. The fallback is to simplify that output schema; the app-side zod
+  visibly with `ai.request_rejected` (M11.1; previously `ai.provider_error`). The fallback is to simplify that output schema; the app-side zod
   validation stays as it is.
 - **Cost:** each click is one paid call. With `claude-opus-5-5` at $4 / $20 per million input /
-  output tokens, a call is roughly 3–8k input and up to 8k output tokens. That is about $0.03–0.18
-  per call, so at most about $5 per user per day at the default limit of 30. Lower
+  output tokens (price confirmed on the official pricing page in M11.1), a call is an estimated
+  1–9k input tokens and up to `AI_MAX_OUTPUT_TOKENS` (8k) output tokens, thinking included. Request
+  sizes were measured in characters in M11.1; token counts remain estimates. That is about
+  $0.01–0.20 per call, so at most about $6 per user per day at the default limit of 30. These are
+  estimates, not measurements. Lower
   `AI_DAILY_LIMIT` or choose a smaller `AI_MODEL` to reduce this.
-- **Runtime:** generation is synchronous in the request (up to `AI_TIMEOUT_MS` + 5 s) and not
-  streamed. Rate limits are counted from the database: a burst of concurrent requests can exceed
-  the per-minute limit by the number of requests in flight.
+- **Runtime:** generation is synchronous in the request and not streamed. It is bounded by
+  `AI_TIMEOUT_MS`, which covers the request and any retry; the request is aborted at the deadline
+  (M11.1). Concurrent requests can no longer exceed the per-user limits (fixed in M11.1).
 - **Out of scope:**
   - multi-turn chat or memory;
   - recommendations for project or milestone changes, plan creation and goal creation (plans

@@ -123,6 +123,10 @@
     "proposal_closed": "这个提议已经处理过，不能再批准。",
     "proposal_stale": "生成之后相关数据已被修改，这个提议已失效。请重新生成。",
     "proposal_expired": "这个提议已过期。请重新生成。",
-    "change_mismatch": "批准的更改与原提议不一致。"
+    "change_mismatch": "批准的更改与原提议不一致。",
+    "auth_failed": "AI 服务拒绝了服务器配置的凭据（无效或无权限），没有生成任何内容。请管理员检查 AI_API_KEY。",
+    "model_unavailable": "配置的 AI 模型不存在或当前账号无权使用，没有生成任何内容。请管理员检查 AI_MODEL。",
+    "request_rejected": "AI 服务拒绝了这个请求，没有生成任何内容。",
+    "incomplete_output": "AI 的回答不完整（输出被截断或为空），已被拒绝。请稍后再试。"
   }
 }
