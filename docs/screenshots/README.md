@@ -229,3 +229,18 @@ only direct write, as a deadline cannot be "planned in advance" within one run).
 | `06-mobile-discipline.png`      | `/development/attributes/[id]` (phone)    | iPhone 13                                                                      |
 | `07-dark-discipline.png`        | `/development/attributes/[id]` (dark)     | Dark theme                                                                     |
 | `08-empty.png`                  | `/development/attributes/[id]` (new user) | 0 分, empty history, rules, worker notice                                      |
+
+## Phase 1 integration (`phase1-integration/`)
+
+One account, with data made through the app's API, on the integrated branch (M0–M10.6, no AI).
+
+| File                    | Page                    | Shows                                                                      |
+| ----------------------- | ----------------------- | -------------------------------------------------------------------------- |
+| `01-dashboard.png`      | `/`                     | Level, XP currencies, radar, trend, focus, rewards, this week, activity    |
+| `02-tasks.png`          | `/tasks`                | Task list with urgency, importance, blocked, project, area and due markers |
+| `03-project.png`        | `/projects/[id]`        | Project page: progress, milestone, blocked dependency                      |
+| `04-gantt.png`          | `/projects/gantt`       | The same tasks on the Gantt chart, with the dependency arrow               |
+| `05-development.png`    | `/development`          | Growth: recent growth from completed tasks, the goal                       |
+| `06-finance.png`        | `/finance`              | Net worth in CNY from a recorded snapshot                                  |
+| `07-mobile-matrix.png`  | `/tasks/matrix` (phone) | iPhone 13: matrix, uncategorised tray, no horizontal overflow              |
+| `08-dark-character.png` | `/character` (dark)     | Dark theme: level, XP, radar with 自制力                                   |

@@ -512,6 +512,17 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M9 Growth planning & goal attribution** ✅: growth plans grouping existing tasks, goal-specific Growth XP by explicit allocation (no duplication, 未归属 remainder), goal evidence (actions, attributed XP, last 30 days, unattributed), attribution editor; no XP changes, no AI.
 - **M9.5 Personal finance** ✅: institutions and accounts, assets and liabilities, dated balance snapshots in atomic batches, manual frozen FX (missing never = 1), base currency, net worth with balance / FX split, history of recorded dates, archival keeping history; no bank APIs, no transactions, no XP.
 - **M10 Automation engine** ✅: user-owned typed rules (5 event triggers + schedules), allowlisted conditions and actions through the owning services, transactional outbox, at-most-once effects, duplicate and loop protection, execution history with safe retries, in-app notifications, health view, worker endpoint for schedules; no AI, no external services.
+- **M11 AI advisor** ⏸ **on hold since 2026-10-28.** Built on the branches `m11-ai-advisor` and
+  `m11-1-real-provider-verification` (ADR 0022 is there). It is kept but not part of this line, and
+  will be re-evaluated after deployment and real use.
+- **Phase 1 integration** (branch `phase1-integration`, from M10.6):
+  - M0–M10.6 verified as one linear history;
+  - a fresh-database migration check;
+  - `pnpm db:integrity` cross-module invariants;
+  - a cross-module e2e regression.
+
+  Then the remaining Phase 1 items below.
+
 - **M10.5 自制力 (Discipline)** ✅: fixed system attribute scored from planned-task outcomes (deadline planned ≥ 1 h ahead), separate append-only ledger with per-task net reconciliation, failed status, overdue sweep in the worker tick; no change to XP, levels or rewards.
 - **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.

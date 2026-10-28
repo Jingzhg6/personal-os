@@ -6,7 +6,12 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: M10.5 — 自制力 (Discipline).** A fixed growth attribute scores how planned tasks are
+> **Status: Phase 1 integration** (branch `phase1-integration`). M0–M10.6 are integrated and
+> verified together (see [`docs/reports/phase1-integration.md`](docs/reports/phase1-integration.md)).
+> The AI advisor (M11) is **on hold**: it is kept on its own branches, not included here, and will
+> be re-evaluated after deployment and real use. Previously:
+>
+> **M10.5 — 自制力 (Discipline).** A fixed growth attribute scores how planned tasks are
 > carried out: a task whose deadline was set in advance earns +15 early, +10 on time, +3 late;
 > −3 while overdue and −5 if marked failed (a new 已失败 status), 0 if cancelled — one net result
 > per task, recorded in its own append-only history, never touching XP, levels or rewards. Overdue
@@ -67,6 +72,17 @@ To close sign-up after creating your own account, set `AUTH_ALLOW_SIGNUP=false` 
 | `pnpm automation:worker`            | Automation worker: calls the tick endpoint every minute (needs `APP_URL`, `AUTOMATION_WORKER_SECRET`) |
 
 First time running E2E tests on a new machine: `pnpm exec playwright install chromium`.
+
+## Database checks
+
+```bash
+pnpm db:migrate     # apply pending migrations (forward-only)
+pnpm db:integrity   # read-only: pending migrations, unvalidated constraints and 36 invariants;
+                    # exits 1 on any violation. Uses DATABASE_URL.
+```
+
+The invariants are mostly that every cross-table reference stays within one user, plus domain
+invariants (milestone in the task's project, status timestamps, 自制力 nets, XP reversals).
 
 ## Environment variables
 
