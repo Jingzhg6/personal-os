@@ -31,6 +31,14 @@ export {
   updateTask,
   type TaskDeps,
 } from "./service";
+export {
+  generateNextInstance,
+  getTaskRecurrence,
+  listInstances,
+  setRecurrence,
+  skipOccurrence,
+  stopRecurrence,
+} from "./recurrence";
 export { listStatuses, seedDefaultStatuses } from "./statuses";
 export { listTags } from "./tags";
 export { listTrash } from "./trash";

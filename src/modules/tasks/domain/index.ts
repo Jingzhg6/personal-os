@@ -6,6 +6,7 @@ export * from "./eisenhower";
 export * from "./list-query";
 export * from "./priority";
 export * from "./quick-add";
+export * from "./recurrence";
 export * from "./rich-text";
 export * from "./statuses";
 export * from "./tags";

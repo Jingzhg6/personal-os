@@ -52,6 +52,8 @@ export interface Task {
    * deadline was planned in advance. Null without a due date.
    */
   plannedAt: Date | null;
+  /** Recurring series this task is an instance of (ADR 0023), or null. */
+  recurrenceId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

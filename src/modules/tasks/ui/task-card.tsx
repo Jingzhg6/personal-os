@@ -11,7 +11,7 @@ import { ColorDot } from "@/shared/ui/color";
 import { MenuCheckbox, Popover } from "@/shared/ui/popover";
 
 import { isClosedCategory, type Tag, type Task } from "../domain";
-import { BlockedChip } from "./blocked-chip";
+import { BlockedChip, RecurringMark } from "./blocked-chip";
 import { useDueLabel } from "./labels";
 import { PriorityIcon } from "./priority-icon";
 import { MilestoneChip, ProjectChip } from "./project-chip";
@@ -191,9 +191,11 @@ function CardBody({
       due ||
       task.priority ||
       tags.length > 0 ||
+      task.recurrenceId ||
       task.subtaskCount > 0 ? (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pl-14 text-xs text-muted-foreground">
           <BlockedChip task={task} />
+          <RecurringMark task={task} />
           {showProject && task.projectId ? <ProjectChip projectId={task.projectId} /> : null}
           {task.milestoneId && lookups.milestones?.get(task.milestoneId) ? (
             <MilestoneChip name={lookups.milestones.get(task.milestoneId)!} />

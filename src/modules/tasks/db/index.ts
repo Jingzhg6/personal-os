@@ -67,6 +67,32 @@ export const tags = pgTable(
   (t) => [uniqueIndex("tags_user_name_uq").on(t.userId, sql`lower(${t.name})`)],
 );
 
+/**
+ * A recurring series (ADR 0023): an RFC 5545 rule ("DTSTART;VALUE=DATE:…\nRRULE:…") and a mode.
+ * Its instances are ordinary tasks pointing here; one is open at a time.
+ */
+export const taskRecurrences = pgTable(
+  "task_recurrences",
+  {
+    id: primaryId(),
+    userId: userId(),
+    rrule: text("rrule").notNull(),
+    /** fixed: by the schedule · after_completion: counted from when an instance is closed. */
+    mode: text("mode").notNull(),
+    /** IANA zone the local dates of the series are computed in. */
+    timezone: text("timezone").notNull(),
+    /** Due date of the newest instance, at the start of that local day (informational). */
+    nextDueAt: timestamp("next_due_at", { withTimezone: true }),
+    /** Set when the series stops (by the user, or after its UNTIL / COUNT). */
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    ...timestamps(),
+  },
+  (t) => [
+    index("task_recurrences_user_id_idx").on(t.userId),
+    check("task_recurrences_mode_valid", sql`${t.mode} in ('fixed', 'after_completion')`),
+  ],
+);
+
 export const tasks = pgTable(
   "tasks",
   {
@@ -106,9 +132,20 @@ export const tasks = pgTable(
      */
     plannedAtInferred: boolean("planned_at_inferred").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Recurring series this task is an instance of (ADR 0023). */
+    // Series are never deleted on their own (only with the user, together with the tasks).
+    recurrenceId: uuid("recurrence_id").references((): AnyPgColumn => taskRecurrences.id),
+    /** 1-based position in the series; unique per series, so a successor exists at most once. */
+    recurrenceIndex: integer("recurrence_index"),
     ...timestamps(),
   },
   (t) => [
+    uniqueIndex("tasks_recurrence_index_uq").on(t.recurrenceId, t.recurrenceIndex),
+    check(
+      "tasks_recurrence_pair",
+      sql`(${t.recurrenceId} is null) = (${t.recurrenceIndex} is null)`,
+    ),
+    check("tasks_recurring_top_level", sql`${t.recurrenceId} is null or ${t.parentTaskId} is null`),
     index("tasks_user_active_idx")
       .on(t.userId, t.sortKey)
       .where(sql`${t.deletedAt} is null`),

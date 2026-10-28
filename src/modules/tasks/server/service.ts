@@ -263,6 +263,10 @@ export function updateTask(
   return db.transaction(async (tx) => {
     const current = await getTask(tx, userId, input.id);
     const { tagIds, contributions, ...rest } = input.patch;
+    // A recurring instance keeps a due date: the next one is scheduled from it (ADR 0023).
+    if (current.recurrenceId && rest.dueDate === null) {
+      throw new DomainError("invalid", "recurrence.needs_due_date");
+    }
     const fields: typeof rest = { ...rest };
     if (rest.projectId !== undefined || rest.milestoneId !== undefined) {
       const projectId = rest.projectId !== undefined ? rest.projectId : current.projectId;
@@ -389,6 +393,11 @@ export function completeTask(deps: TaskDeps, userId: string, id: string): Promis
   return moveToCategory(deps, userId, id, "completed", (t) => t.statusCategory !== "completed");
 }
 
+/** Moves the task to the first "cancelled" status. No-op when already cancelled. */
+export function cancelTask(deps: TaskDeps, userId: string, id: string): Promise<Task> {
+  return moveToCategory(deps, userId, id, "cancelled", (t) => t.statusCategory !== "cancelled");
+}
+
 /** Moves the task to the first "failed" status (M10.5). No-op when already failed. */
 export function failTask(deps: TaskDeps, userId: string, id: string): Promise<Task> {
   return moveToCategory(deps, userId, id, "failed", (t) => t.statusCategory !== "failed");
@@ -440,6 +449,10 @@ export function setTaskParent(
   return db.transaction(async (tx) => {
     const task = await getTask(tx, userId, input.id);
     if (task.parentTaskId === input.parentTaskId) return task;
+    // A recurring instance stays a top-level task (ADR 0023).
+    if (input.parentTaskId && task.recurrenceId) {
+      throw new DomainError("invalid", "recurrence.subtask");
+    }
     if (input.parentTaskId) {
       await getTask(tx, userId, input.parentTaskId);
       if ((await subtreeIds(tx, userId, task.id)).includes(input.parentTaskId)) {

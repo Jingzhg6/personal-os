@@ -6,7 +6,13 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: Phase 1 integration** (branch `phase1-integration`). M0–M10.6 are integrated and
+> **Status: Recurring tasks** (branch `recurring-tasks`). A task can repeat (daily, weekly,
+> monthly or yearly; on a fixed schedule or counted from completion). Each occurrence is an
+> ordinary task; completing, skipping or failing it creates the next one, exactly once. Set it in
+> the task panel's 「重复」 section. See ADR 0023 and
+> [`docs/reports/recurring-tasks.md`](docs/reports/recurring-tasks.md).
+>
+> **Phase 1 integration** (branch `phase1-integration`). M0–M10.6 are integrated and
 > verified together (see [`docs/reports/phase1-integration.md`](docs/reports/phase1-integration.md)).
 > The AI advisor (M11) is **on hold**: it is kept on its own branches, not included here, and will
 > be re-evaluated after deployment and real use. Previously:
@@ -77,7 +83,7 @@ First time running E2E tests on a new machine: `pnpm exec playwright install chr
 
 ```bash
 pnpm db:migrate     # apply pending migrations (forward-only)
-pnpm db:integrity   # read-only: pending migrations, unvalidated constraints and 36 invariants;
+pnpm db:integrity   # read-only: pending migrations, unvalidated constraints and 38 invariants;
                     # exits 1 on any violation. Uses DATABASE_URL.
 ```
 

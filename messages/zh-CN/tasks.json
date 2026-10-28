@@ -383,5 +383,78 @@
     "remove": "移除「{name}」",
     "preview": "完成后约获得 {total} XP：{parts}",
     "archived": "已停用"
+  },
+  "recurrence": {
+    "title": "重复",
+    "edit": "修改",
+    "add": "设置重复",
+    "none": "不重复。",
+    "badge": "重复任务",
+    "modes": {
+      "fixed": "按固定日程",
+      "after_completion": "完成后再计"
+    },
+    "modeLabel": "下一次的日期",
+    "modeHints": {
+      "fixed": "按日程推算；错过的日期会跳过，不会补出一串逾期任务。",
+      "after_completion": "从这一次结束的那天起重新计算。"
+    },
+    "position": "第 {index} 次 · 共已生成 {total} 次",
+    "ended": "已停止重复",
+    "history": "这是较早的一次，修改请到最新一次",
+    "upcoming": "之后：{dates}",
+    "skip": "跳过本次",
+    "skipped": "已跳过本次，已生成下一次",
+    "stop": "停止重复",
+    "stopTitle": "停止重复？",
+    "stopBody": "不会再生成新的任务。已经生成的任务保持不变。",
+    "needsDueDate": "请先设置截止日期：重复的日期按它计算。",
+    "frequency": "重复频率",
+    "frequencies": {
+      "none": "不重复",
+      "daily": "每天",
+      "weekly": "每周",
+      "monthly": "每月",
+      "yearly": "每年"
+    },
+    "every": "每",
+    "interval": "间隔",
+    "units": {
+      "daily": "天",
+      "weekly": "周",
+      "monthly": "个月",
+      "yearly": "年"
+    },
+    "everyOne": {
+      "daily": "每天",
+      "weekly": "每周",
+      "monthly": "每月",
+      "yearly": "每年"
+    },
+    "everyN": "每 {n} {unit}",
+    "weekdays": "重复的星期",
+    "weekdayShort": {
+      "d1": "一",
+      "d2": "二",
+      "d3": "三",
+      "d4": "四",
+      "d5": "五",
+      "d6": "六",
+      "d7": "日"
+    },
+    "monthDay": "日期",
+    "sameDay": "与首次相同",
+    "dayN": "{day} 日",
+    "lastDay": "最后一天",
+    "endLabel": "结束",
+    "ends": {
+      "never": "永不",
+      "until": "截止到",
+      "count": "共几次"
+    },
+    "untilDate": "到 {date} 为止",
+    "countN": "共 {count} 次",
+    "save": "保存",
+    "cancel": "取消"
   }
 }

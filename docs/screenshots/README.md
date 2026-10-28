@@ -244,3 +244,16 @@ One account, with data made through the app's API, on the integrated branch (M0�
 | `06-finance.png`        | `/finance`              | Net worth in CNY from a recorded snapshot                                  |
 | `07-mobile-matrix.png`  | `/tasks/matrix` (phone) | iPhone 13: matrix, uncategorised tray, no horizontal overflow              |
 | `08-dark-character.png` | `/character` (dark)     | Dark theme: level, XP, radar with 自制力                                   |
+
+## Recurring tasks (`recurring-tasks/`)
+
+Series made through the app's API; instances created by completing and skipping.
+
+| File                   | Page                       | Shows                                                                                   |
+| ---------------------- | -------------------------- | --------------------------------------------------------------------------------------- |
+| `01-task-list.png`     | `/tasks`                   | Open occurrences as ordinary tasks with the ↻ marker; completed and skipped ones folded |
+| `02-panel-summary.png` | `/tasks?task=` (newest)    | 重复: 每月最后一天 · 按固定日程, position, next three dates, 跳过本次 / 停止重复        |
+| `03-panel-edit.png`    | `/tasks?task=`             | The rule editor: frequency, interval, weekdays, end, mode with its explanation          |
+| `04-matrix.png`        | `/tasks/matrix`            | The next 整理周报 occurrence in 重要且紧急, with project, due time and ↻ marker         |
+| `05-mobile-panel.png`  | `/tasks?task=` (phone)     | iPhone 13, the 重复 section                                                             |
+| `06-dark-panel.png`    | `/tasks?task=` (old, dark) | Dark theme; an earlier occurrence, marked as history (edit on the newest)               |

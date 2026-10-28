@@ -8,6 +8,8 @@ import {
   dependencyInput,
   moveStatusInput,
   moveTaskInput,
+  recurrenceTaskInput,
+  setRecurrenceInput,
   setTaskParentInput,
   setTaskStatusInput,
   taskListQuery,
@@ -19,6 +21,7 @@ import {
   updateTaskViewInput,
 } from "../domain";
 import { addDependency, removeDependency } from "./dependencies";
+import { getTaskRecurrence, setRecurrence, skipOccurrence, stopRecurrence } from "./recurrence";
 import { getTaskDetail, listTasks, listTimeline } from "./repository";
 import {
   completeTask,
@@ -88,6 +91,22 @@ const viewsRouter = router({
     .mutation(({ ctx, input }) => updateTaskViewScope(ctx.db, ctx.userId, input)),
 });
 
+/** Recurring series of a task (ADR 0023). */
+const recurrenceRouter = router({
+  get: protectedProcedure
+    .input(recurrenceTaskInput)
+    .query(({ ctx, input }) => getTaskRecurrence(ctx.db, ctx.userId, input.taskId)),
+  set: protectedProcedure
+    .input(setRecurrenceInput)
+    .mutation(({ ctx, input }) => setRecurrence(ctx, ctx.userId, input)),
+  skip: protectedProcedure
+    .input(recurrenceTaskInput)
+    .mutation(({ ctx, input }) => skipOccurrence(ctx, ctx.userId, input.taskId)),
+  stop: protectedProcedure
+    .input(recurrenceTaskInput)
+    .mutation(({ ctx, input }) => stopRecurrence(ctx, ctx.userId, input.taskId)),
+});
+
 const dependenciesRouter = router({
   add: protectedProcedure
     .input(dependencyInput)
@@ -137,6 +156,7 @@ export const tasksRouter = router({
     .input(setTaskParentInput)
     .mutation(({ ctx, input }) => setTaskParent(ctx, ctx.userId, input)),
   dependencies: dependenciesRouter,
+  recurrence: recurrenceRouter,
   trash: trashRouter,
   views: viewsRouter,
   statuses: statusesRouter,

@@ -82,6 +82,7 @@ function toTask(
     cancelledAt: row.cancelledAt,
     failedAt: row.failedAt,
     plannedAt: row.plannedAt,
+    recurrenceId: row.recurrenceId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

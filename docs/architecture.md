@@ -407,11 +407,24 @@ overdue sweep in the M10 worker tick. Shown on `/development/attributes/[id]` (s
 history), the radar (score floored at 0) and the task panel. Deadlines back-filled by migration
 0014 are marked `planned_at_inferred` (M10.6) and never scored.
 
+### 5.2.9 Recurring tasks (Phase 1, ADR 0023)
+
+`task_recurrences` (`rrule`, `mode` fixed or after_completion, `timezone`, `next_due_at`,
+`ended_at`; migration 0016). Tasks gained `recurrence_id` and `recurrence_index`, unique per
+series.
+
+- **Generation:** closing the open instance (completed, cancelled = skipped, or failed) creates
+  the next one in the same transaction, at most once.
+- **Dates:** local dates in the series' zone. Fixed mode skips missed occurrences.
+- **Instances** are ordinary tasks in every view.
+- **Panel:** a 重复 section in the task panel (set, edit, skip, stop) and a ↻ marker on rows and
+  cards.
+
 ### 5.3 Phase 1 (planned, after M9)
 
 ```
-tasks (additive)   + recurrence_id? (M8), actual_minutes? (Phase 2)
-task_recurrences   id, user_id, rrule, mode(fixed|after_completion), timezone, next_due_at, ended_at
+tasks (additive)   + recurrence_id, recurrence_index (built, §5.2.9), actual_minutes? (Phase 2)
+task_recurrences   id, user_id, rrule, mode(fixed|after_completion), timezone, next_due_at, ended_at (built)
 ```
 
 Key decisions: `priority` is independent of `is_urgent`/`is_important` (null = not yet sorted
@@ -523,6 +536,10 @@ Every module ships domain unit tests and DB integration tests for its repository
 
   Then the remaining Phase 1 items below.
 
+- **Recurring tasks** ✅ (branch `recurring-tasks`, ADR 0023): daily, weekly, monthly or yearly
+  rules; fixed or after-completion; end by date or count; one open instance at a time, created
+  idempotently when the previous one is completed, skipped or failed; panel editor and list
+  markers.
 - **M10.5 自制力 (Discipline)** ✅: fixed system attribute scored from planned-task outcomes (deadline planned ≥ 1 h ahead), separate append-only ledger with per-task net reconciliation, failed status, overdue sweep in the worker tick; no change to XP, levels or rewards.
 - **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.

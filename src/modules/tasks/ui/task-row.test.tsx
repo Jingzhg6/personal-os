@@ -40,6 +40,7 @@ const baseTask: Task = {
   cancelledAt: null,
   failedAt: null,
   plannedAt: null,
+  recurrenceId: null,
   createdAt: now,
   updatedAt: now,
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { Lock, Repeat } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { isClosedCategory, type Task } from "../domain";
@@ -18,6 +18,17 @@ export function BlockedChip({ task }: { task: Task }) {
     >
       <Lock className="size-3" aria-hidden />
       <span aria-hidden>{t("blocked")}</span>
+    </span>
+  );
+}
+
+/** Marks an instance of a recurring series (ADR 0023). */
+export function RecurringMark({ task }: { task: Task }) {
+  const t = useTranslations("tasks.recurrence");
+  if (!task.recurrenceId) return null;
+  return (
+    <span title={t("badge")} aria-label={t("badge")} data-testid="recurring-mark">
+      <Repeat className="size-3.5 text-primary" aria-hidden />
     </span>
   );
 }

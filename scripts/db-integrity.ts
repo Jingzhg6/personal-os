@@ -70,7 +70,16 @@ const checks: [string, string][] = [
   ["reward_ledger → level reward", sameUser("reward_ledger", "level_reward_id", "level_rewards")],
   ["reward_ledger refund → entry", sameUser("reward_ledger", "refund_of", "reward_ledger")],
 
+  ["tasks → recurring series", sameUser("tasks", "recurrence_id", "task_recurrences")],
+
   // Domain invariants.
+  [
+    "a recurring series has at most one open instance",
+    `select count(*) from (select t.recurrence_id from tasks t join task_statuses s on s.id = t.status_id
+       where t.recurrence_id is not null and t.deleted_at is null
+         and s.category in ('backlog', 'unstarted', 'started')
+       group by t.recurrence_id having count(*) > 1) x`,
+  ],
   [
     "task milestone belongs to the task's project",
     `select count(*) from tasks t join milestones m on m.id = t.milestone_id where t.project_id is distinct from m.project_id`,
