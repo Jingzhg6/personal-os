@@ -10,20 +10,24 @@ export function daysBetween(from: IsoDate, to: IsoDate): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
-/** Monday on or before `date` (ISO weeks; the header groups by week). */
-export function startOfWeek(date: IsoDate): IsoDate {
+/**
+ * First day of the week on or before `date` (the header groups by week). `weekStartsOn` is the
+ * user's setting: 0 = Sunday … 6 = Saturday; Monday by default.
+ */
+export function startOfWeek(date: IsoDate, weekStartsOn = 1): IsoDate {
   const weekday = new Date(`${date}T00:00:00Z`).getUTCDay(); // 0 = Sunday
-  return addDays(date, -((weekday + 6) % 7));
+  return addDays(date, -((weekday - weekStartsOn + 7) % 7));
 }
 
 /**
- * Visible range: every given span plus today, padded by a week on each side, starting on a Monday
- * and at least `minDays` long.
+ * Visible range: every given span plus today, padded by a week on each side, starting on the
+ * first day of a week and at least `minDays` long.
  */
 export function timelineWindow(
   spans: readonly { start: IsoDate; end: IsoDate }[],
   today: IsoDate,
   minDays = 42,
+  weekStartsOn = 1,
 ): { start: IsoDate; end: IsoDate; days: number } {
   let first = today;
   let last = today;
@@ -31,7 +35,7 @@ export function timelineWindow(
     if (span.start < first) first = span.start;
     if (span.end > last) last = span.end;
   }
-  const start = startOfWeek(addDays(first, -7));
+  const start = startOfWeek(addDays(first, -7), weekStartsOn);
   const end = addDays(start, Math.max(daysBetween(start, addDays(last, 7)), minDays - 1));
   return { start, end, days: daysBetween(start, end) + 1 };
 }

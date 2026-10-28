@@ -44,6 +44,16 @@ describe("timeline", () => {
     expect(startOfWeek("2026-10-26")).toBe("2026-10-26");
   });
 
+  it("starts weeks on the user's first weekday", () => {
+    // 2026-10-28 is a Wednesday.
+    expect(startOfWeek("2026-10-28", 0)).toBe("2026-10-25"); // Sunday
+    expect(startOfWeek("2026-10-25", 0)).toBe("2026-10-25");
+    expect(startOfWeek("2026-10-28", 6)).toBe("2026-10-24"); // Saturday
+    expect(startOfWeek("2026-01-01", 1)).toBe("2025-12-29"); // across the year
+    const window = timelineWindow([], "2026-10-28", 42, 0);
+    expect(new Date(`${window.start}T00:00:00Z`).getUTCDay()).toBe(0);
+  });
+
   it("pads the window around the spans and today", () => {
     const window = timelineWindow([{ start: "2026-11-10", end: "2026-12-20" }], "2026-10-25");
     expect(window.start).toBe("2026-10-12");

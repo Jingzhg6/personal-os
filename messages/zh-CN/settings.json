@@ -1,6 +1,6 @@
 {
   "title": "设置",
-  "description": "管理你的偏好设置。",
+  "description": "管理个人资料、时区和显示偏好。",
   "theme": {
     "title": "外观",
     "description": "选择浅色、深色，或跟随系统设置。"
@@ -11,5 +11,50 @@
     "statuses": "任务状态",
     "tags": "标签"
   },
-  "sections": "设置分区"
+  "sections": "设置分区",
+  "saved": "设置已保存。",
+  "save": "保存",
+  "saving": "正在保存…",
+  "profile": {
+    "title": "个人资料",
+    "description": "显示在侧边栏和账户菜单中的名字。",
+    "name": "显示名称",
+    "nameRequired": "请输入显示名称。",
+    "email": "登录邮箱",
+    "emailHint": "登录邮箱暂不支持修改。"
+  },
+  "regional": {
+    "title": "时区与日期",
+    "description": "“今天”、截止日期、逾期判断和仪表盘统计都按这里的时区和每周起始日计算。",
+    "timeZone": "时区",
+    "notSet": "尚未设置（按 UTC 计算）",
+    "now": "该时区当前时间：{time}",
+    "browser": "浏览器时区为 {zone}。",
+    "useBrowser": "使用浏览器时区",
+    "keepsZone": "已有的重复任务和自动化定时规则保留创建时的时区，修改这里不会改变它们的日程。",
+    "weekStartsOn": "每周起始日",
+    "weekHint": "用于仪表盘“本周”、甘特图的周刻度和星期选择的顺序。",
+    "regions": {
+      "Africa": "非洲",
+      "America": "美洲",
+      "Antarctica": "南极洲",
+      "Arctic": "北极",
+      "Asia": "亚洲",
+      "Atlantic": "大西洋",
+      "Australia": "澳大利亚",
+      "Europe": "欧洲",
+      "Indian": "印度洋",
+      "Pacific": "太平洋",
+      "other": "其他"
+    }
+  },
+  "weekdays": {
+    "0": "星期日",
+    "1": "星期一",
+    "2": "星期二",
+    "3": "星期三",
+    "4": "星期四",
+    "5": "星期五",
+    "6": "星期六"
+  }
 }

@@ -16,6 +16,7 @@ import {
 } from "react";
 
 import { useAreas } from "@/modules/areas/ui";
+import { useWeekStartsOn } from "@/modules/settings/ui";
 import type { MilestoneMarker, Project } from "@/modules/projects/domain";
 import { cn } from "@/shared/lib/cn";
 import { useTRPC } from "@/shared/trpc/react";
@@ -74,6 +75,7 @@ export function GanttChart({
   const format = useFormatter();
   const trpc = useTRPC();
   const today = useToday();
+  const weekStartsOn = useWeekStartsOn();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -163,7 +165,7 @@ export function GanttChart({
       spans.push({ start: project.startDate, end: project.targetDate });
   }
   for (const m of visibleMilestones) spans.push({ start: m.dueDate, end: m.dueDate });
-  const range = timelineWindow(spans, today, minDays[zoom]);
+  const range = timelineWindow(spans, today, minDays[zoom], weekStartsOn);
 
   const width = range.days * dayWidth;
   const x = (date: string) => daysBetween(range.start, date) * dayWidth;
@@ -604,6 +606,7 @@ function TimelineHeader({
   today: string;
 }) {
   const format = useFormatter();
+  const weekStartsOn = useWeekStartsOn();
   const dates = Array.from({ length: days }, (_, i) => addDays(start, i));
   const months = dates.flatMap((date, i) =>
     i === 0 || date.endsWith("-01") ? [{ date, left: i * dayWidth }] : [],
@@ -630,7 +633,7 @@ function TimelineHeader({
         ? null
         : dates.map((date, i) => {
             const weekday = asDate(date).getUTCDay();
-            if (zoom === "week" && weekday !== 1) return null;
+            if (zoom === "week" && weekday !== weekStartsOn) return null;
             return (
               <span
                 key={date}

@@ -1,10 +1,17 @@
 import { eq } from "drizzle-orm";
 
 import type { DbExecutor } from "@/shared/db/types";
+import { users } from "@/shared/auth/schema";
 import { isLocale } from "@/shared/i18n/config";
+import { DomainError } from "@/shared/lib/errors";
 
 import { userSettings } from "../db";
-import { defaultUserSettings, type UpdateUserSettingsInput, type UserSettings } from "../domain";
+import {
+  defaultUserSettings,
+  type UpdateProfileInput,
+  type UpdateUserSettingsInput,
+  type UserSettings,
+} from "../domain";
 
 function toDomain(row: typeof userSettings.$inferSelect): UserSettings {
   return {
@@ -36,4 +43,19 @@ export async function updateUserSettings(
     .onConflictDoUpdate({ target: userSettings.userId, set: patch })
     .returning();
   return toDomain(row!);
+}
+
+/** Renames the signed-in user. Only their own row; the session reads the name from it. */
+export async function updateProfile(
+  db: DbExecutor,
+  userId: string,
+  input: UpdateProfileInput,
+): Promise<{ name: string }> {
+  const [row] = await db
+    .update(users)
+    .set({ name: input.name, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+    .returning({ name: users.name });
+  if (!row) throw new DomainError("not_found", "settings.user_not_found");
+  return row;
 }

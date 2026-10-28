@@ -6,7 +6,13 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: Recurring tasks** (branch `recurring-tasks`). A task can repeat (daily, weekly,
+> **Status: Settings** (branch `settings`). 设置 › 通用 now has three cards: the display name, the
+> time zone (any IANA zone, with the browser's zone suggested and a local-time preview) and the
+> week start, and the theme. "Today", overdue checks, the dashboard, the Gantt week scale and the
+> weekday pickers follow them. Recurring series and schedule rules keep the zone they were created
+> in. See ADR 0024 and [`docs/reports/settings.md`](docs/reports/settings.md).
+>
+> **Recurring tasks** (branch `recurring-tasks`). A task can repeat (daily, weekly,
 > monthly or yearly; on a fixed schedule or counted from completion). Each occurrence is an
 > ordinary task; completing, skipping or failing it creates the next one, exactly once. Set it in
 > the task panel's 「重复」 section. See ADR 0023 and

@@ -5,6 +5,7 @@ import { Repeat } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { useWeekdayOrder } from "@/modules/settings/ui";
 import { useTRPC } from "@/shared/trpc/react";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -74,6 +75,7 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const errorMessage = useErrorMessage();
+  const weekdays = useWeekdayOrder();
   const { data: recurrence } = useQuery({
     ...trpc.tasks.recurrence.get.queryOptions({ taskId: task.id }),
     retry: false,
@@ -231,7 +233,7 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
 
           {draft.frequency === "weekly" ? (
             <div className="flex flex-wrap gap-1" role="group" aria-label={t("weekdays")}>
-              {[1, 2, 3, 4, 5, 6, 7].map((d) => {
+              {weekdays.map((d) => {
                 const on = draft.weekdays.includes(d);
                 return (
                   <button

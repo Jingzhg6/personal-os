@@ -257,3 +257,16 @@ Series made through the app's API; instances created by completing and skipping.
 | `04-matrix.png`        | `/tasks/matrix`            | The next 整理周报 occurrence in 重要且紧急, with project, due time and ↻ marker         |
 | `05-mobile-panel.png`  | `/tasks?task=` (phone)     | iPhone 13, the 重复 section                                                             |
 | `06-dark-panel.png`    | `/tasks?task=` (old, dark) | Dark theme; an earlier occurrence, marked as history (edit on the newest)               |
+
+## Settings (`settings/`)
+
+A demo user with a three-task project; settings changed in the UI, then the views that follow them.
+
+| File                        | Page                     | Shows                                                                                         |
+| --------------------------- | ------------------------ | --------------------------------------------------------------------------------------------- |
+| `01-settings.png`           | `/settings`              | 通用: 个人资料 (display name, read-only e-mail) and 时区与日期 (UTC, 星期一) with their hints |
+| `02-time-zone-edit.png`     | `/settings`              | Asia/Shanghai chosen: local-time preview, 使用浏览器时区, the note on fixed zones; 星期日     |
+| `03-gantt-weeks-sunday.png` | `/projects/gantt`        | Week scale labelled on Sundays (10/18, 10/25, …) after saving 星期日                          |
+| `04-weekday-picker.png`     | `/tasks?task=`           | The recurrence editor's weekday buttons starting with 日                                      |
+| `05-mobile-settings.png`    | `/settings` (phone)      | iPhone 13, the 时区与日期 card, no horizontal overflow                                        |
+| `06-dark-settings.png`      | `/settings` (dark theme) | Dark theme                                                                                    |

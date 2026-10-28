@@ -5,7 +5,9 @@ import { useTranslations } from "next-intl";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 
 import { useAreaLabel } from "@/modules/areas/ui";
+import { useWeekdayOrder } from "@/modules/settings/ui";
 import { usePriorityLabel, useStatusLabel } from "@/modules/tasks/ui";
+import { defaultTimeZone } from "@/shared/i18n/config";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -294,7 +296,11 @@ export function RuleBuilder({
 
       <Step title={t("builder.step2")}>
         {triggerType === "schedule" ? (
-          <ScheduleFields value={schedule} onChange={setSchedule} />
+          <ScheduleFields
+            value={schedule}
+            onChange={setSchedule}
+            fixedZone={initial?.timeZone ?? null}
+          />
         ) : (
           <p className="text-sm text-muted-foreground">{t("builder.noConfig")}</p>
         )}
@@ -444,16 +450,21 @@ type ScheduleDraft = {
 function ScheduleFields({
   value,
   onChange,
+  fixedZone,
 }: {
   value: ScheduleDraft;
   onChange: (value: ScheduleDraft) => void;
+  /** The zone an existing rule was fixed to; changing the settings zone later does not move it. */
+  fixedZone: string | null;
 }) {
   const t = useTranslations("automation.schedule");
   const { timeZone } = useLookups();
   const { data: health } = useHealth();
+  const weekdays = useWeekdayOrder();
   const ids = { kind: useId(), date: useId(), time: useId(), day: useId() };
   const set = (patch: Partial<ScheduleDraft>) => onChange({ ...value, ...patch });
-  const zone = timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // Same order as the server: the rule's own zone, then the settings zone, then UTC.
+  const zone = fixedZone ?? timeZone ?? defaultTimeZone;
 
   return (
     <div className="flex flex-col gap-3" data-testid="schedule-fields">
@@ -525,7 +536,7 @@ function ScheduleFields({
         <fieldset className="flex flex-col gap-1.5">
           <legend className="mb-1.5 text-sm font-medium">{t("weekdays")}</legend>
           <div className="flex flex-wrap gap-1.5">
-            {[1, 2, 3, 4, 5, 6, 7].map((d) => {
+            {weekdays.map((d) => {
               const on = value.weekdays.includes(d);
               return (
                 <button

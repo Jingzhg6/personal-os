@@ -420,6 +420,24 @@ series.
 - **Panel:** a 重复 section in the task panel (set, edit, skip, stop) and a ↻ marker on rows and
   cards.
 
+### 5.2.10 Settings (Phase 1, ADR 0024)
+
+`/settings` 通用 tab, with no new table. It has three cards:
+
+- **个人资料:** `users.name`, through `settings.updateProfile`; the e-mail is shown read-only.
+- **时区与日期:** `user_settings.time_zone` and `week_starts_on`.
+- **外观:** the theme, per device.
+
+A changed zone moves "today", overdue checks and dashboard periods at once. Recurring series and
+schedule rules keep the zone they were created in.
+
+The week start reaches the client through `PreferencesProvider` (`useWeekStartsOn`,
+`useWeekdayOrder` in `settings/ui`). It is used by:
+
+- the dashboard's 本周;
+- the Gantt week scale;
+- the order of the weekday pickers.
+
 ### 5.3 Phase 1 (planned, after M9)
 
 ```
@@ -540,6 +558,10 @@ Every module ships domain unit tests and DB integration tests for its repository
   rules; fixed or after-completion; end by date or count; one open instance at a time, created
   idempotently when the previous one is completed, skipped or failed; panel editor and list
   markers.
+- **Settings** ✅ (branch `settings`, ADR 0024): display name; time zone (any IANA zone,
+  browser suggestion, local-time preview) and week start, applied to "today", the dashboard,
+  the Gantt week scale and the weekday pickers; recurring series and schedule rules keep their
+  own zone.
 - **M10.5 自制力 (Discipline)** ✅: fixed system attribute scored from planned-task outcomes (deadline planned ≥ 1 h ahead), separate append-only ledger with per-task net reconciliation, failed status, overdue sweep in the worker tick; no change to XP, levels or rewards.
 - **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.
