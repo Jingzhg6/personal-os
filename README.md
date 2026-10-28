@@ -6,7 +6,14 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: M10.5 — 自制力 (Discipline).** A fixed growth attribute scores how planned tasks are
+> **Status: M11 — AI 顾问 (AI advisor).** `/ai` reviews tasks, projects, goals, growth, finance
+> completeness and automation health. App-computed facts are shown separately from AI
+> interpretations. It also suggests priorities, goal plans, growth contributions and automation
+> rules, and answers one-off questions. The AI only proposes: every change is shown first, needs
+> your explicit approval, and is executed by the app's own services. AI is off unless configured
+> (see "AI advisor"). Previously:
+>
+> **M10.5 — 自制力 (Discipline).** A fixed growth attribute scores how planned tasks are
 > carried out: a task whose deadline was set in advance earns +15 early, +10 on time, +3 late;
 > −3 while overdue and −5 if marked failed (a new 已失败 status), 0 if cancelled — one net result
 > per task, recorded in its own append-only history, never touching XP, levels or rewards. Overdue
@@ -70,14 +77,55 @@ First time running E2E tests on a new machine: `pnpm exec playwright install chr
 
 ## Environment variables
 
-| Variable                   | Purpose                                                                        |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| `DATABASE_URL`             | Dev database connection string                                                 |
-| `TEST_DATABASE_URL`        | Test database (Vitest `db` project and Playwright)                             |
-| `BETTER_AUTH_SECRET`       | Session signing secret, at least 32 characters                                 |
-| `BETTER_AUTH_URL`          | Public URL of the app, e.g. `http://localhost:3000`                            |
-| `AUTH_ALLOW_SIGNUP`        | `true` / `false` — allow creating new accounts                                 |
-| `AUTOMATION_WORKER_SECRET` | Optional (M10). Enables the automation worker endpoint; at least 32 characters |
+| Variable                   | Purpose                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| `DATABASE_URL`             | Dev database connection string                                                  |
+| `TEST_DATABASE_URL`        | Test database (Vitest `db` project and Playwright)                              |
+| `BETTER_AUTH_SECRET`       | Session signing secret, at least 32 characters                                  |
+| `BETTER_AUTH_URL`          | Public URL of the app, e.g. `http://localhost:3000`                             |
+| `AUTH_ALLOW_SIGNUP`        | `true` / `false` — allow creating new accounts                                  |
+| `AUTOMATION_WORKER_SECRET` | Optional (M10). Enables the automation worker endpoint; at least 32 characters  |
+| `AI_PROVIDER`              | Optional (M11). `off` (default), `anthropic` or `mock` (tests only)             |
+| `AI_API_KEY`               | Required for `anthropic`. Server-side only; never sent to the browser or logged |
+| `AI_MODEL`                 | Optional. Default `claude-opus-5-5`                                             |
+| `AI_BASE_URL`              | Optional. Default `https://api.anthropic.com`                                   |
+| `AI_EFFORT`                | Optional. `low` / `medium` (default) / `high`                                   |
+| `AI_TIMEOUT_MS`            | Optional. Provider timeout, default 60000 (5000–300000)                         |
+| `AI_MAX_OUTPUT_TOKENS`     | Optional. Output budget per call, default 8000 (1000–16000)                     |
+| `AI_DAILY_LIMIT`           | Optional. Calls per user per 24 h, default 30 (0 disables calls)                |
+| `AI_PER_MINUTE_LIMIT`      | Optional. Calls per user per minute, default 5                                  |
+
+## AI advisor (optional)
+
+AI is **off** unless configured. When it is off, the 「AI 顾问」 pages say so; the review's facts,
+which are computed by the app, still work.
+
+```bash
+# .env.local (server only — never commit a real key)
+AI_PROVIDER=anthropic
+AI_API_KEY=<your Anthropic API key>
+# optional: AI_MODEL=claude-opus-5-5  AI_DAILY_LIMIT=30  AI_PER_MINUTE_LIMIT=5  AI_TIMEOUT_MS=60000
+```
+
+**What it does:**
+
+- Every AI call is started by a button.
+- Output is validated, and every id it names must belong to you.
+- Changes are applied only after you approve them, through the same services as manual edits.
+
+**What is sent:**
+
+- Ids, titles, dates, statuses and counts of your tasks, projects, goals, attributes and rules.
+- Finance completeness counts only (no amounts, balances, currencies, rates or account names).
+- Never sent: passwords, sessions, e-mail addresses or ledgers.
+
+**Costs:** each call is billed by the provider. The per-user limits above cap usage.
+
+**To disable:** set `AI_PROVIDER=off` (or remove it) and restart.
+
+Tests and screenshots use `AI_PROVIDER=mock`, a deterministic stand-in labelled 模拟 in the UI;
+its output is not AI. Details: [ADR 0022](docs/decisions/0022-ai-advisor.md) and
+[`docs/reports/m11-ai-advisor.md`](docs/reports/m11-ai-advisor.md).
 
 ## Automation worker (scheduled rules)
 

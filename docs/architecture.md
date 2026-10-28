@@ -407,6 +407,22 @@ overdue sweep in the M10 worker tick. Shown on `/development/attributes/[id]` (s
 history), the radar (score floored at 0) and the task panel. Deadlines back-filled by migration
 0014 are marked `planned_at_inferred` (M10.6) and never scored.
 
+### 5.2.8 AI advisor (M11, ADR 0022)
+
+The `ai` module owns two tables (migration 0016):
+
+- `ai_proposals`: request, analysis, typed `items`, `source_refs` with versions, expiry, status
+  and apply result.
+- `ai_requests`: per-call metadata for rate limits; no content.
+
+It reads other modules through their read models and changes nothing until a user approves a
+proposal. Approval runs only `tasks.updateTask`, `development.createGoalTask` or
+`automation.createRule` (saved disabled), in one locked transaction with staleness, expiry and
+idempotency checks.
+
+Providers are `off`, `anthropic` (SDK, env-configured) or `mock` (tests, labelled 模拟).
+Pages: `/ai`, `/ai/review`, `/ai/planning` and `/ai/history`.
+
 ### 5.3 Phase 1 (planned, after M9)
 
 ```
@@ -512,6 +528,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M9 Growth planning & goal attribution** ✅: growth plans grouping existing tasks, goal-specific Growth XP by explicit allocation (no duplication, 未归属 remainder), goal evidence (actions, attributed XP, last 30 days, unattributed), attribution editor; no XP changes, no AI.
 - **M9.5 Personal finance** ✅: institutions and accounts, assets and liabilities, dated balance snapshots in atomic batches, manual frozen FX (missing never = 1), base currency, net worth with balance / FX split, history of recorded dates, archival keeping history; no bank APIs, no transactions, no XP.
 - **M10 Automation engine** ✅: user-owned typed rules (5 event triggers + schedules), allowlisted conditions and actions through the owning services, transactional outbox, at-most-once effects, duplicate and loop protection, execution history with safe retries, in-app notifications, health view, worker endpoint for schedules; no AI, no external services.
+- **M11 AI advisor** ✅: app-computed review facts plus AI interpretation, priority recommendations, goal plans, growth-contribution and automation-rule drafts, one-shot questions; typed proposals with strict output validation and id allow-lists, explicit per-proposal approval through the owning services (idempotent, stale/expired rejected), rate limits, data minimisation (finance as completeness counts only), retention and deletion; never touches XP, 自制力, rewards, finance or auth.
 - **M10.5 自制力 (Discipline)** ✅: fixed system attribute scored from planned-task outcomes (deadline planned ≥ 1 h ahead), separate append-only ledger with per-task net reconciliation, failed status, overdue sweep in the worker tick; no change to XP, levels or rewards.
 - **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.

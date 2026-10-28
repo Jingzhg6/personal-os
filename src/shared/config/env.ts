@@ -16,6 +16,20 @@ const envSchema = z.object({
    * scheduled rules are not run automatically (the UI says so).
    */
   AUTOMATION_WORKER_SECRET: z.string().min(32).optional(),
+  /**
+   * AI advisor (M11, ADR 0022). "off" (default) disables every AI feature; "anthropic" needs
+   * AI_API_KEY; "mock" is the deterministic test provider (labelled 模拟 in the UI). Credentials are
+   * read only here, on the server, and never sent to the browser or logged.
+   */
+  AI_PROVIDER: z.enum(["off", "anthropic", "mock"]).default("off"),
+  AI_API_KEY: z.string().min(1).optional(),
+  AI_MODEL: z.string().min(1).max(100).default("claude-opus-5-5"),
+  AI_BASE_URL: z.url().default("https://api.anthropic.com"),
+  AI_EFFORT: z.enum(["low", "medium", "high"]).default("medium"),
+  AI_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(300_000).default(60_000),
+  AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(1_000).max(16_000).default(8_000),
+  AI_DAILY_LIMIT: z.coerce.number().int().min(0).max(1_000).default(30),
+  AI_PER_MINUTE_LIMIT: z.coerce.number().int().min(1).max(60).default(5),
 });
 
 export type Env = z.infer<typeof envSchema>;

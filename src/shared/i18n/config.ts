@@ -29,6 +29,7 @@ export const namespaces = [
   "development",
   "finance",
   "automation",
+  "ai",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

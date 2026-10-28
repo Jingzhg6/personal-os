@@ -12,3 +12,4 @@ export * from "@/modules/rewards/db";
 export * from "@/modules/development/db";
 export * from "@/modules/finance/db";
 export * from "@/modules/automation/db";
+export * from "@/modules/ai/db";

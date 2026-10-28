@@ -7,6 +7,7 @@
     "life": "生活",
     "finance": "财务",
     "automation": "自动化",
+    "ai": "AI 顾问",
     "work": "工作",
     "administration": "行政事务",
     "calendar": "日历",
@@ -46,6 +47,10 @@
     "financeOverview": "资产总览",
     "financeAccounts": "账户",
     "automationRules": "规则",
-    "automationNotifications": "通知"
+    "automationNotifications": "通知",
+    "aiAdvisor": "顾问",
+    "aiReview": "回顾",
+    "aiPlanning": "规划",
+    "aiHistory": "历史记录"
   }
 }

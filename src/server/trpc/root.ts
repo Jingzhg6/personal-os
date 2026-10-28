@@ -1,3 +1,4 @@
+import { aiRouter } from "@/modules/ai/server";
 import { areasRouter } from "@/modules/areas/server";
 import { automationRouter } from "@/modules/automation/server";
 import { characterRouter } from "@/modules/character/server";
@@ -22,6 +23,7 @@ export const appRouter = router({
   development: developmentRouter,
   finance: financeRouter,
   automation: automationRouter,
+  ai: aiRouter,
 });
 
 export type AppRouter = typeof appRouter;

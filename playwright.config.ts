@@ -48,6 +48,9 @@ export default defineConfig({
       BETTER_AUTH_URL: baseURL,
       BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "e2e-secret-e2e-secret-e2e-secret-1234",
       AUTH_ALLOW_SIGNUP: "true",
+      // M11: the deterministic mock provider (labelled 模拟 in the UI) — no paid AI calls in tests.
+      AI_PROVIDER: "mock",
+      AI_PER_MINUTE_LIMIT: "30",
     },
   },
 });

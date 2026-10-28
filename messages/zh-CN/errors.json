@@ -108,5 +108,21 @@
     "not_retryable": "这次执行不能重试。",
     "retry_limit": "已达到重试次数上限。",
     "rule_disabled": "规则已停用，不能重试。"
+  },
+  "ai": {
+    "not_configured": "AI 顾问未配置或凭据无效，没有生成任何内容。",
+    "timeout": "AI 响应超时，没有生成任何内容。请稍后再试。",
+    "rate_limited": "AI 服务暂时繁忙（请求过多），请稍后再试。",
+    "quota_exceeded": "已达到 AI 使用上限（每分钟或每天），请稍后再试。",
+    "malformed_output": "AI 返回的内容格式不正确或包含不支持的操作，已被拒绝。",
+    "invalid_reference": "AI 返回的内容引用了不属于你的数据，已被拒绝。",
+    "refused": "AI 拒绝了这个请求。",
+    "provider_error": "AI 服务出错，没有生成任何内容。请稍后再试。",
+    "input_too_large": "数据太多，无法发送给 AI。请缩小范围后再试。",
+    "proposal_not_found": "这条 AI 记录不存在或已被删除。",
+    "proposal_closed": "这个提议已经处理过，不能再批准。",
+    "proposal_stale": "生成之后相关数据已被修改，这个提议已失效。请重新生成。",
+    "proposal_expired": "这个提议已过期。请重新生成。",
+    "change_mismatch": "批准的更改与原提议不一致。"
   }
 }

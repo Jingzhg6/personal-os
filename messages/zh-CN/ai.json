@@ -1,0 +1,272 @@
+{
+  "status": {
+    "unavailableTitle": "AI 顾问未启用",
+    "unavailableBody": "服务器没有配置 AI 提供方，所以不会生成任何 AI 分析或建议。回顾页上由应用计算的数据事实仍然可以查看。管理员可以按文档设置 AI_PROVIDER 和 AI_API_KEY 来启用。",
+    "simulated": "模拟模式",
+    "simulatedHint": "当前使用测试用的模拟提供方：结果由程序按固定规则生成，不是 AI 的分析。",
+    "model": "模型：{model}",
+    "principle": "AI 只提出建议；是否采纳由你决定，确认后由应用自己的服务执行。",
+    "usage": "今天已用 {used}/{daily} 次 · 每分钟最多 {perMinute} 次",
+    "failedTitle": "AI 请求失败，没有生成任何内容",
+    "generating": "正在生成，可能需要一分钟…"
+  },
+  "capability": {
+    "review": "回顾分析",
+    "priorities": "优先级建议",
+    "goal_plan": "目标计划",
+    "contributions": "成长贡献建议",
+    "automation_rule": "自动化规则草稿",
+    "question": "问答"
+  },
+  "proposal": {
+    "status": {
+      "analysis": "分析",
+      "proposed": "待你决定",
+      "applied": "已应用",
+      "failed": "应用失败",
+      "stale": "已过时",
+      "expired": "已过期",
+      "discarded": "已放弃"
+    },
+    "simulated": "模拟",
+    "changes": "拟议的更改",
+    "appliedChanges": "已应用的更改",
+    "select": "选择：{change}",
+    "notApplied": "未应用",
+    "approve": "批准所选更改（{count}）",
+    "discard": "放弃",
+    "regenerate": "重新生成",
+    "delete": "删除记录",
+    "confirmTitle": "确认应用这些更改？",
+    "confirmBody": "以下更改会通过应用自己的服务执行，和你手动操作的效果相同。新的自动化规则保存为停用状态。",
+    "confirm": "确认应用",
+    "appliedToast": "已应用 {count} 项更改",
+    "failedToast": "更改没有被应用，请查看原因",
+    "open": "查看",
+    "expires": "等待你的决定，{time} 前有效。生成建议不会修改任何数据。",
+    "appliedHint": "{time} 已应用 {count} 项更改。",
+    "failedHint": "没有任何更改被应用：{error}",
+    "staleHint": "生成之后相关数据已被修改，这个提议已失效。请重新生成。",
+    "expiredHint": "这个提议超过 24 小时未处理，已过期。请重新生成。",
+    "discardedHint": "你放弃了这个提议，没有任何更改。",
+    "analysisHint": "这是分析，不包含可应用的更改。"
+  },
+  "change": {
+    "setPriority": "将「{task}」的优先级改为 {priority}",
+    "changePriority": "将「{task}」的优先级从 {from} 改为 {to}",
+    "setContributions": "将「{task}」的成长贡献设为：{list}",
+    "createTask": "创建任务「{title}」并关联到目标",
+    "createRule": "创建自动化规则「{name}」：{summary}",
+    "contribution": "{name} ×{weight}",
+    "noContributions": "无",
+    "separator": "，",
+    "priority": "优先级",
+    "title": "任务标题",
+    "dueDate": "截止日期",
+    "step": "步骤：{step}",
+    "minutes": "预计 {minutes} 分钟",
+    "weight": "{name} 的权重",
+    "weights": {
+      "w1": "少量",
+      "w2": "一般",
+      "w3": "主要"
+    },
+    "removeContribution": "移除 {name}",
+    "ruleSavedDisabled": "保存后为停用状态，需要你在自动化页面手动启用。"
+  },
+  "uncertainty": {
+    "low": "把握较大",
+    "medium": "把握一般",
+    "high": "把握较小"
+  },
+  "areas": {
+    "tasks": "任务",
+    "projects": "项目",
+    "goals": "目标",
+    "growth": "成长",
+    "finance": "财务",
+    "automation": "自动化"
+  },
+  "priorityAction": {
+    "do_now": "现在就做",
+    "schedule": "安排时间",
+    "unblock_first": "先解除阻塞",
+    "break_down": "拆分任务",
+    "defer": "推迟",
+    "review_deadline": "检查截止日期"
+  },
+  "analysis": {
+    "summary": "摘要（AI）",
+    "interpretations": "解读（AI）",
+    "recommendations": "建议（AI）",
+    "factsDate": "基于 {date} 的数据事实。",
+    "noRecommendations": "没有建议。",
+    "benefit": "好处：{text}",
+    "nextStep": "下一步：{text}",
+    "ignored": "已忽略 {count} 条不符合依赖关系的建议（被阻塞的任务不能马上开始）。",
+    "steps": "步骤",
+    "assumptions": "假设",
+    "contributionsNote": "只会使用你的成长能力；自制力只按固定规则计分，不能作为贡献目标。",
+    "unsupported": "无法实现的部分",
+    "ruleDisabledNote": "规则只使用自动化引擎支持的触发器、条件和动作。",
+    "basedOn": "依据：{areas}",
+    "dataGaps": "数据不足之处",
+    "reason": "{name}：{reason}"
+  },
+  "facts": {
+    "title": "数据事实",
+    "hint": "由应用根据你 {date} 的数据计算，不是 AI 生成。",
+    "tasks": {
+      "title": "任务",
+      "open": "未完成",
+      "overdue": "已逾期",
+      "dueToday": "今天到期",
+      "blocked": "等待前置任务",
+      "urgentImportant": "紧急且重要"
+    },
+    "projects": {
+      "title": "项目",
+      "active": "进行中",
+      "overdue": "超过目标日期",
+      "milestonesOverdue": "里程碑已逾期",
+      "withOverdueTasks": "含逾期任务",
+      "milestoneLine": "{project} · {milestone}"
+    },
+    "goals": {
+      "title": "目标",
+      "active": "进行中",
+      "paused": "已暂停",
+      "withoutOpenTasks": "没有待办行动",
+      "focus": "当前重点：{names}",
+      "noFocus": "还没有设置重点能力。"
+    },
+    "growth": {
+      "title": "成长",
+      "attributes": "成长能力",
+      "discipline": "自制力",
+      "points": "{points} 分",
+      "recent": "近 30 天：{list}",
+      "outcome": "{outcome} {count}",
+      "outcomes": {
+        "none": "不计分",
+        "early": "提前",
+        "on_time": "按时",
+        "late": "迟交",
+        "overdue": "逾期",
+        "failed": "失败",
+        "cancelled": "取消"
+      },
+      "noRecent": "近 30 天没有自制力记录。"
+    },
+    "finance": {
+      "title": "财务完整性",
+      "noAccounts": "还没有财务账户。",
+      "lastValuation": "最近估值日",
+      "never": "从未记录",
+      "missing": "没有估值的账户",
+      "stale": "估值已过期",
+      "unconverted": "缺少汇率",
+      "notRecorded": "未记录（不计为 0）",
+      "note": "只检查数据是否完整，不分析金额，也不提供投资建议。发送给 AI 的只有这些计数。"
+    },
+    "automation": {
+      "title": "自动化",
+      "rules": "规则",
+      "ruleCounts": "{enabled} 条启用 · {disabled} 条停用",
+      "scheduler": "定时调度",
+      "notConfigured": "未配置",
+      "running": "运行中",
+      "notRunning": "未运行",
+      "dueRules": "等待运行的定时规则",
+      "failures": "最近失败"
+    }
+  },
+  "home": {
+    "title": "AI 顾问",
+    "description": "根据你的任务、项目、目标、成长、财务完整性和自动化状态给出分析与建议。每一项更改都需要你确认。",
+    "links": {
+      "review": {
+        "title": "回顾",
+        "body": "查看数据事实，生成分析和优先级建议。"
+      },
+      "planning": {
+        "title": "规划",
+        "body": "为目标拟定计划、建议成长贡献、起草自动化规则。"
+      },
+      "history": {
+        "title": "历史记录",
+        "body": "查看、处理或删除所有分析和提议。"
+      }
+    },
+    "ask": {
+      "title": "问一个问题",
+      "hint": "只根据你自己的数据回答；每次提问都是独立的，不会记住之前的对话。",
+      "placeholder": "例如：这周我应该优先做什么？",
+      "count": "{count}/{max}",
+      "submit": "提问"
+    },
+    "recent": "最近记录",
+    "allHistory": "全部记录",
+    "recentEmpty": "还没有记录。生成的分析和提议会显示在这里。"
+  },
+  "review": {
+    "title": "回顾",
+    "description": "先看事实，再看 AI 的解读和建议。AI 的内容会明确标注。",
+    "factsError": "无法加载数据事实。",
+    "analysisTitle": "AI 分析",
+    "analysisHint": "基于上面的事实生成解读和建议；只生成分析，不会修改任何数据。",
+    "generate": "生成分析",
+    "prioritiesTitle": "优先级建议",
+    "prioritiesHint": "推荐接下来要做的任务，并说明理由、好处和不确定性。调整优先级需要你逐项批准。",
+    "generatePriorities": "生成优先级建议"
+  },
+  "planning": {
+    "title": "规划",
+    "description": "让 AI 起草计划、贡献和规则。所有内容都是草稿，批准前不会创建或修改任何东西。",
+    "plan": {
+      "title": "目标计划",
+      "hint": "为一个目标拟定步骤和候选任务。你可以修改标题和日期，只勾选想要的任务。",
+      "noGoals": "还没有进行中的目标。",
+      "createGoal": "去创建目标",
+      "goal": "目标",
+      "chooseGoal": "选择一个目标",
+      "note": "补充说明",
+      "notePlaceholder": "可选：时间安排、限制条件等",
+      "generate": "生成计划"
+    },
+    "contributions": {
+      "title": "成长贡献建议",
+      "hint": "为一个任务建议它锻炼的成长能力和权重。",
+      "task": "任务",
+      "chooseTask": "选择一个未完成的任务",
+      "generate": "生成建议",
+      "discipline": "{name}不会出现在建议中：它只按固定规则计分。"
+    },
+    "automation": {
+      "title": "自动化规则草稿",
+      "hint": "用一句话描述想要的规则。只会使用自动化引擎支持的功能；规则保存为停用状态，需要你手动启用。",
+      "placeholder": "例如：项目里的任务完成后，创建一个两天后到期的跟进任务",
+      "generate": "起草规则"
+    }
+  },
+  "history": {
+    "title": "AI 历史记录",
+    "description": "所有分析和提议，以及它们的处理结果。",
+    "clear": "清空历史记录",
+    "clearTitle": "清空全部 AI 历史记录？",
+    "clearBody": "会删除所有分析、提议和调用记录。已经应用的更改不会被撤销，它们已经是你的普通数据。",
+    "filter": "按状态筛选",
+    "filters": {
+      "all": "全部",
+      "proposed": "待决定",
+      "applied": "已应用",
+      "closed": "其他"
+    },
+    "capability": "按类型筛选",
+    "allCapabilities": "全部类型",
+    "empty": "还没有 AI 记录",
+    "emptyHint": "在回顾或规划页生成分析后，记录会出现在这里。",
+    "noMatch": "没有符合筛选条件的记录。",
+    "retention": "记录保存 {days} 天后自动删除；你也可以随时删除单条记录或清空全部。"
+  }
+}

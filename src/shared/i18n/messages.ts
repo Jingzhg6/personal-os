@@ -1,3 +1,4 @@
+import ai from "../../../messages/zh-CN/ai.json";
 import areas from "../../../messages/zh-CN/areas.json";
 import auth from "../../../messages/zh-CN/auth.json";
 import character from "../../../messages/zh-CN/character.json";
@@ -33,6 +34,7 @@ export const sourceMessages = {
   development,
   finance,
   automation,
+  ai,
 };
 
 export type Messages = typeof sourceMessages;

@@ -1,5 +1,9 @@
 import {
+  Bot,
+  CalendarRange,
   Gift,
+  History,
+  ListChecks,
   Activity,
   Bell,
   AlarmClock,
@@ -53,6 +57,7 @@ export type ModuleId =
   | "development"
   | "finance"
   | "automation"
+  | "ai"
   | "tasks"
   | "projects"
   | "goals"
@@ -221,6 +226,36 @@ export const navigation: NavSection[] = [
         module: "automation",
         phase: 1,
         milestone: "M10",
+      },
+    ],
+  },
+  {
+    id: "ai",
+    items: [
+      { id: "aiAdvisor", href: "/ai", icon: Bot, module: "ai", phase: 1, milestone: "M11" },
+      {
+        id: "aiReview",
+        href: "/ai/review",
+        icon: ListChecks,
+        module: "ai",
+        phase: 1,
+        milestone: "M11",
+      },
+      {
+        id: "aiPlanning",
+        href: "/ai/planning",
+        icon: CalendarRange,
+        module: "ai",
+        phase: 1,
+        milestone: "M11",
+      },
+      {
+        id: "aiHistory",
+        href: "/ai/history",
+        icon: History,
+        module: "ai",
+        phase: 1,
+        milestone: "M11",
       },
     ],
   },

@@ -26,3 +26,4 @@ changes; never rewrite history — supersede instead.
 | [0019](./0019-personal-finance.md)                     | Finance: manual dated balance snapshots, frozen manual FX, net worth                  | Accepted                                |
 | [0020](./0020-automation-engine.md)                    | Automation: typed rules, transactional outbox, at-most-once effects, honest scheduler | Accepted                                |
 | [0021](./0021-discipline-attribute.md)                 | 自制力: fixed system attribute scored from planned-task outcomes, own ledger          | Accepted                                |
+| [0022](./0022-ai-advisor.md)                           | AI advisor: typed proposals, explicit approval, execution only through services       | Accepted                                |

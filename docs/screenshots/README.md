@@ -229,3 +229,23 @@ only direct write, as a deadline cannot be "planned in advance" within one run).
 | `06-mobile-discipline.png`      | `/development/attributes/[id]` (phone)    | iPhone 13                                                                      |
 | `07-dark-discipline.png`        | `/development/attributes/[id]` (dark)     | Dark theme                                                                     |
 | `08-empty.png`                  | `/development/attributes/[id]` (new user) | 0 分, empty history, rules, worker notice                                      |
+
+## M11 — AI advisor (`m11/`)
+
+Data made through the app's API. Every AI result comes from the **mock provider**
+(`AI_PROVIDER=mock`, labelled 模拟模式 / 模拟 in the UI): fixed rules applied to the user's data,
+not a model. No real provider was configured.
+
+| File                      | Page                 | Shows                                                                                       |
+| ------------------------- | -------------------- | ------------------------------------------------------------------------------------------- |
+| `01-home.png`             | `/ai`                | Status (simulated, usage), links, a one-shot question answered, recent records by status    |
+| `02-review.png`           | `/ai/review`         | App-computed facts (finance missing value 未记录, not 0), AI analysis, priority proposal    |
+| `03-approve-dialog.png`   | `/ai/review`         | Explicit confirmation listing each change (priority from → to)                              |
+| `04-goal-plan.png`        | `/ai/planning`       | Goal plan: steps, assumptions, editable candidate tasks, one unselected                     |
+| `05-automation-draft.png` | `/ai/planning`       | Rule draft from plain language using supported features only, saved disabled after approval |
+| `06-history.png`          | `/ai/history`        | Filters; an answer, and a proposal shown as 已过时 after its task changed, with 重新生成    |
+| `07-mobile-review.png`    | `/ai/review` (phone) | iPhone 13, no horizontal overflow                                                           |
+| `08-dark-error.png`       | `/ai` (dark)         | Dark theme; a provider timeout shown as a failure, with no substitute answer                |
+
+The provider-unavailable state (`AI_PROVIDER` unset) cannot be shown by the e2e server, which runs
+the mock. It is covered by `src/modules/ai/ui/status-notice.test.tsx`.
