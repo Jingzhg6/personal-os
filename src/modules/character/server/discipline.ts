@@ -70,6 +70,7 @@ export function reconcileTaskDiscipline(
         dueDate: tasks.dueDate,
         dueTime: tasks.dueTime,
         plannedAt: tasks.plannedAt,
+        plannedAtInferred: tasks.plannedAtInferred,
         completedAt: tasks.completedAt,
         failedAt: tasks.failedAt,
         deletedAt: tasks.deletedAt,
@@ -79,6 +80,9 @@ export function reconcileTaskDiscipline(
       .where(and(eq(tasks.id, input.taskId), eq(tasks.userId, input.userId)));
     // Purged tasks keep their history; tasks in the Trash are not scored (nor unscored).
     if (!task || task.deletedAt) return null;
+    // M10.6: a back-filled planning time is not evidence of planning. Such tasks are outside
+    // 自制力 — not scored, and entries they may already have are left exactly as they are.
+    if (task.plannedAtInferred) return null;
 
     const history = await tx
       .select({
@@ -94,6 +98,8 @@ export function reconcileTaskDiscipline(
     const net = history.reduce((sum, e) => sum + e.points, 0);
     const last = history.at(-1);
     const missed = history.some((e) => isMissedOutcome(e.outcome as DisciplineOutcome));
+    // An overdue penalty once recorded survives a cancellation (M10.6).
+    const penalised = history.some((e) => e.outcome === "overdue");
 
     const timeZone = await timeZoneOf(tx, input.userId);
     const target = disciplineOutcome(
@@ -105,7 +111,7 @@ export function reconcileTaskDiscipline(
         completedAt: task.completedAt,
         failedAt: task.failedAt,
       },
-      { now: (input.now ?? new Date()).getTime(), timeZone, missed },
+      { now: (input.now ?? new Date()).getTime(), timeZone, missed, penalised },
     );
     const adjustment = adjustmentFor(
       { net, outcome: (last?.outcome as DisciplineOutcome | undefined) ?? null },
@@ -148,6 +154,7 @@ const overdueCandidates = (now: Date, userId?: string) => sql`
       and s.category in ('backlog', 'unstarted', 'started')
       and t.due_date is not null
       and t.planned_at is not null
+      and not t.planned_at_inferred
       ${userId ? sql`and t.user_id = ${userId}` : sql``}
   )
   select o.id as task_id, o.user_id

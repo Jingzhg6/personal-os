@@ -204,7 +204,7 @@ describe("scoring", () => {
     expect(await net(failed.id)).toBe(-5);
   });
 
-  it("gives cancellation 0 and never a failure penalty", async () => {
+  it("gives cancellation 0 and never a failure penalty, but keeps an earned overdue −3 (M10.6)", async () => {
     const { api } = await setup();
     const fresh = await plannedTask(api, "取消（未逾期）", 2);
     const overdue = await plannedTask(api, "取消（已逾期）", -1);
@@ -215,10 +215,118 @@ describe("scoring", () => {
     await api.tasks.setStatus({ id: overdue.id, statusId: cancelled.id });
     await sweepOverdueDiscipline(db);
     expect(await entries(fresh.id)).toEqual([]);
+    // Cancelling neither adds a penalty nor erases the one already earned.
     expect((await entries(overdue.id)).map((e) => [e.points, e.outcome])).toEqual([
       [-3, "overdue"],
-      [3, "cancelled"],
     ]);
+    expect(await net(overdue.id)).toBe(-3);
+  });
+
+  it("keeps the score stable through repeated cancellation events", async () => {
+    const { api, user } = await setup();
+    const overdue = await plannedTask(api, "反复取消", -1);
+    const fresh = await plannedTask(api, "反复取消（未逾期）", 2);
+    await sweepOverdueDiscipline(db);
+    const statuses = await api.tasks.statuses.list();
+    const cancelled = statuses.find((s) => s.category === "cancelled")!;
+    const second = await api.tasks.statuses.create({
+      name: "放弃了",
+      category: "cancelled",
+      color: "gray",
+    });
+    for (const task of [overdue, fresh]) {
+      await api.tasks.setStatus({ id: task.id, statusId: cancelled.id });
+      // Another cancelled status, a redelivered event, a sweep, and reopen + cancel again.
+      await api.tasks.setStatus({ id: task.id, statusId: second.id });
+      await reconcileTaskDiscipline(db, { userId: user.id, taskId: task.id, sourceKey: "again" });
+      await sweepOverdueDiscipline(db);
+      await api.tasks.reopen({ id: task.id });
+      await api.tasks.setStatus({ id: task.id, statusId: cancelled.id });
+    }
+    expect(await net(overdue.id)).toBe(-3);
+    expect((await entries(overdue.id)).map((e) => e.points)).toEqual([-3]);
+    expect(await net(fresh.id)).toBe(0);
+    expect(await entries(fresh.id)).toEqual([]);
+  });
+
+  it("restores the right net when an overdue task is cancelled, reopened and completed", async () => {
+    const { api } = await setup();
+    const task = await plannedTask(api, "取消后又完成", -1);
+    await sweepOverdueDiscipline(db);
+    const cancelled = (await api.tasks.statuses.list()).find((s) => s.category === "cancelled")!;
+    await api.tasks.setStatus({ id: task.id, statusId: cancelled.id });
+    await api.tasks.reopen({ id: task.id });
+    await api.tasks.complete({ id: task.id });
+    expect((await entries(task.id)).map((e) => [e.points, e.reason])).toEqual([
+      [-3, "overdue"],
+      [6, "completed_late"],
+    ]);
+    await api.tasks.setStatus({ id: task.id, statusId: cancelled.id });
+    // Cancelling the completed task: its completion is withdrawn, the earned −3 stays.
+    expect((await entries(task.id)).map((e) => [e.points, e.reason, e.outcome])).toEqual([
+      [-3, "overdue", "overdue"],
+      [6, "completed_late", "late"],
+      [-6, "cancelled", "overdue"],
+    ]);
+    expect(await net(task.id)).toBe(-3);
+  });
+
+  it("scores completion on the due date as on time (+10), never early", async () => {
+    const { api } = await setup();
+    const dateOnly = await plannedTask(api, "当天完成", 0);
+    const timed = await plannedTask(api, "当天截止时间前完成", 0, "23:59");
+    await api.tasks.complete({ id: dateOnly.id });
+    await api.tasks.complete({ id: timed.id });
+    expect(await entries(dateOnly.id)).toEqual([
+      { points: 10, outcome: "on_time", reason: "completed_on_time" },
+    ]);
+    expect(await entries(timed.id)).toEqual([
+      { points: 10, outcome: "on_time", reason: "completed_on_time" },
+    ]);
+  });
+
+  it("does not score tasks whose planning time was back-filled, nor touch their history (M10.6)", async () => {
+    const { api, user } = await setup();
+    // A deadline that existed before M10.5: migration 0014 set planned_at = created_at, 0015 marks it.
+    const legacy = await api.tasks.create({ title: "旧任务", dueDate: isoDay(-5) });
+    const [row] = await db
+      .select({ createdAt: tasks.createdAt })
+      .from(tasks)
+      .where(eq(tasks.id, legacy.id));
+    await db
+      .update(tasks)
+      .set({ plannedAt: row!.createdAt, plannedAtInferred: true })
+      .where(eq(tasks.id, legacy.id));
+    // An entry recorded for it before M10.6 (e.g. by an M10.5 sweep) stays as it is.
+    await db.update(tasks).set({ plannedAtInferred: false }).where(eq(tasks.id, legacy.id));
+    await db
+      .update(tasks)
+      .set({ plannedAt: new Date(Date.now() - 10 * DAY) })
+      .where(eq(tasks.id, legacy.id));
+    await sweepOverdueDiscipline(db, { userId: user.id });
+    expect(await net(legacy.id)).toBe(-3);
+    await db
+      .update(tasks)
+      .set({ plannedAt: row!.createdAt, plannedAtInferred: true })
+      .where(eq(tasks.id, legacy.id));
+    const untouched = await api.tasks.create({ title: "旧任务（未计分）", dueDate: isoDay(-5) });
+    await db.update(tasks).set({ plannedAtInferred: true }).where(eq(tasks.id, untouched.id));
+
+    await sweepOverdueDiscipline(db, { userId: user.id });
+    await api.tasks.complete({ id: legacy.id });
+    await api.tasks.complete({ id: untouched.id });
+    expect((await entries(legacy.id)).map((e) => e.points)).toEqual([-3]);
+    expect(await entries(untouched.id)).toEqual([]);
+    // Setting a deadline anew records real planning again (new tasks follow the normal rules).
+    await api.tasks.reopen({ id: untouched.id });
+    await api.tasks.update({ id: untouched.id, patch: { dueDate: null } });
+    await api.tasks.update({ id: untouched.id, patch: { dueDate: isoDay(3) } });
+    const [fresh] = await db
+      .select({ inferred: tasks.plannedAtInferred, plannedAt: tasks.plannedAt })
+      .from(tasks)
+      .where(eq(tasks.id, untouched.id));
+    expect(fresh).toMatchObject({ inferred: false });
+    expect(fresh!.plannedAt).not.toBeNull();
   });
 
   it("keeps a failure's −5 through deletion and restoration, without scoring again", async () => {

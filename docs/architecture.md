@@ -402,9 +402,10 @@ A fixed `development_attributes` row (`system_key = 'discipline'`), locked by se
 never a Growth XP target. Scores in the append-only `discipline_ledger`, never in the XP ledger.
 Tasks gained `planned_at` (when the deadline was set) and `failed_at`, and a `failed` status
 category. Each task's net is reconciled to the points of its current outcome (early +15, on time
-+10, late +3, overdue −3, failed −5, cancelled 0) on status changes (same transaction) and by the
++10, late +3, overdue −3, failed −5, cancelled 0 — or −3 kept if already penalised, M10.6) on status changes (same transaction) and by the
 overdue sweep in the M10 worker tick. Shown on `/development/attributes/[id]` (score, rules,
-history), the radar (score floored at 0) and the task panel.
+history), the radar (score floored at 0) and the task panel. Deadlines back-filled by migration
+0014 are marked `planned_at_inferred` (M10.6) and never scored.
 
 ### 5.3 Phase 1 (planned, after M9)
 

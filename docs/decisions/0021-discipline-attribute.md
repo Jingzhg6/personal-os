@@ -1,6 +1,6 @@
 # 0021 — 自制力 (Discipline): a fixed, system-scored growth attribute
 
-Status: Accepted (M10.5). Builds on ADR 0012/0014 (XP ledger and economy), 0013 (development
+Status: Accepted (M10.5; corrected in M10.6, see §8). Builds on ADR 0012/0014 (XP ledger and economy), 0013 (development
 attributes), 0006 (task model) and 0020 (automation worker).
 
 ## 1. What it is
@@ -66,7 +66,8 @@ outcome and `net_after`. So the net always equals the current outcome's points:
 - overdue (−3) then completed late → +6 → net **+3**;
 - overdue (−3) then failed → −2 → net **−5** (never −8);
 - completed (+10), reopened (−10 → 0), completed again (+10) → net **+10** (never +20);
-- overdue (−3) then cancelled → +3 → net **0** (cancellation never carries a failure penalty);
+- overdue (−3) then cancelled → no entry → net **−3** (M10.6: a cancellation neither adds a
+  penalty nor erases an earned one; a cancelled task never gets the failure penalty);
 - failed, then deleted and restored → no entries (Trash neither scores nor unscores);
 - a missed deadline is sticky: reopening an overdue-then-completed task makes it overdue again.
 
@@ -100,3 +101,21 @@ progress and goal action counts treat failed like cancelled (closed without bein
 
 User-editable rules, streaks or bonuses, Discipline XP for levels or rewards, notifications for
 penalties, back-scoring of tasks completed before M10.5.
+
+## 8. M10.6 corrections
+
+- **Cancellation after an overdue penalty keeps −3.** Target for a cancelled task: `overdue` (−3)
+  if an overdue entry was ever recorded for it, otherwise `cancelled` (0). Cancelling an overdue
+  open task therefore writes nothing; cancelling a task completed after its overdue penalty writes
+  one `cancelled` entry back to −3. Repeated cancellations, other cancelled statuses, redelivered
+  events and sweeps change nothing.
+- **Completion precedence is explicit**: late (after the deadline, or missed before) → early
+  (completed on a local date before the due date) → on time (anything else by the deadline,
+  including any time on the due date). One outcome per completion.
+- **Back-filled planning times are not planning.** Migration 0014 set `planned_at = created_at`
+  for deadlines that existed before M10.5. Migration 0015 adds `tasks.planned_at_inferred` and
+  marks exactly those rows (`planned_at = created_at`); since M10.5 the app records `planned_at`
+  separately from the creation time. Marked tasks are outside 自制力: never scored or penalised,
+  and any entries already recorded for them are left as they are (no reversal). Setting a
+  deadline anew (after removing it) records real planning and clears the mark. Tasks completed
+  before M10.5 are never back-scored.

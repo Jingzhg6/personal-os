@@ -110,6 +110,40 @@ describe("自制力 rules", () => {
     );
   });
 
+  it("keeps an earned overdue penalty through cancellation, and only that (M10.6)", () => {
+    const cancelled = planned({ category: "cancelled" });
+    const ctx = { now: ms("2026-10-30T00:00:00Z"), timeZone: UTC, missed: true };
+    expect(disciplineOutcome(cancelled, { ...ctx, penalised: true })).toBe("overdue");
+    // A late completion without an overdue entry: cancelling still yields 0.
+    expect(disciplineOutcome(cancelled, { ...ctx, penalised: false })).toBe("cancelled");
+    expect(reasonFor("overdue", "cancelled")).toBe("cancelled");
+  });
+
+  it("gives a completion exactly one outcome: late, else early (earlier date), else on time", () => {
+    // Due date with a due time: completed earlier that day → on time, not early.
+    const timed = planned({
+      category: "completed",
+      dueTime: "18:00",
+      completedAt: at("2026-10-28T08:00:00Z"),
+    });
+    expect(outcome(timed, "2026-10-28T08:00:00Z")).toBe("on_time");
+    // The day before → early, with or without a due time.
+    expect(
+      outcome({ ...timed, completedAt: at("2026-10-27T23:00:00Z") }, "2026-10-27T23:00:00Z"),
+    ).toBe("early");
+  });
+
+  it("never treats a back-filled planning time as planning (M10.6)", () => {
+    const legacy = planned({ plannedAtInferred: true });
+    expect(outcome(legacy, "2026-10-30T00:00:00Z")).toBe("none");
+    expect(
+      outcome(
+        { ...legacy, category: "completed", completedAt: at("2026-10-27T00:00:00Z") },
+        "2026-10-27T00:00:00Z",
+      ),
+    ).toBe("none");
+  });
+
   it("adjusts the net to the target instead of stacking", () => {
     // Overdue (−3) then completed late: +6 → net +3.
     expect(adjustmentFor({ net: -3, outcome: "overdue" }, "late")).toEqual({ points: 6 });

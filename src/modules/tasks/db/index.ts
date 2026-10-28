@@ -100,6 +100,11 @@ export const tasks = pgTable(
     failedAt: timestamp("failed_at", { withTimezone: true }),
     /** M10.5: when the current due date was first set (null without a due date). */
     plannedAt: timestamp("planned_at", { withTimezone: true }),
+    /**
+     * M10.6: true when `planned_at` was back-filled by migration 0014 (unknown real planning time).
+     * Such deadlines are never treated as planned by 自制力. Cleared when a deadline is set anew.
+     */
+    plannedAtInferred: boolean("planned_at_inferred").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...timestamps(),
   },

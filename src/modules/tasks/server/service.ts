@@ -239,6 +239,7 @@ export function createTask(
         failedAt: transition.failedAt,
         // The deadline is planned from the moment it is set.
         plannedAt: schedule.dueDate ? now : null,
+        plannedAtInferred: false,
       })
       .returning({ id: tasks.id });
     await replaceTags(tx, row!.id, input.tagIds ?? []);
@@ -299,7 +300,7 @@ export function updateTask(
     const planning =
       fields.dueDate === undefined || (fields.dueDate !== null) === (current.dueDate !== null)
         ? {}
-        : { plannedAt: fields.dueDate === null ? null : new Date() };
+        : { plannedAt: fields.dueDate === null ? null : new Date(), plannedAtInferred: false };
     if (Object.keys(fields).length > 0) {
       await tx
         .update(tasks)

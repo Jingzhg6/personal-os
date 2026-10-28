@@ -60,6 +60,11 @@ export interface DisciplineTask {
   /** Optional local "HH:MM"; without it the deadline is the end of the due date. */
   dueTime: string | null;
   plannedAt: Date | null;
+  /**
+   * M10.6: `plannedAt` was back-filled by migration 0014 (the creation time of a deadline that
+   * existed before M10.5), not recorded when the deadline was set. Such a task is never planned.
+   */
+  plannedAtInferred?: boolean;
   completedAt: Date | null;
   failedAt: Date | null;
 }
@@ -87,7 +92,7 @@ export function deadlineOf(
 /** Planned: the deadline was set at least PLANNING_LEAD_MS before both `at` and the deadline. */
 export function isPlanned(task: DisciplineTask, at: number, timeZone: string): boolean {
   const deadline = deadlineOf(task, timeZone);
-  if (deadline === null || task.plannedAt === null) return false;
+  if (deadline === null || task.plannedAt === null || task.plannedAtInferred) return false;
   const planned = task.plannedAt.getTime() + PLANNING_LEAD_MS;
   return planned <= at && planned <= deadline;
 }
@@ -95,23 +100,27 @@ export function isPlanned(task: DisciplineTask, at: number, timeZone: string): b
 /**
  * The outcome a task deserves now.
  *
- * - Completed: late if after the deadline or if the deadline was ever missed before (`missed`:
- *   an earlier overdue or late outcome — moving the date afterwards does not undo it); early if
- *   completed on a local date before the due date; otherwise on time. Unplanned → none.
+ * - Completed — exactly one outcome, checked in this order (M10.6):
+ *   1. late: after the deadline, or the deadline was missed before (`missed`: an earlier overdue
+ *      or late outcome — moving the date afterwards does not undo it);
+ *   2. early: completed on a local calendar date *before* the due date;
+ *   3. on time: otherwise (by the deadline, including any time on the due date itself).
+ *   Unplanned → none.
  * - Failed: failed if planned (judged at the failure time; a missed task is planned). Else none.
- * - Cancelled: cancelled (0) — never a failure penalty.
+ * - Cancelled: 0, never a failure penalty — but an overdue penalty already recorded for the task
+ *   (`penalised`) is kept (M10.6): the outcome stays overdue (−3).
  * - Open: overdue once the deadline has passed (planned before it), or if it was missed before;
  *   otherwise none.
  */
 export function disciplineOutcome(
   task: DisciplineTask,
-  context: { now: number; timeZone: string; missed: boolean },
+  context: { now: number; timeZone: string; missed: boolean; penalised?: boolean },
 ): DisciplineOutcome {
   const { now, timeZone, missed } = context;
   const deadline = deadlineOf(task, timeZone);
   switch (task.category) {
     case "cancelled":
-      return "cancelled";
+      return context.penalised ? "overdue" : "cancelled";
     case "completed": {
       const at = task.completedAt?.getTime() ?? now;
       if (missed) return "late";
@@ -152,6 +161,8 @@ export function reasonFor(
   outcome: DisciplineOutcome,
   category: DisciplineCategory,
 ): DisciplineReason {
+  // A cancellation keeping an earlier overdue penalty is recorded as a cancellation.
+  if (category === "cancelled") return "cancelled";
   switch (outcome) {
     case "early":
       return "completed_early";
