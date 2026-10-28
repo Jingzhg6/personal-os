@@ -119,14 +119,28 @@ AI_API_KEY=<your Anthropic API key>
 - Finance completeness counts only (no amounts, balances, currencies, rates or account names).
 - Never sent: passwords, sessions, e-mail addresses or ledgers.
 
-**Costs:** each call is billed by the provider. The per-user limits above cap usage.
+**Costs:** each call is billed by the provider. The per-user limits above cap usage. The cost
+estimate in the reports (about $0.01–0.23 per call) is an estimate, not a measurement.
+
+**Verification status (M11.1):** no real model call has succeeded yet; no key was available.
+Still unverified:
+
+- that the API accepts the schemas;
+- Chinese output quality;
+- actual token usage and cost;
+- latency.
+
+Only the invalid-key error path was checked against the real API. Tests use a mock provider and
+fakes.
 
 **Verifying a real key** (M11.1):
 
 - `AI_LIVE_VERIFY=auth pnpm ai:verify` makes one free call with a deliberately invalid key.
 - `AI_LIVE_VERIFY=1 pnpm ai:verify` runs the bounded real smoke test against the test database.
-  It needs `AI_PROVIDER=anthropic` and `AI_API_KEY` in `.env.local`, and makes at most 7 calls, of
-  which 5 are billed.
+  It needs `AI_PROVIDER=anthropic` and `AI_API_KEY` in `.env.local`, and empties the test database.
+  - It makes 7 provider calls: 5 billable smoke generations and 2 refused checks.
+  - With the adapter's single retry after a 429, 5xx or lost connection, the ceiling is 13 HTTP
+    requests.
 - Results (status codes, tokens and estimated cost; no content, no key) are written to
   `test-results/ai-live.json`. `pnpm test` never runs these.
 

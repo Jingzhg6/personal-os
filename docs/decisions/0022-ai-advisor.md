@@ -83,6 +83,15 @@ development, automation) and ledgers that must never be touched by anything but 
 - A stale or expired proposal must be regenerated; the UI offers 重新生成.
 - Quality depends on the provider. Real-provider behaviour (schema acceptance of the structured
   output format, latency, cost) must be verified with a real key; tests use the mock and fakes.
+  As of M11.1 this is **still unverified**: no real model call has succeeded. Only the invalid-key
+  error path was checked against the real API. Still open:
+  - schema acceptance;
+  - Chinese quality;
+  - token usage and cost (the cost figures are estimates);
+  - latency.
+
+  See `docs/reports/m11-1-real-provider-verification.md`.
+
 - The structured-output schema includes the automation engine's own trigger, condition and action
   schemas, so a new automation capability becomes proposable automatically. It is still validated
   by `ruleConfigSchema` and `createRule`.

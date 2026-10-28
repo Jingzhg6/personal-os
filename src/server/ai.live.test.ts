@@ -21,11 +21,18 @@ import { appRouter } from "./trpc/root";
  * M11.1 live verification against the real Anthropic API. NEVER runs by default (no paid calls in
  * CI or `pnpm test`):
  *
- *   AI_LIVE_VERIFY=auth  pnpm ai:verify   one call with a deliberately invalid key (free: 401)
+ *   AI_LIVE_VERIFY=auth  pnpm ai:verify   one request with a deliberately invalid key (free: 401)
  *   AI_LIVE_VERIFY=1     pnpm ai:verify   + the real smoke test; needs AI_PROVIDER=anthropic and
- *                                           AI_API_KEY in .env.local (7 calls at most, 5 billed)
+ *                                           AI_API_KEY in .env.local
  *
- * Results (codes, tokens, estimated cost — no content, no key) go to test-results/ai-live.json.
+ * Call budget with AI_LIVE_VERIFY=1: 7 provider calls (1 invalid key, 5 smoke generations, 1
+ * unknown model). The adapter retries a call once after a 429, 5xx or lost connection, so the
+ * HTTP ceiling is 13 requests; at most 5 can return a billable generation (a retry only follows a
+ * failed attempt). Every check records its actual HTTP request count.
+ *
+ * Results (codes, tokens, estimated cost, HTTP counts — no content, no key) go to
+ * test-results/ai-live.json. Only AI_API_KEY / AI_BASE_URL / AI_MODEL are read; the adapter
+ * never uses ambient ANTHROPIC_* credentials (see anthropic-adapter.test.ts).
  */
 
 const mode = process.env.AI_LIVE_VERIFY;
@@ -90,10 +97,15 @@ describe.skipIf(!live)("live: smoke test of the four proposal types", () => {
   let ids: Record<string, string>;
   let discipline: string;
   let api: ReturnType<typeof caller>;
+  let httpCalls = 0;
+  const countingFetch: typeof fetch = (input, init) => {
+    httpCalls += 1;
+    return fetch(input, init);
+  };
 
   beforeAll(async () => {
     const env = getEnv();
-    const provider = providerFromEnv(env);
+    const provider = providerFromEnv(env, { fetch: countingFetch });
     if (env.AI_PROVIDER !== "anthropic" || !provider) {
       throw new Error("AI_LIVE_VERIFY=1 needs AI_PROVIDER=anthropic and AI_API_KEY");
     }
@@ -150,6 +162,7 @@ describe.skipIf(!live)("live: smoke test of the four proposal types", () => {
   async function run(name: string, input: GenerateInput) {
     const before = await snapshot();
     const started = Date.now();
+    httpCalls = 0;
     let proposal: AiProposal | null = null;
     let code: string | null = null;
     try {
@@ -180,6 +193,8 @@ describe.skipIf(!live)("live: smoke test of the four proposal types", () => {
       outputTokens: usage?.outputTokens ?? null,
       durationMs: usage?.durationMs ?? Date.now() - started,
       costUsd: cost,
+      costIsEstimate: true,
+      httpCalls,
     });
     // Nothing is executed by generating, whatever the outcome.
     expect(await snapshot()).toEqual(before);
@@ -191,6 +206,8 @@ describe.skipIf(!live)("live: smoke test of the four proposal types", () => {
     expect(code).toBeNull();
     const a = proposal!.analysis;
     if (a.kind !== "priorities") throw new Error("kind");
+    // Four open tasks, one overdue: an empty answer is not a successful verification.
+    expect(a.recommendations.length).toBeGreaterThan(0);
     for (const r of a.recommendations) {
       expect([ids.report, ids.release, ids.testing, ids.french]).toContain(r.taskId);
       if (r.taskId === ids.release) expect(r.action).not.toBe("do_now");
@@ -205,6 +222,7 @@ describe.skipIf(!live)("live: smoke test of the four proposal types", () => {
       note: "每周大约 3 小时",
     });
     expect(code).toBeNull();
+    expect(proposal!.items.length).toBeGreaterThan(0);
     for (const item of proposal!.items) {
       expect(item.change.type).toBe("create_goal_task");
       if (item.change.type === "create_goal_task") {
@@ -245,7 +263,11 @@ describe.skipIf(!live)("live: smoke test of the four proposal types", () => {
 
   it("5. an unknown model fails clearly as ai.model_unavailable (not billed)", async () => {
     const env = getEnv();
-    const provider = providerFromEnv({ ...env, AI_MODEL: "claude-model-that-does-not-exist" })!;
+    httpCalls = 0;
+    const provider = providerFromEnv(
+      { ...env, AI_MODEL: "claude-model-that-does-not-exist" },
+      { fetch: countingFetch },
+    )!;
     const { outputSchemas } = await import("@/modules/ai/domain");
     const result = await provider.generate({
       capability: "question",
@@ -255,7 +277,8 @@ describe.skipIf(!live)("live: smoke test of the four proposal types", () => {
       userText: null,
       schema: outputSchemas.question,
     });
-    record({ check: "unknown_model", result });
+    record({ check: "unknown_model", result, httpCalls });
     expect(result).toEqual({ ok: false, code: "ai.model_unavailable" });
+    expect(httpCalls).toBe(1);
   });
 });

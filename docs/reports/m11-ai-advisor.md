@@ -54,6 +54,8 @@ is additive and creates:
 
 - `anthropic`: the SDK with an explicit key, base URL and model (default `claude-opus-5-5`).
   - Structured output, bounded `max_tokens`, timeout, one retry, server-side refusal fallback.
+  - M11.1 changed the retry: the app now makes a single retry, only after a 429, 5xx or lost
+    connection, within one deadline.
   - Errors map to closed codes; provider messages are never shown or logged.
 - `mock`: deterministic and test-only, labelled 模拟.
 - `off` (the default): AI is unavailable and the UI shows an unavailable state.
@@ -213,9 +215,9 @@ not a screenshot, because the e2e server runs the mock.
   validation stays as it is.
 - **Cost:** each click is one paid call. With `claude-opus-5-5` at $4 / $20 per million input /
   output tokens (price confirmed on the official pricing page in M11.1), a call is an estimated
-  1–9k input tokens and up to `AI_MAX_OUTPUT_TOKENS` (8k) output tokens, thinking included. Request
-  sizes were measured in characters in M11.1; token counts remain estimates. That is about
-  $0.01–0.20 per call, so at most about $6 per user per day at the default limit of 30. These are
+  0.7–18k input tokens and up to `AI_MAX_OUTPUT_TOKENS` (8k) output tokens, thinking included.
+  Request sizes were measured in characters in M11.1; token counts remain estimates. That is about
+  $0.01–0.23 per call, so at most about $7 per user per day at the default limit of 30. These are
   estimates, not measurements. Lower
   `AI_DAILY_LIMIT` or choose a smaller `AI_MODEL` to reduce this.
 - **Runtime:** generation is synchronous in the request and not streamed. It is bounded by
