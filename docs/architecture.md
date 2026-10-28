@@ -438,6 +438,25 @@ The week start reaches the client through `PreferencesProvider` (`useWeekStartsO
 - the Gantt week scale;
 - the order of the weekday pickers.
 
+### 5.2.11 Personal data export (Phase 1, ADR 0025)
+
+Module `data-export` is read-only: it owns no tables. It is used through:
+
+- `POST /api/export`, which builds one JSON file for the session user;
+- the 导出数据 card on 设置 › 通用.
+
+The file is a consistent read-only snapshot of every table the user owns, grouped by module
+(`settings`, `areas`, `tasks`, `projects`, `character`, `development`, `rewards`, `finance`,
+`automation`). It has a `format`, a `version` (1), `generatedAt`, the file's own conventions,
+`counts` and an `excluded` list:
+
+- credentials: `accounts`, `sessions`, `verifications`;
+- the automation event queue;
+- the worker heartbeat.
+
+Values are as stored: UTC instants, plain dates, decimal-string money, and `null` for unknown. A
+test keeps the exported and excluded lists equal to the schema.
+
 ### 5.3 Phase 1 (planned, after M9)
 
 ```
@@ -562,6 +581,9 @@ Every module ships domain unit tests and DB integration tests for its repository
   browser suggestion, local-time preview) and week start, applied to "today", the dashboard,
   the Gantt week scale and the weekday pickers; recurring series and schedule rules keep their
   own zone.
+- **JSON export** ✅ (branch `json-export`, ADR 0025): 导出数据 on 设置 › 通用. One JSON file
+  (`version` 1) with every owned record, history and ledger, ids kept, values as stored, no
+  credentials; built on request, never uploaded.
 - **M10.5 自制力 (Discipline)** ✅: fixed system attribute scored from planned-task outcomes (deadline planned ≥ 1 h ahead), separate append-only ledger with per-task net reconciliation, failed status, overdue sweep in the worker tick; no change to XP, levels or rewards.
 - **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.

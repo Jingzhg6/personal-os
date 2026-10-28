@@ -121,5 +121,8 @@
   },
   "settings": {
     "user_not_found": "账户不存在，请重新登录。"
+  },
+  "export": {
+    "user_not_found": "账户不存在，请重新登录。"
   }
 }

@@ -270,3 +270,15 @@ A demo user with a three-task project; settings changed in the UI, then the view
 | `04-weekday-picker.png`     | `/tasks?task=`           | The recurrence editor's weekday buttons starting with 日                                      |
 | `05-mobile-settings.png`    | `/settings` (phone)      | iPhone 13, the 时区与日期 card, no horizontal overflow                                        |
 | `06-dark-settings.png`      | `/settings` (dark theme) | Dark theme                                                                                    |
+
+## JSON export (`json-export/`)
+
+A demo user with a project and two tasks exports the data from 设置 › 通用.
+
+| File                   | Page                     | Shows                                                                              |
+| ---------------------- | ------------------------ | ---------------------------------------------------------------------------------- |
+| `01-export-card.png`   | `/settings`              | 导出数据 card: what is included, what is not (no passwords or sessions), 导出 JSON |
+| `02-export-done.png`   | `/settings`              | After a real download: 上次导出 with the file name and record count (toast closed) |
+| `03-export-failed.png` | `/settings`              | The server answering 500 (intercepted): 导出失败，请稍后再试。, nothing saved      |
+| `04-mobile-export.png` | `/settings` (phone)      | iPhone 13 after a real download: button and 上次导出, no horizontal overflow       |
+| `05-dark-export.png`   | `/settings` (dark theme) | Dark theme                                                                         |

@@ -6,7 +6,23 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: Settings** (branch `settings`). 设置 › 通用 now has three cards: the display name, the
+> **Status: JSON export** (branch `json-export`). 设置 › 通用 › 导出数据 downloads one JSON file
+> with everything the user owns, for backup or a later move:
+>
+> - tasks with tags, dependencies and recurrences;
+> - areas, projects and milestones;
+> - attributes and the XP and 自制力 ledgers;
+> - goals and plans;
+> - rewards;
+> - finance accounts and snapshots;
+> - automation rules and history;
+> - settings.
+>
+> Ids and history are kept, and values are written exactly as stored. The file contains no
+> passwords, sessions or tokens. It is built on request and never uploaded. See ADR 0025 and
+> [`docs/reports/json-export.md`](docs/reports/json-export.md).
+>
+> **Settings** (branch `settings`). 设置 › 通用 now has three cards: the display name, the
 > time zone (any IANA zone, with the browser's zone suggested and a local-time preview) and the
 > week start, and the theme. "Today", overdue checks, the dashboard, the Gantt week scale and the
 > weekday pickers follow them. Recurring series and schedule rules keep the zone they were created

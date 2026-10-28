@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { ExportDataCard } from "@/modules/data-export/ui";
 import { getUserSettings } from "@/modules/settings/server";
 import { ProfileForm, RegionalForm } from "@/modules/settings/ui";
 import { getDb } from "@/shared/db/client";
@@ -45,6 +46,15 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <ThemeSelector />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("export.title")}</CardTitle>
+          <CardDescription>{t("export.description")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ExportDataCard />
         </CardContent>
       </Card>
     </div>

@@ -27,4 +27,5 @@ changes; never rewrite history — supersede instead.
 | [0020](./0020-automation-engine.md)                    | Automation: typed rules, transactional outbox, at-most-once effects, honest scheduler  | Accepted                                |
 | [0023](./0023-recurring-tasks.md)                      | Recurring tasks: a rule plus ordinary task instances, one open at a time, idempotent   | Accepted                                |
 | [0024](./0024-settings.md)                             | Settings: display name, time zone and week start; fixed zones of series and rules kept | Accepted                                |
+| [0025](./0025-json-export.md)                          | Personal data export: one JSON file on request, every owned table, no credentials      | Accepted                                |
 | [0021](./0021-discipline-attribute.md)                 | 自制力: fixed system attribute scored from planned-task outcomes, own ledger           | Accepted                                |
