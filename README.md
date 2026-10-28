@@ -6,7 +6,11 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: M11 — AI 顾问 (AI advisor).** `/ai` reviews tasks, projects, goals, growth, finance
+> **AI 顾问 is on hold (2026-10-28).** It is kept as built but not merged and not configured
+> (no API key, no model calls). It will be re-evaluated after the system is deployed and used for a
+> while. The description below documents what exists.
+>
+> **M11 — AI 顾问 (AI advisor).** `/ai` reviews tasks, projects, goals, growth, finance
 > completeness and automation health. App-computed facts are shown separately from AI
 > interpretations. It also suggests priorities, goal plans, growth contributions and automation
 > rules, and answers one-off questions. The AI only proposes: every change is shown first, needs

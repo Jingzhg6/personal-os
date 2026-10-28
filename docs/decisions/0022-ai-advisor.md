@@ -1,6 +1,7 @@
 # 0022 — AI advisor: the model proposes, the user decides, services execute
 
-- Status: Accepted (M11)
+- Status: Accepted (M11). **On hold since 2026-10-28.** The implementation is kept and not
+  merged; it will be re-evaluated after deployment and real use.
 - Date: 2026-10-28
 
 ## Context

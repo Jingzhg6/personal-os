@@ -236,4 +236,16 @@ not a screenshot, because the e2e server runs the mock.
 
 ## Next milestone
 
-M12, per the roadmap, after the owner reviews and approves M11. It was not started.
+The roadmap in `docs/architecture.md` defines no M12. The next milestone is for the owner to
+choose (see the status note below).
+
+## Status
+
+**On hold since 2026-10-28 (owner's decision):** the AI advisor is shelved until the system is
+deployed and has been used for a while; it will be re-evaluated then.
+
+- **Kept as-is, not merged:** the code, ADR, reports and history on `m11-ai-advisor` (`d6806b0`)
+  and `m11-1-real-provider-verification` (`0624b32`).
+- **Disabled:** no API key is configured, no real model is called, and AI stays off by default
+  (`AI_PROVIDER=off`).
+- **Paused:** no further M11 / M11.1 feature, verification or architecture work.

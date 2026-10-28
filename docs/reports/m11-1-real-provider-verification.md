@@ -6,6 +6,17 @@
 - **Final commit:** the M11.1 commit on this branch (see `git log`).
 - **Not done:** nothing was merged or deployed, and M12 was not started.
 
+## Status: on hold
+
+**On hold since 2026-10-28 (owner's decision):** the AI advisor is shelved until the system is
+deployed and has been used for a while; it will be re-evaluated then.
+
+- **Kept as-is, not merged:** the code, ADR, reports and history on `m11-ai-advisor` (`d6806b0`)
+  and `m11-1-real-provider-verification` (`0624b32`).
+- **Disabled:** no API key is configured, no real model is called, and AI stays off by default
+  (`AI_PROVIDER=off`).
+- **Paused:** no further M11 / M11.1 feature, verification or architecture work.
+
 ## Summary: live verification is NOT complete
 
 **No real API key was available** in this environment. `AI_API_KEY`, `AI_PROVIDER` and
