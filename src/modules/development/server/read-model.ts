@@ -3,6 +3,7 @@ import {
   getLevelProgress,
   isActiveAttribute,
   isLegacyAttribute,
+  attributeScore,
 } from "@/modules/character/domain";
 import {
   getAttributeLastActivity,
@@ -141,7 +142,7 @@ export async function getDevelopmentOverview(
     })),
     archivedGoals: goals.filter((goal) => goal.status === "archived"),
     attributes: active.map((attribute) => ({
-      attribute: { ...attribute, progress: getLevelProgress(attribute.xp) },
+      attribute: { ...attribute, progress: getLevelProgress(attributeScore(attribute)) },
       lifetimeGrowthXp: attribute.xp,
       recentGrowthXp: recentOf.get(attribute.id) ?? 0,
       activeGoalCount: goals.filter(
@@ -153,7 +154,10 @@ export async function getDevelopmentOverview(
     })),
     archivedAttributes: attributes
       .filter((attribute) => attribute.archivedAt && !isLegacyAttribute(attribute))
-      .map((attribute) => ({ ...attribute, progress: getLevelProgress(attribute.xp) })),
+      .map((attribute) => ({
+        ...attribute,
+        progress: getLevelProgress(attributeScore(attribute)),
+      })),
     recentGrowth: rankGrowth(recent.byAttribute, active, RECENT_GROWTH_SIZE),
     plans: openPlans
       .map((plan) => {
@@ -232,7 +236,7 @@ export async function getGoalDetail(
       return [
         {
           ...link,
-          attribute: { ...attribute, progress: getLevelProgress(attribute.xp) },
+          attribute: { ...attribute, progress: getLevelProgress(attributeScore(attribute)) },
           lifetimeGrowthXp: attribute.xp,
           recentGrowthXp: recentOf.get(attribute.id) ?? 0,
         },
@@ -293,7 +297,7 @@ export async function getAttributeDetail(
   const { bucket, points } = buildTrend(activity.days, trendFrom, today);
 
   return {
-    attribute: { ...attribute, progress: getLevelProgress(attribute.xp) },
+    attribute: { ...attribute, progress: getLevelProgress(attributeScore(attribute)) },
     lifetimeGrowthXp: attribute.xp,
     recentGrowthXp: activity.days
       .filter((day) => day.date >= recentFrom)

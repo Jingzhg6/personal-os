@@ -24,6 +24,8 @@ export const defaultDevelopmentAttributes = [
  */
 export const attributeLabelKeys = [
   ...defaultDevelopmentAttributes.map((a) => a.systemKey),
+  /** M10.5: the fixed 自制力 attribute (scored by fixed rules, never renamed). */
+  "discipline",
   "legacy.learning",
   "legacy.work",
   "legacy.fitness",
@@ -42,9 +44,32 @@ export interface DevelopmentAttribute {
   onRadar: boolean;
   archivedAt: Date | null;
   sortKey: string;
-  /** XP credited so far (archived attributes keep theirs). */
+  /** Growth XP credited so far (archived attributes keep theirs). Always 0 for 自制力. */
   xp: number;
+  /** 自制力 only: its score (sum of the discipline ledger, may be negative). Null otherwise. */
+  points: number | null;
 }
+
+/** The fixed, system-managed 自制力 attribute (M10.5). */
+export const isDisciplineAttribute = (attribute: { systemKey: string | null }) =>
+  attribute.systemKey === "discipline";
+
+/**
+ * Attributes that may receive Growth XP (task contributions, goals, focus): every attribute
+ * except 自制力, whose value comes only from its fixed rules.
+ */
+export const isGrowthTarget = (attribute: { systemKey: string | null }) =>
+  !isDisciplineAttribute(attribute);
+
+/**
+ * The value an attribute's level and radar point are drawn from: Growth XP, or for 自制力 its
+ * score, floored at 0 for the level scale (the stored score itself may be negative).
+ */
+export const attributeScore = (attribute: {
+  systemKey: string | null;
+  xp: number;
+  points: number | null;
+}) => (isDisciplineAttribute(attribute) ? Math.max(0, attribute.points ?? 0) : attribute.xp);
 
 export const isLegacyAttribute = (attribute: { systemKey: string | null }) =>
   attribute.systemKey?.startsWith("legacy.") ?? false;

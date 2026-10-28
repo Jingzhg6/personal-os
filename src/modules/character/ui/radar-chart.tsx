@@ -5,8 +5,8 @@ import { useState } from "react";
 
 import { cn } from "@/shared/lib/cn";
 
-import { fractionalLevel, type AttributeValue } from "../domain";
-import { useAttributeLabel } from "./use-character";
+import { attributeScore, fractionalLevel, type AttributeValue } from "../domain";
+import { useAttributeAmount, useAttributeLabel } from "./use-character";
 
 const SIZE = 320;
 const CENTER = SIZE / 2;
@@ -26,6 +26,7 @@ function textAnchor(x: number) {
 export function RadarChart({ attributes }: { attributes: AttributeValue[] }) {
   const t = useTranslations("character.attributes");
   const label = useAttributeLabel();
+  const amount = useAttributeAmount();
   const [hover, setHover] = useState<string | null>(null);
 
   // A radar needs at least three axes; the list beside it still shows every value.
@@ -37,7 +38,9 @@ export function RadarChart({ attributes }: { attributes: AttributeValue[] }) {
     );
   }
 
-  const values = attributes.map((a) => fractionalLevel(a.xp));
+  // 自制力 is drawn from its score (floored at 0: a negative score sits at the centre); the
+  // tooltip and the list beside the chart show the real value.
+  const values = attributes.map((a) => fractionalLevel(attributeScore(a)));
   // Rings at whole levels; at least 5 so a new character is not a full-size shape.
   const rings = Math.max(5, Math.ceil(Math.max(...values, 1)));
   const angle = (i: number) => (Math.PI * 2 * i) / attributes.length - Math.PI / 2;
@@ -128,9 +131,9 @@ export function RadarChart({ attributes }: { attributes: AttributeValue[] }) {
             x={point(hovered, values[hovered]!)[0]}
             y={point(hovered, values[hovered]!)[1]}
             title={label(attributes[hovered]!)}
-            detail={`${t("level", { level: attributes[hovered]!.progress.level })} · ${t("xp", {
-              xp: attributes[hovered]!.xp,
-            })}`}
+            detail={`${t("level", { level: attributes[hovered]!.progress.level })} · ${amount(
+              attributes[hovered]!,
+            )}`}
           />
         ) : null}
       </svg>

@@ -218,6 +218,7 @@ _system-key pattern_: `system_key`set and`name`null ⇒ translated label; user-r
 | `automation_effects`                             | automation  | (M10) one per executed action, written with the effect (at most once) |
 | `automation_notifications`                       | automation  | (M10) minimal in-app notifications (read / unread)                    |
 | `automation_worker_status`                       | automation  | (M10) scheduler heartbeat                                             |
+| `discipline_ledger`                              | character   | (M10.5) append-only 自制力 scoring entries, one sequence per task     |
 
 `tasks` (M1): `id, user_id, title, description (jsonb, Tiptap), area_id → areas (set null),
 parent_task_id → tasks (cascade), status_id → task_statuses (restrict), priority 0–4,
@@ -395,6 +396,16 @@ rule chain). Schedules (once / daily / weekly / monthly, IANA zone, explicit DST
 grace) run only through `POST /api/automation/tick` (`AUTOMATION_WORKER_SECRET`) or the manual
 立即检查. Pages: `/automation`, `/automation/new`, `/automation/[id]`, `/automation/notifications`.
 
+### 5.2.7 自制力 / Discipline (M10.5, ADR 0021)
+
+A fixed `development_attributes` row (`system_key = 'discipline'`), locked by service and CHECK,
+never a Growth XP target. Scores in the append-only `discipline_ledger`, never in the XP ledger.
+Tasks gained `planned_at` (when the deadline was set) and `failed_at`, and a `failed` status
+category. Each task's net is reconciled to the points of its current outcome (early +15, on time
++10, late +3, overdue −3, failed −5, cancelled 0) on status changes (same transaction) and by the
+overdue sweep in the M10 worker tick. Shown on `/development/attributes/[id]` (score, rules,
+history), the radar (score floored at 0) and the task panel.
+
 ### 5.3 Phase 1 (planned, after M9)
 
 ```
@@ -500,6 +511,7 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M9 Growth planning & goal attribution** ✅: growth plans grouping existing tasks, goal-specific Growth XP by explicit allocation (no duplication, 未归属 remainder), goal evidence (actions, attributed XP, last 30 days, unattributed), attribution editor; no XP changes, no AI.
 - **M9.5 Personal finance** ✅: institutions and accounts, assets and liabilities, dated balance snapshots in atomic batches, manual frozen FX (missing never = 1), base currency, net worth with balance / FX split, history of recorded dates, archival keeping history; no bank APIs, no transactions, no XP.
 - **M10 Automation engine** ✅: user-owned typed rules (5 event triggers + schedules), allowlisted conditions and actions through the owning services, transactional outbox, at-most-once effects, duplicate and loop protection, execution history with safe retries, in-app notifications, health view, worker endpoint for schedules; no AI, no external services.
+- **M10.5 自制力 (Discipline)** ✅: fixed system attribute scored from planned-task outcomes (deadline planned ≥ 1 h ahead), separate append-only ledger with per-task net reconciliation, failed status, overdue sweep in the worker tick; no change to XP, levels or rewards.
 - **M8 Personal development system** ✅: vision, development goals (weighted attributes, linked tasks/projects, activity-based progress), chosen focus vs measured growth, attribute pages, goal links in the task panel; no XP from goals, no AI.
 - **M6.2 Growth RPG & rewards** ✅: Active / Growth / Level XP, level curve `round(100×1.08^(n−1))`, growth stages, lifetime vs spendable, reward store with mixed payment, level rewards with early claim, append-only reward ledger, zh-CN only.
 - **M6 Character & XP** ✅: event → XP rules, append-only idempotent ledger with reversals (incl. new `milestone.reopened`), levels derived from the ledger, attributes credited through areas, radar, XP history, character page.

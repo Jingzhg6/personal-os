@@ -1,5 +1,6 @@
 "use client";
 
+import { TaskDisciplineBadge } from "@/modules/character/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { JSONContent } from "@tiptap/react";
 import { ChevronLeft, Trash2, X } from "lucide-react";
@@ -178,6 +179,16 @@ function TaskDetailContent({
           >
             {closed ? t("detail.reopen") : t("detail.complete")}
           </Button>
+          {!closed ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => actions.fail.mutate({ id: task.id })}
+              data-testid="task-fail"
+            >
+              {t("detail.fail")}
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="icon-sm"
@@ -488,11 +499,18 @@ function TaskDetailContent({
 
           <DependenciesField task={task} onOpenTask={onOpenTask} />
 
+          <TaskDisciplineBadge taskId={task.id} />
+
           <footer className="flex flex-col gap-1 border-t border-border pt-4 text-xs text-muted-foreground">
             <span>{t("detail.created", { date: format.dateTime(task.createdAt, "long") })}</span>
             {task.completedAt ? (
               <span>
                 {t("detail.completedAt", { date: format.dateTime(task.completedAt, "long") })}
+              </span>
+            ) : null}
+            {task.failedAt ? (
+              <span data-testid="task-failed-at">
+                {t("detail.failedAt", { date: format.dateTime(task.failedAt, "long") })}
               </span>
             ) : null}
           </footer>

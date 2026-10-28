@@ -49,7 +49,7 @@ export const taskStatuses = pgTable(
       .where(sql`${t.systemKey} is not null`),
     check(
       "task_statuses_category_valid",
-      sql`${t.category} in ('backlog', 'unstarted', 'started', 'completed', 'cancelled')`,
+      sql`${t.category} in ('backlog', 'unstarted', 'started', 'completed', 'cancelled', 'failed')`,
     ),
     check("task_statuses_label_present", sql`${t.systemKey} is not null or ${t.name} is not null`),
   ],
@@ -96,6 +96,10 @@ export const tasks = pgTable(
     sortKey: sortKey(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    /** M10.5: set while the task is in a "failed" status. */
+    failedAt: timestamp("failed_at", { withTimezone: true }),
+    /** M10.5: when the current due date was first set (null without a due date). */
+    plannedAt: timestamp("planned_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...timestamps(),
   },

@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId, useState, type FormEvent } from "react";
 
-import { isActiveAttribute } from "@/modules/character/domain";
+import { isActiveAttribute, isGrowthTarget } from "@/modules/character/domain";
 import { useAttributeLabel, useDevelopmentAttributes } from "@/modules/character/ui";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
@@ -55,7 +55,9 @@ export function GoalFormDialog({
   const byId = new Map(allAttributes.map((a) => [a.id, a]));
   // Active attributes, plus any archived one the goal already names (it may stay).
   const selectable = allAttributes.filter(
-    (a) => isActiveAttribute(a) || attributes.some((link) => link.attributeId === a.id),
+    (a) =>
+      isGrowthTarget(a) &&
+      (isActiveAttribute(a) || attributes.some((link) => link.attributeId === a.id)),
   );
   const valid = title.trim() !== "" && attributes.length > 0;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, Lock, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
@@ -16,7 +16,7 @@ import { Input } from "@/shared/ui/input";
 import { PageHeader } from "@/shared/ui/page-header";
 import { useToast } from "@/shared/ui/toast";
 
-import { isLegacyAttribute, type DevelopmentAttribute } from "../domain";
+import { isDisciplineAttribute, isLegacyAttribute, type DevelopmentAttribute } from "../domain";
 import {
   useAttributeLabel,
   useAttributeMutations,
@@ -132,6 +132,109 @@ export function AttributeSettings() {
 }
 
 function AttributeRow({
+  attribute,
+  isFirst,
+  isLast,
+}: {
+  attribute: DevelopmentAttribute;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  if (isDisciplineAttribute(attribute)) {
+    return <DisciplineRow attribute={attribute} isFirst={isFirst} isLast={isLast} />;
+  }
+  return <EditableRow attribute={attribute} isFirst={isFirst} isLast={isLast} />;
+}
+
+/**
+ * 自制力 (M10.5): fixed by the system. Only its radar visibility and position can change; the
+ * server and the database refuse everything else.
+ */
+function DisciplineRow({
+  attribute,
+  isFirst,
+  isLast,
+}: {
+  attribute: DevelopmentAttribute;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  const t = useTranslations("character.settings");
+  const label = useAttributeLabel();
+  const toast = useToast();
+  const mutations = useAttributeMutations();
+  const [onRadar, setOnRadar] = useState(attribute.onRadar);
+  return (
+    <li
+      data-testid="attribute-setting"
+      data-system="discipline"
+      className="flex flex-col gap-3 p-3 sm:p-4"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          aria-hidden
+          className={cn(
+            "flex size-9 w-12 shrink-0 items-center justify-center rounded-md",
+            colorClasses[attribute.color].soft,
+          )}
+        >
+          {attribute.icon}
+        </span>
+        <span className="min-w-32 flex-1 font-medium">{label(attribute)}</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted-foreground">
+          <Lock className="size-3" aria-hidden />
+          {t("systemAttribute")}
+        </span>
+        <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">
+          {t("points", { points: attribute.points ?? 0 })}
+        </span>
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={isFirst}
+            onClick={() => mutations.move.mutate({ id: attribute.id, direction: "up" })}
+            aria-label={t("moveUp", { name: label(attribute) })}
+            title={t("moveUp", { name: label(attribute) })}
+          >
+            <ArrowUp />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={isLast}
+            onClick={() => mutations.move.mutate({ id: attribute.id, direction: "down" })}
+            aria-label={t("moveDown", { name: label(attribute) })}
+            title={t("moveDown", { name: label(attribute) })}
+          >
+            <ArrowDown />
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-14">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={onRadar}
+            onChange={(event) => {
+              setOnRadar(event.target.checked);
+              mutations.update.mutate(
+                { id: attribute.id, patch: { onRadar: event.target.checked } },
+                { onSuccess: () => toast.show(t("saved")) },
+              );
+            }}
+            className="size-4 accent-primary"
+            data-testid="discipline-on-radar"
+          />
+          {t("onRadar")}
+        </label>
+        <p className="text-xs text-muted-foreground">{t("disciplineLocked")}</p>
+      </div>
+    </li>
+  );
+}
+
+function EditableRow({
   attribute,
   isFirst,
   isLast,

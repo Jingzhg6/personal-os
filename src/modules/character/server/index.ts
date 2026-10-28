@@ -1,7 +1,13 @@
 import "server-only";
 
 export { registerCharacterEventHandlers } from "./events";
-export { listAttributes, seedDevelopmentAttributes } from "./attributes";
+export { ensureDisciplineAttribute, listAttributes, seedDevelopmentAttributes } from "./attributes";
+export {
+  getDisciplineSummary,
+  getTaskDiscipline,
+  reconcileTaskDiscipline,
+  sweepOverdueDiscipline,
+} from "./discipline";
 export {
   getAttributeLastActivity,
   getAttributeSources,

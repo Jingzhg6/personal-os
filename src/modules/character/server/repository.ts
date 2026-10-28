@@ -16,6 +16,7 @@ import {
   type XpEntryKind,
   type XpHistoryInput,
   type XpSourceType,
+  attributeScore,
 } from "../domain";
 import { listAttributes } from "./attributes";
 
@@ -142,9 +143,10 @@ export async function getOverview(db: DbExecutor, userId: string): Promise<Chara
     stage: getStageProgress(totals.lifetimeLevelXp),
     grantCount: counts[0]?.grants ?? 0,
     reversalCount: counts[0]?.reversals ?? 0,
-    attributes: attributes
-      .filter(isActiveAttribute)
-      .map((attribute) => ({ ...attribute, progress: getLevelProgress(attribute.xp) })),
+    attributes: attributes.filter(isActiveAttribute).map((attribute) => ({
+      ...attribute,
+      progress: getLevelProgress(attributeScore(attribute)),
+    })),
     recentGrants,
     recentReversals,
   };

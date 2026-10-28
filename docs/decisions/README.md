@@ -25,3 +25,4 @@ changes; never rewrite history — supersede instead.
 | [0018](./0018-growth-planning-and-goal-attribution.md) | Growth plans; goal XP is an allocation (≤ 100 %) of linked tasks' credits             | Accepted                                |
 | [0019](./0019-personal-finance.md)                     | Finance: manual dated balance snapshots, frozen manual FX, net worth                  | Accepted                                |
 | [0020](./0020-automation-engine.md)                    | Automation: typed rules, transactional outbox, at-most-once effects, honest scheduler | Accepted                                |
+| [0021](./0021-discipline-attribute.md)                 | 自制力: fixed system attribute scored from planned-task outcomes, own ledger          | Accepted                                |

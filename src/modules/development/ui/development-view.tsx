@@ -1,5 +1,6 @@
 "use client";
 
+import { isGrowthTarget } from "@/modules/character/domain";
 import { Compass, Info, Pencil, Plus, Star, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
@@ -296,39 +297,42 @@ function FocusDialog({ data, onClose }: { data: DevelopmentOverview; onClose: ()
         }}
       >
         <p className="text-sm text-muted-foreground">{t("dialogHint", { max: data.maxFocus })}</p>
+        {/* 自制力 is scored by fixed rules, never a growth focus (M10.5). */}
         {data.attributes.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("noAttributes")}</p>
         ) : (
           <fieldset className="flex flex-col gap-1">
             <legend className="sr-only">{t("dialogTitle")}</legend>
-            {data.attributes.map(({ attribute }) => {
-              const checked = selected.includes(attribute.id);
-              const disabled = !checked && full;
-              return (
-                <label
-                  key={attribute.id}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-2 py-2 text-sm",
-                    disabled ? "opacity-50" : "cursor-pointer hover:bg-surface-muted",
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={disabled}
-                    onChange={() =>
-                      setSelected((list) =>
-                        checked
-                          ? list.filter((id) => id !== attribute.id)
-                          : [...list, attribute.id],
-                      )
-                    }
-                    className="size-4 accent-primary"
-                  />
-                  <AttributeName attribute={attribute} />
-                </label>
-              );
-            })}
+            {data.attributes
+              .filter(({ attribute }) => isGrowthTarget(attribute))
+              .map(({ attribute }) => {
+                const checked = selected.includes(attribute.id);
+                const disabled = !checked && full;
+                return (
+                  <label
+                    key={attribute.id}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-2 py-2 text-sm",
+                      disabled ? "opacity-50" : "cursor-pointer hover:bg-surface-muted",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={() =>
+                        setSelected((list) =>
+                          checked
+                            ? list.filter((id) => id !== attribute.id)
+                            : [...list, attribute.id],
+                        )
+                      }
+                      className="size-4 accent-primary"
+                    />
+                    <AttributeName attribute={attribute} />
+                  </label>
+                );
+              })}
           </fieldset>
         )}
         <p

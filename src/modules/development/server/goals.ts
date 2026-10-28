@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 
 import { developmentAttributes } from "@/modules/character/db";
-import { isLegacyAttribute } from "@/modules/character/domain";
+import { isGrowthTarget, isLegacyAttribute } from "@/modules/character/domain";
 import { projects } from "@/modules/projects/db";
 import { tasks, taskStatuses } from "@/modules/tasks/db";
 import type { StatusCategory } from "@/modules/tasks/domain";
@@ -125,6 +125,9 @@ async function assertAttributesUsable(
     .from(developmentAttributes)
     .where(and(eq(developmentAttributes.userId, userId), inArray(developmentAttributes.id, ids)));
   if (rows.length !== new Set(ids).size) throw new DomainError("not_found", "attribute.not_found");
+  if (rows.some((row) => !isGrowthTarget(row))) {
+    throw new DomainError("invalid", "attribute.system_scored");
+  }
   const kept = new Set(existing.map((a) => a.attributeId));
   if (rows.some((row) => (row.archivedAt || isLegacyAttribute(row)) && !kept.has(row.id))) {
     throw new DomainError("invalid", "attribute.archived");

@@ -1,4 +1,9 @@
-import { getLevelProgress, getStageProgress, isActiveAttribute } from "@/modules/character/domain";
+import {
+  getLevelProgress,
+  getStageProgress,
+  isActiveAttribute,
+  attributeScore,
+} from "@/modules/character/domain";
 import {
   getXpActivity,
   getXpTotals,
@@ -82,7 +87,7 @@ export async function getDashboard(db: DbExecutor, userId: string): Promise<Dash
     balances,
     attributes: attributes.map((attribute) => ({
       ...attribute,
-      progress: getLevelProgress(attribute.xp),
+      progress: getLevelProgress(attributeScore(attribute)),
     })),
     activeAttributeIds: active.map((attribute) => attribute.id),
     week: {

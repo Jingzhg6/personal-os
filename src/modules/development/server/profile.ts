@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import { developmentAttributes } from "@/modules/character/db";
-import { isLegacyAttribute } from "@/modules/character/domain";
+import { isGrowthTarget, isLegacyAttribute } from "@/modules/character/domain";
 import type { DbExecutor } from "@/shared/db/types";
 import { DomainError } from "@/shared/lib/errors";
 
@@ -79,6 +79,9 @@ export function setFocus(
       }
       if (rows.some((row) => row.archivedAt || isLegacyAttribute(row))) {
         throw new DomainError("invalid", "attribute.archived");
+      }
+      if (rows.some((row) => !isGrowthTarget(row))) {
+        throw new DomainError("invalid", "attribute.system_scored");
       }
     }
     await tx.delete(developmentFocus).where(eq(developmentFocus.userId, userId));

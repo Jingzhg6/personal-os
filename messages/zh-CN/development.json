@@ -113,7 +113,11 @@
     "archivedBadge": "已停用",
     "empty": "还没有设置成长能力",
     "open": "查看「{name}」",
-    "xp": "{xp} XP"
+    "xp": "{xp} XP",
+    "disciplineScore": "当前得分",
+    "disciplineRules": "评分规则",
+    "disciplineFixed": "系统固定：按计划完成加分，逾期或失败扣分",
+    "points": "{points} 分"
   },
   "goalDetail": {
     "back": "返回成长",
@@ -159,7 +163,8 @@
       "unstarted": "未开始",
       "started": "进行中",
       "completed": "已完成",
-      "cancelled": "已取消"
+      "cancelled": "已取消",
+      "failed": "已失败"
     },
     "due": "截止 {date}",
     "projects": "关联项目",

@@ -3,6 +3,8 @@ import { protectedProcedure, router } from "@/shared/trpc/init";
 import {
   attributeIdInput,
   createAttributeInput,
+  disciplineHistoryInput,
+  taskDisciplineInput,
   moveAttributeInput,
   updateAttributeInput,
   xpHistoryInput,
@@ -14,6 +16,7 @@ import {
   moveAttribute,
   updateAttribute,
 } from "./attributes";
+import { getDisciplineSummary, getTaskDiscipline } from "./discipline";
 import { getOverview, listHistory } from "./repository";
 
 export const characterRouter = router({
@@ -36,5 +39,14 @@ export const characterRouter = router({
     delete: protectedProcedure
       .input(attributeIdInput)
       .mutation(({ ctx, input }) => deleteAttribute(ctx.db, ctx.userId, input.id)),
+  }),
+  /** 自制力 (M10.5): read-only. Scores are only ever written by the fixed rules. */
+  discipline: router({
+    summary: protectedProcedure
+      .input(disciplineHistoryInput)
+      .query(({ ctx, input }) => getDisciplineSummary(ctx.db, ctx.userId, input.limit)),
+    forTask: protectedProcedure
+      .input(taskDisciplineInput)
+      .query(({ ctx, input }) => getTaskDiscipline(ctx.db, ctx.userId, input.taskId)),
   }),
 });

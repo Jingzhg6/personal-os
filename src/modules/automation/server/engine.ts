@@ -1,5 +1,6 @@
 import { and, asc, count, eq, gte, isNull, lte, notInArray, sql } from "drizzle-orm";
 
+import { sweepOverdueDiscipline } from "@/modules/character/server";
 import { getUserSettings } from "@/modules/settings/server";
 import type { Database, DbExecutor } from "@/shared/db/types";
 import type { EventBus } from "@/shared/events/bus";
@@ -503,16 +504,22 @@ export async function tickSchedules(
   return { executed, missed, failed };
 }
 
-/** The worker's tick: schedules of everyone, then pending events, then a heartbeat. */
+/**
+ * The worker's tick: schedules of everyone, then pending events, then the 自制力 overdue sweep
+ * (M10.5: the character module's own scoring; automation only triggers it), then a heartbeat.
+ */
 export async function workerTick(deps: EngineDeps, now = new Date()) {
   const schedules = await tickSchedules(deps, { now });
   const events = await drainEvents(deps);
+  const discipline = await sweepOverdueDiscipline(deps.db, { now });
   const summary = {
     executed: schedules.executed,
     missed: schedules.missed,
     failed: schedules.failed,
     events: events.processed,
     failedEvents: events.failed,
+    disciplineOverdue: discipline.penalised,
+    disciplineFailed: discipline.failed,
   };
   await deps.db
     .insert(automationWorkerStatus)

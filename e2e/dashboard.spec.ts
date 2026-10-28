@@ -195,7 +195,8 @@ test("D — a task growing two attributes splits correctly in the ranking and ra
   await expect(rows.nth(2)).toContainText("+5 XP");
   await expect(page.getByTestId("activity-entry").first()).toContainText("法语 +15 · 阅读 +5");
   // The radar shows every active attribute on the radar (5 seeded).
-  await expect(page.getByTestId("radar-point")).toHaveCount(5);
+  // Five seeded attributes plus the fixed 自制力 (M10.5).
+  await expect(page.getByTestId("radar-point")).toHaveCount(6);
   await expect(page.getByTestId("week-top").getByRole("listitem")).toHaveCount(3);
 
   // Changing the period refetches the ranking; today's growth is in every period.

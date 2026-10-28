@@ -212,7 +212,7 @@ export function createTask(
 
     const now = new Date();
     const transition = statusTransition(
-      { category: "unstarted", completedAt: null, cancelledAt: null },
+      { category: "unstarted", completedAt: null, cancelledAt: null, failedAt: null },
       status.category,
       now,
     );
@@ -236,6 +236,9 @@ export function createTask(
         sortKey: await lastSiblingKey(tx, userId, parentTaskId),
         completedAt: transition.completedAt,
         cancelledAt: transition.cancelledAt,
+        failedAt: transition.failedAt,
+        // The deadline is planned from the moment it is set.
+        plannedAt: schedule.dueDate ? now : null,
       })
       .returning({ id: tasks.id });
     await replaceTags(tx, row!.id, input.tagIds ?? []);
@@ -291,14 +294,21 @@ export function updateTask(
       dueTime: fields.dueTime !== undefined ? fields.dueTime : current.dueTime,
     });
 
+    // 自制力 planning time: set when a due date appears, cleared when it is removed, kept when the
+    // date is only moved (M10.5).
+    const planning =
+      fields.dueDate === undefined || (fields.dueDate !== null) === (current.dueDate !== null)
+        ? {}
+        : { plannedAt: fields.dueDate === null ? null : new Date() };
     if (Object.keys(fields).length > 0) {
       await tx
         .update(tasks)
-        .set(
-          fields.description !== undefined
+        .set({
+          ...(fields.description !== undefined
             ? { ...fields, descriptionText: richTextToPlainText(fields.description) }
-            : fields,
-        )
+            : fields),
+          ...planning,
+        })
         .where(and(eq(tasks.id, current.id), eq(tasks.userId, userId)));
     } else {
       await tx.update(tasks).set({ updatedAt: new Date() }).where(eq(tasks.id, current.id));
@@ -325,6 +335,7 @@ export function setTaskStatus(
         category: current.statusCategory,
         completedAt: current.completedAt,
         cancelledAt: current.cancelledAt,
+        failedAt: current.failedAt,
       },
       next.category,
       new Date(),
@@ -335,6 +346,7 @@ export function setTaskStatus(
         statusId: next.id,
         completedAt: transition.completedAt,
         cancelledAt: transition.cancelledAt,
+        failedAt: transition.failedAt,
       })
       .where(and(eq(tasks.id, current.id), eq(tasks.userId, userId)));
 
@@ -376,7 +388,12 @@ export function completeTask(deps: TaskDeps, userId: string, id: string): Promis
   return moveToCategory(deps, userId, id, "completed", (t) => t.statusCategory !== "completed");
 }
 
-/** Moves a completed or cancelled task back to the first "unstarted" status. */
+/** Moves the task to the first "failed" status (M10.5). No-op when already failed. */
+export function failTask(deps: TaskDeps, userId: string, id: string): Promise<Task> {
+  return moveToCategory(deps, userId, id, "failed", (t) => t.statusCategory !== "failed");
+}
+
+/** Moves a completed, cancelled or failed task back to the first "unstarted" status. */
 export function reopenTask(deps: TaskDeps, userId: string, id: string): Promise<Task> {
   return moveToCategory(deps, userId, id, "unstarted", (t) => isClosedCategory(t.statusCategory));
 }

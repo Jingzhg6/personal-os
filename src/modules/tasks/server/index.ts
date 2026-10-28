@@ -21,6 +21,7 @@ export {
   createTask,
   deleteTask,
   emptyTrash,
+  failTask,
   moveTask,
   purgeTask,
   reopenTask,

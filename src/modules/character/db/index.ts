@@ -49,6 +49,11 @@ export const developmentAttributes = pgTable(
       "development_attributes_label_present",
       sql`${t.systemKey} is not null or length(btrim(${t.name})) > 0`,
     ),
+    // M10.5: the fixed 自制力 attribute can never be renamed or archived.
+    check(
+      "development_attributes_discipline_fixed",
+      sql`${t.systemKey} is distinct from 'discipline' or (${t.name} is null and ${t.archivedAt} is null)`,
+    ),
   ],
 );
 
@@ -132,5 +137,55 @@ export const xpAttributeCredits = pgTable(
     uniqueIndex("xp_attribute_credits_entry_attribute_uq").on(t.ledgerEntryId, t.attributeId),
     index("xp_attribute_credits_user_attribute_idx").on(t.userId, t.attributeId),
     check("xp_attribute_credits_amount_nonzero", sql`${t.amount} <> 0`),
+  ],
+);
+
+/**
+ * 自制力 scoring history (M10.5, ADR 0021). Append-only (a trigger rejects UPDATE and direct
+ * DELETE). One sequence per task: entry `seq` n+1 can only follow n (unique), so concurrent
+ * scorers cannot both append the same step. A task's net is the sum of its entries and always
+ * equals the points of its latest `outcome`. `task_id` has no foreign key: history outlives the
+ * task (as `xp_ledger.source_id`).
+ */
+export const disciplineLedger = pgTable(
+  "discipline_ledger",
+  {
+    id: primaryId(),
+    userId: userId(),
+    /** The user's 自制力 attribute; NO ACTION keeps it from being deleted while it has history. */
+    attributeId: uuid("attribute_id")
+      .notNull()
+      .references(() => developmentAttributes.id),
+    taskId: uuid("task_id").notNull(),
+    /** Title when scored (history shows what was planned at the time). */
+    taskTitle: text("task_title").notNull(),
+    seq: integer("seq").notNull(),
+    reason: text("reason").notNull(),
+    /** The task's outcome after this entry. */
+    outcome: text("outcome").notNull(),
+    points: integer("points").notNull(),
+    netAfter: integer("net_after").notNull(),
+    /** What triggered the scoring: a domain event id or an overdue sweep key. */
+    sourceKey: text("source_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("discipline_ledger_task_seq_uq").on(t.taskId, t.seq),
+    index("discipline_ledger_user_created_idx").on(t.userId, t.createdAt),
+    index("discipline_ledger_user_task_idx").on(t.userId, t.taskId),
+    check("discipline_ledger_points_nonzero", sql`${t.points} <> 0`),
+    check("discipline_ledger_seq_positive", sql`${t.seq} >= 1`),
+    check(
+      "discipline_ledger_points_fixed",
+      sql`${t.points} between -20 and 20 and ${t.netAfter} in (-5, -3, 0, 3, 10, 15)`,
+    ),
+    check(
+      "discipline_ledger_outcome_valid",
+      sql`${t.outcome} in ('none', 'early', 'on_time', 'late', 'overdue', 'failed', 'cancelled')`,
+    ),
+    check(
+      "discipline_ledger_reason_valid",
+      sql`${t.reason} in ('completed_early', 'completed_on_time', 'completed_late', 'overdue', 'failed', 'cancelled', 'reopened', 'not_eligible')`,
+    ),
   ],
 );

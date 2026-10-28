@@ -38,6 +38,8 @@ const baseTask: Task = {
   openBlockerCount: 0,
   completedAt: null,
   cancelledAt: null,
+  failedAt: null,
+  plannedAt: null,
   createdAt: now,
   updatedAt: now,
 };

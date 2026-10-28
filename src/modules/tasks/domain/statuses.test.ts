@@ -11,6 +11,7 @@ describe("statusTransition", () => {
     expect(statusTransition(open, "completed", now)).toEqual({
       completedAt: now,
       cancelledAt: null,
+      failedAt: null,
       event: "task.completed",
     });
   });
@@ -20,6 +21,7 @@ describe("statusTransition", () => {
     expect(statusTransition(done, "completed", now)).toEqual({
       completedAt: earlier,
       cancelledAt: null,
+      failedAt: null,
       event: null,
     });
   });
@@ -29,6 +31,7 @@ describe("statusTransition", () => {
     expect(statusTransition(done, "started", now)).toEqual({
       completedAt: null,
       cancelledAt: null,
+      failedAt: null,
       event: "task.reopened",
     });
   });
@@ -37,16 +40,33 @@ describe("statusTransition", () => {
     expect(statusTransition(open, "cancelled", now)).toEqual({
       completedAt: null,
       cancelledAt: now,
+      failedAt: null,
       event: null,
     });
     const done = { category: "completed" as const, completedAt: earlier, cancelledAt: null };
     expect(statusTransition(done, "cancelled", now).event).toBe("task.reopened");
   });
 
+  it("failing sets failedAt (not cancelledAt); failing a completed task emits task.reopened", () => {
+    expect(statusTransition(open, "failed", now)).toEqual({
+      completedAt: null,
+      cancelledAt: null,
+      failedAt: now,
+      event: null,
+    });
+    const failed = { ...open, category: "failed" as const, failedAt: earlier };
+    expect(statusTransition(failed, "failed", now).failedAt).toBe(earlier);
+    expect(statusTransition(failed, "unstarted", now).failedAt).toBeNull();
+    const done = { category: "completed" as const, completedAt: earlier, cancelledAt: null };
+    expect(statusTransition(done, "failed", now).event).toBe("task.reopened");
+    expect(isClosedCategory("failed")).toBe(true);
+  });
+
   it("moving between open categories changes nothing", () => {
     expect(statusTransition(open, "started", now)).toEqual({
       completedAt: null,
       cancelledAt: null,
+      failedAt: null,
       event: null,
     });
   });

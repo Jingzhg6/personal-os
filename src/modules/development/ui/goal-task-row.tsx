@@ -31,7 +31,10 @@ export function GoalTaskRow({
   const t = useTranslations("development.goalDetail");
   const ta = useTranslations("development.attribution");
   const format = useFormatter();
-  const closed = task.statusCategory === "completed" || task.statusCategory === "cancelled";
+  const closed =
+    task.statusCategory === "completed" ||
+    task.statusCategory === "cancelled" ||
+    task.statusCategory === "failed";
 
   return (
     <li

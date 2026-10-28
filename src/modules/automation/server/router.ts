@@ -1,3 +1,4 @@
+import { sweepOverdueDiscipline } from "@/modules/character/server";
 import { getEnv } from "@/shared/config/env";
 import { protectedProcedure, router } from "@/shared/trpc/init";
 
@@ -70,6 +71,7 @@ export const automationRouter = router({
   runDue: protectedProcedure.mutation(async ({ ctx }) => {
     const schedules = await tickSchedules(ctx, { userId: ctx.userId });
     const events = await drainEvents(ctx, { userId: ctx.userId });
-    return { ...schedules, events: events.processed };
+    const discipline = await sweepOverdueDiscipline(ctx.db, { userId: ctx.userId });
+    return { ...schedules, events: events.processed, disciplineOverdue: discipline.penalised };
   }),
 });

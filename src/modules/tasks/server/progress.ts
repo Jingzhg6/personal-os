@@ -20,9 +20,10 @@ async function progressBy(
   const rows = await db
     .select({
       key: column,
-      total: sql<number>`(count(*) filter (where ${taskStatuses.category} <> 'cancelled'))::int`,
+      // Cancelled and failed tasks are closed without being done: not part of the work total.
+      total: sql<number>`(count(*) filter (where ${taskStatuses.category} not in ('cancelled', 'failed')))::int`,
       completed: sql<number>`(count(*) filter (where ${taskStatuses.category} = 'completed'))::int`,
-      overdue: sql<number>`(count(*) filter (where ${taskStatuses.category} not in ('completed', 'cancelled') and ${tasks.dueDate} < ${today}))::int`,
+      overdue: sql<number>`(count(*) filter (where ${taskStatuses.category} not in ('completed', 'cancelled', 'failed') and ${tasks.dueDate} < ${today}))::int`,
     })
     .from(tasks)
     .innerJoin(taskStatuses, eq(tasks.statusId, taskStatuses.id))

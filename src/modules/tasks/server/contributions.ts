@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 
 import { developmentAttributes } from "@/modules/character/db";
+import { isGrowthTarget } from "@/modules/character/domain";
 import type { DbExecutor } from "@/shared/db/types";
 import { DomainError } from "@/shared/lib/errors";
 
@@ -25,10 +26,18 @@ export async function assertContributionsUsable(
   if (contributions.length === 0) return;
   const ids = contributions.map((c) => c.attributeId);
   const rows = await db
-    .select({ id: developmentAttributes.id, archivedAt: developmentAttributes.archivedAt })
+    .select({
+      id: developmentAttributes.id,
+      systemKey: developmentAttributes.systemKey,
+      archivedAt: developmentAttributes.archivedAt,
+    })
     .from(developmentAttributes)
     .where(and(eq(developmentAttributes.userId, userId), inArray(developmentAttributes.id, ids)));
   if (rows.length !== new Set(ids).size) throw new DomainError("not_found", "attribute.not_found");
+  // 自制力 is scored by fixed rules only, never by task contributions (M10.5).
+  if (rows.some((row) => !isGrowthTarget(row))) {
+    throw new DomainError("invalid", "attribute.system_scored");
+  }
   const kept = new Set(existing.map((c) => c.attributeId));
   if (rows.some((row) => row.archivedAt && !kept.has(row.id))) {
     throw new DomainError("invalid", "attribute.archived");

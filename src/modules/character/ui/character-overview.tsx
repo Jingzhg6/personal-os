@@ -14,7 +14,12 @@ import { ProgressBar } from "@/shared/ui/progress-bar";
 
 import type { CharacterOverview as Overview, DevelopmentAttribute, XpEntry } from "../domain";
 import { RadarChart } from "./radar-chart";
-import { useAttributeLabel, useCharacterOverview, useDevelopmentAttributes } from "./use-character";
+import {
+  useAttributeAmount,
+  useAttributeLabel,
+  useCharacterOverview,
+  useDevelopmentAttributes,
+} from "./use-character";
 import { XpEntryRow } from "./xp-entry";
 
 /** The character page: level, attributes (radar + list) and the latest ledger lines. */
@@ -268,6 +273,7 @@ function CurrencyCard({
 function AttributeList({ attributes }: { attributes: Overview["attributes"] }) {
   const t = useTranslations("character.attributes");
   const label = useAttributeLabel();
+  const amount = useAttributeAmount();
   if (attributes.length === 0) return <CardDescription>{t("empty")}</CardDescription>;
   return (
     <ul className="flex flex-col gap-4" aria-label={t("title")}>
@@ -281,7 +287,7 @@ function AttributeList({ attributes }: { attributes: Overview["attributes"] }) {
               {t("level", { level: attribute.progress.level })}
             </span>
             <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
-              {t("xp", { xp: attribute.xp })}
+              {amount(attribute)}
             </span>
           </div>
           <ProgressBar

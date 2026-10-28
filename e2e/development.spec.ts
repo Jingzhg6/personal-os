@@ -50,7 +50,8 @@ test("empty states guide a new user", async ({ page }) => {
   await expect(page.getByTestId("focus-empty")).toContainText("选择最多 3 个当前成长重点。");
   await expect(page.getByTestId("recent-growth-empty")).toBeVisible();
   // The user's own attributes, not a fixed list.
-  await expect(page.getByTestId("attribute-card")).toHaveCount(5);
+  // Five seeded attributes plus the fixed 自制力 (M10.5).
+  await expect(page.getByTestId("attribute-card")).toHaveCount(6);
 });
 
 test("writes and edits the vision", async ({ page }) => {

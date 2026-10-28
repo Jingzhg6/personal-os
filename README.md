@@ -6,15 +6,14 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: M10 — Automation engine.** Rules of the form _trigger → conditions → actions_ let
-> the modules work together: e.g. completing an important task creates a follow-up, saving a
-> balance batch sends an in-app notification, a monthly schedule creates a "record balances" task.
-> Rules are typed data (never code), start disabled, run through the owning modules' services, and
-> every execution is recorded; duplicates and loops are prevented by the engine. Scheduled rules
-> need the worker endpoint (`AUTOMATION_WORKER_SECRET`, `pnpm automation:worker`); without it the
-> app says so. `/` is the M7 RPG dashboard, `/development` the development system, `/finance`
-> the finance overview, `/automation` the rules. See [`docs/architecture.md`](docs/architecture.md)
-> and the milestone screenshots in [`docs/screenshots/`](docs/screenshots/README.md).
+> **Status: M10.5 — 自制力 (Discipline).** A fixed growth attribute scores how planned tasks are
+> carried out: a task whose deadline was set in advance earns +15 early, +10 on time, +3 late;
+> −3 while overdue and −5 if marked failed (a new 已失败 status), 0 if cancelled — one net result
+> per task, recorded in its own append-only history, never touching XP, levels or rewards. Overdue
+> penalties are applied by the automation worker (see "Automation worker"). Previously: M10
+> automation rules (`/automation`), M9.5 finance (`/finance`), the M7 dashboard (`/`) and the
+> development system (`/development`). See [`docs/architecture.md`](docs/architecture.md) and
+> [`docs/screenshots/`](docs/screenshots/README.md).
 
 ## Requirements
 
@@ -95,7 +94,7 @@ APP_URL=http://localhost:3000 AUTOMATION_WORKER_SECRET=<same secret> pnpm automa
 #    * * * * * curl -fsS -X POST -H "Authorization: Bearer <secret>" http://localhost:3000/api/automation/tick
 ```
 
-The worker runs due schedules (misfires: missed occurrences coalesce into the latest one if it is
+The worker runs due schedules, applies 自制力 overdue penalties (M10.5) (misfires: missed occurrences coalesce into the latest one if it is
 at most 6 h late, otherwise recorded as missed) and processes pending events, and writes a
 heartbeat; the health view reports the scheduler as running only with a heartbeat younger than
 5 minutes. Details and guarantees: [ADR 0020](docs/decisions/0020-automation-engine.md).

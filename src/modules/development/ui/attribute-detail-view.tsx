@@ -14,7 +14,13 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo } from "react";
 
-import { useAttributeLabel, XpEntryRow, XpTrendChart } from "@/modules/character/ui";
+import { isDisciplineAttribute } from "@/modules/character/domain";
+import {
+  DisciplinePanel,
+  useAttributeLabel,
+  XpEntryRow,
+  XpTrendChart,
+} from "@/modules/character/ui";
 import { StatusIcon } from "@/modules/tasks/ui";
 import { Card, CardContent } from "@/shared/ui/card";
 import { ColorDot } from "@/shared/ui/color";
@@ -42,6 +48,9 @@ export function AttributeDetailView({ id }: { id: string }) {
       </Link>
       {isError ? (
         <p className="text-sm text-muted-foreground">{t("notFound")}</p>
+      ) : data && isDisciplineAttribute(data.attribute) ? (
+        // 自制力 (M10.5) has no Growth XP: its page shows its score, rules and history.
+        <DisciplinePanel />
       ) : data ? (
         <>
           <Identity detail={data} />

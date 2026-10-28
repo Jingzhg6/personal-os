@@ -171,7 +171,10 @@ export function goalActionStats(
   linked: readonly { statusCategory: StatusCategory }[],
 ): GoalActionStats {
   const completed = linked.filter((t) => t.statusCategory === "completed").length;
-  const cancelled = linked.filter((t) => t.statusCategory === "cancelled").length;
+  // Failed tasks (M10.5) are, like cancelled ones, closed without being done.
+  const cancelled = linked.filter(
+    (t) => t.statusCategory === "cancelled" || t.statusCategory === "failed",
+  ).length;
   return {
     linked: linked.length,
     completed,

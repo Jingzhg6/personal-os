@@ -4,6 +4,7 @@ import { ChevronRight, Settings2, Sprout, Star } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 
+import { isDisciplineAttribute } from "@/modules/character/domain";
 import { useAttributeLabel } from "@/modules/character/ui";
 
 import { RECENT_WINDOW_DAYS, type AttributeSummary, type DevelopmentOverview } from "../domain";
@@ -90,34 +91,52 @@ function AttributeCard({ summary }: { summary: AttributeSummary }) {
             <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
           </span>
         </div>
-        <dl className="grid grid-cols-2 gap-2">
-          <div>
-            <dt className="text-xs text-muted-foreground">{t("lifetime")}</dt>
-            <dd className="text-lg font-semibold" data-testid="attribute-lifetime">
-              {t("xp", { xp: format.number(summary.lifetimeGrowthXp) })}
-            </dd>
+        {isDisciplineAttribute(attribute) ? (
+          <dl className="grid grid-cols-2 gap-2" data-testid="discipline-card">
+            <div>
+              <dt className="text-xs text-muted-foreground">{t("disciplineScore")}</dt>
+              <dd className="text-lg font-semibold" data-testid="attribute-lifetime">
+                {t("points", { points: format.number(attribute.points ?? 0) })}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">{t("disciplineRules")}</dt>
+              <dd className="text-sm">{t("disciplineFixed")}</dd>
+            </div>
+          </dl>
+        ) : (
+          <dl className="grid grid-cols-2 gap-2">
+            <div>
+              <dt className="text-xs text-muted-foreground">{t("lifetime")}</dt>
+              <dd className="text-lg font-semibold" data-testid="attribute-lifetime">
+                {t("xp", { xp: format.number(summary.lifetimeGrowthXp) })}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">
+                {t("recent", { days: RECENT_WINDOW_DAYS })}
+              </dt>
+              <dd className="text-lg font-semibold text-primary" data-testid="attribute-recent">
+                {format.number(summary.recentGrowthXp, SIGNED)}
+              </dd>
+            </div>
+          </dl>
+        )}
+        {/* 自制力 has no goals and no growth record (M10.5). */}
+        {isDisciplineAttribute(attribute) ? null : (
+          <div className="mt-auto flex flex-col gap-0.5 text-xs text-muted-foreground">
+            <span>
+              {summary.activeGoalCount > 0
+                ? t("goals", { count: summary.activeGoalCount })
+                : t("noGoals")}
+            </span>
+            <span>
+              {summary.lastActivityAt
+                ? t("lastActivity", { date: format.dateTime(summary.lastActivityAt, DATE) })
+                : t("never")}
+            </span>
           </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">
-              {t("recent", { days: RECENT_WINDOW_DAYS })}
-            </dt>
-            <dd className="text-lg font-semibold text-primary" data-testid="attribute-recent">
-              {format.number(summary.recentGrowthXp, SIGNED)}
-            </dd>
-          </div>
-        </dl>
-        <div className="mt-auto flex flex-col gap-0.5 text-xs text-muted-foreground">
-          <span>
-            {summary.activeGoalCount > 0
-              ? t("goals", { count: summary.activeGoalCount })
-              : t("noGoals")}
-          </span>
-          <span>
-            {summary.lastActivityAt
-              ? t("lastActivity", { date: format.dateTime(summary.lastActivityAt, DATE) })
-              : t("never")}
-          </span>
-        </div>
+        )}
       </Link>
     </li>
   );

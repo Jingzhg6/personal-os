@@ -37,7 +37,8 @@ describe("authentication", () => {
     expect(row?.name).toBe("Jin");
     expect(await getUserSettings(db, result.user.id)).toMatchObject({ locale: "zh-CN" });
     expect(await listAreas(db, result.user.id)).toHaveLength(6);
-    expect(await listStatuses(db, result.user.id)).toHaveLength(5);
+    // Five workflow statuses plus 已失败 (M10.5).
+    expect(await listStatuses(db, result.user.id)).toHaveLength(6);
   });
 
   it("signs in with the right password and rejects the wrong one", async () => {

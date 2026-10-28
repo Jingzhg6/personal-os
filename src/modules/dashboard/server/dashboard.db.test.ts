@@ -90,7 +90,8 @@ describe("dashboard read model", () => {
     expect(overview.week).toMatchObject({ completedTasks: 0, activeXp: 0, growthXp: 0, top: [] });
     expect(overview.focus).toEqual({ fastest: null, slowest: null });
     expect(overview.recentActivity).toEqual([]);
-    expect(overview.activeAttributeIds).toHaveLength(5);
+    // Five seeded examples plus the fixed 自制力 (M10.5).
+    expect(overview.activeAttributeIds).toHaveLength(6);
     // Seeded level rewards: Lv 5 is the next one, claimable early from Lv 1 (stage 启程者 ends at 5).
     expect(overview.nextLevelReward?.reward).toMatchObject({ level: 5, state: "early" });
     expect(overview.nextLevelReward?.missingLevelXp).toBe(xpForLevel(5));

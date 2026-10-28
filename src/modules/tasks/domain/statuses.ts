@@ -13,6 +13,8 @@ export const statusCategories = [
   "started",
   "completed",
   "cancelled",
+  /** M10.5: the task was given up — a distinct outcome from cancellation (自制力 −5). */
+  "failed",
 ] as const;
 export type StatusCategory = (typeof statusCategories)[number];
 
@@ -22,6 +24,7 @@ export const defaultStatuses = [
   { systemKey: "in_progress", category: "started", color: "amber" },
   { systemKey: "done", category: "completed", color: "green" },
   { systemKey: "cancelled", category: "cancelled", color: "gray" },
+  { systemKey: "failed", category: "failed", color: "red" },
 ] as const satisfies readonly { systemKey: string; category: StatusCategory; color: ColorId }[];
 
 export type StatusSystemKey = (typeof defaultStatuses)[number]["systemKey"];
@@ -36,7 +39,7 @@ export interface TaskStatus {
 }
 
 export function isClosedCategory(category: StatusCategory): boolean {
-  return category === "completed" || category === "cancelled";
+  return category === "completed" || category === "cancelled" || category === "failed";
 }
 
 /** Statuses ordered by category (workflow order), then by their position inside the category. */
@@ -61,6 +64,7 @@ export function defaultStatusFor<T extends Pick<TaskStatus, "category" | "sortKe
 export interface StatusTransition {
   completedAt: Date | null;
   cancelledAt: Date | null;
+  failedAt: Date | null;
   /** Domain event implied by the transition. */
   event: "task.completed" | "task.reopened" | null;
 }
@@ -70,7 +74,12 @@ export interface StatusTransition {
  * `task.reopened` means "was completed, no longer is" (so XP can be reversed later).
  */
 export function statusTransition(
-  previous: { category: StatusCategory; completedAt: Date | null; cancelledAt: Date | null },
+  previous: {
+    category: StatusCategory;
+    completedAt: Date | null;
+    cancelledAt: Date | null;
+    failedAt?: Date | null;
+  },
   next: StatusCategory,
   now: Date,
 ): StatusTransition {
@@ -79,6 +88,7 @@ export function statusTransition(
     return {
       completedAt: wasCompleted ? (previous.completedAt ?? now) : now,
       cancelledAt: null,
+      failedAt: null,
       event: wasCompleted ? null : "task.completed",
     };
   }
@@ -88,6 +98,12 @@ export function statusTransition(
       next === "cancelled"
         ? previous.category === "cancelled"
           ? (previous.cancelledAt ?? now)
+          : now
+        : null,
+    failedAt:
+      next === "failed"
+        ? previous.category === "failed"
+          ? (previous.failedAt ?? now)
           : now
         : null,
     event: wasCompleted ? "task.reopened" : null,

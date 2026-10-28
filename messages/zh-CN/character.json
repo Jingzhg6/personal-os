@@ -17,7 +17,7 @@
   "attributes": {
     "title": "成长能力",
     "radar": "成长能力雷达图",
-    "radarHint": "半径表示成长能力等级（含当前等级进度）。只显示已启用且选择在雷达图显示的能力。",
+    "radarHint": "半径表示成长能力等级（含当前等级进度）。只显示已启用且选择在雷达图显示的能力。自制力按得分绘制，负分显示在圆心。",
     "radarTooFew": "至少需要 3 项在雷达图显示的成长能力才能画出雷达图。",
     "level": "Lv {level}",
     "xp": "{xp} XP",
@@ -38,8 +38,10 @@
         "business": "业务（M6 旧属性）",
         "admin": "行政（M6 旧属性）",
         "life": "生活（M6 旧属性）"
-      }
-    }
+      },
+      "discipline": "自制力"
+    },
+    "points": "{points} 分"
   },
   "recent": {
     "grants": "最近获得",
@@ -125,7 +127,10 @@
     "deleted": "已删除",
     "noArchived": "没有停用的成长能力。",
     "xp": "{xp} XP",
-    "back": "返回角色"
+    "back": "返回角色",
+    "systemAttribute": "系统属性",
+    "points": "{points} 分",
+    "disciplineLocked": "评分规则由系统固定：不能改名、改图标或颜色、归档或删除。隐藏后仍会继续计分。"
   },
   "currencies": {
     "lifetime": "累计",
@@ -170,5 +175,48 @@
     "date": "日期",
     "level": "升级经验",
     "chartLabelGrowth": "{period}每{bucket}获得的成长经验"
+  },
+  "discipline": {
+    "title": "自制力",
+    "system": "系统属性",
+    "description": "衡量你是否按计划完成任务。规则由系统固定，不能修改；与任务经验值、等级经验和奖励无关。",
+    "score": "当前得分",
+    "points": "{points} 分",
+    "signed": "{points} 分",
+    "level": "Lv {level}",
+    "scoredTasks": "已计分任务",
+    "rulesTitle": "固定规则",
+    "outcome": "结果",
+    "pointsHeader": "分数",
+    "outcomes": {
+      "early": "提前完成（截止日期之前的日子完成）",
+      "on_time": "按时完成（截止日期当天、截止时间之前）",
+      "late": "逾期完成",
+      "overdue": "过了截止时间仍未完成（只扣一次）",
+      "failed": "标记为失败（最终合计）",
+      "cancelled": "取消",
+      "none": "不计分"
+    },
+    "definitions": "计分条件：任务有截止日期，并且截止日期至少提前 1 小时设定（随手创建并马上完成的任务不计分）。截止时间是截止日期当天的截止时刻；没有设定时刻时为当天结束（按你的时区）。没有截止日期的任务只获得普通经验值。",
+    "netRule": "每个任务只按当前结果计一次分：逾期后完成合计 +3，逾期后失败合计 −5，重新打开会撤销完成分。所有更正都以新记录保存，历史不会被修改。删除或恢复任务不会单独计分。",
+    "workerOk": "逾期检查：后台 worker 正在运行，过了截止时间的任务会自动扣分。",
+    "workerMissing": "逾期检查：后台 worker 未运行，过了截止时间的任务不会自动扣分。可以在「自动化」页面使用「立即检查」手动处理。完成、失败和取消的计分不受影响。",
+    "historyTitle": "计分记录",
+    "historyEmpty": "还没有计分记录。完成一个提前计划的任务试试。",
+    "reasons": {
+      "completed_early": "提前完成",
+      "completed_on_time": "按时完成",
+      "completed_late": "逾期完成",
+      "overdue": "逾期未完成",
+      "failed": "任务失败",
+      "cancelled": "任务取消",
+      "reopened": "重新打开",
+      "not_eligible": "不符合计分条件"
+    },
+    "net": "合计 {points} 分",
+    "taskLabel": "自制力",
+    "taskNone": "不计分",
+    "taskHint": "自制力只计算提前计划的任务（有截止日期且至少提前 1 小时设定）。",
+    "levelLabel": "等级"
   }
 }

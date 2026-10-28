@@ -22,6 +22,7 @@ import { addDependency, removeDependency } from "./dependencies";
 import { getTaskDetail, listTasks, listTimeline } from "./repository";
 import {
   completeTask,
+  failTask,
   createTask,
   deleteTask,
   emptyTrash,
@@ -119,6 +120,10 @@ export const tasksRouter = router({
   complete: protectedProcedure
     .input(taskIdInput)
     .mutation(({ ctx, input }) => completeTask(ctx, ctx.userId, input.id)),
+  /** M10.5: give the task up (a "failed" status; distinct from cancelling). */
+  fail: protectedProcedure
+    .input(taskIdInput)
+    .mutation(({ ctx, input }) => failTask(ctx, ctx.userId, input.id)),
   reopen: protectedProcedure
     .input(taskIdInput)
     .mutation(({ ctx, input }) => reopenTask(ctx, ctx.userId, input.id)),

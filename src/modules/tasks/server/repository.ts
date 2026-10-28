@@ -80,6 +80,8 @@ function toTask(
     openBlockerCount,
     completedAt: row.completedAt,
     cancelledAt: row.cancelledAt,
+    failedAt: row.failedAt,
+    plannedAt: row.plannedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -113,6 +113,8 @@ export function useTaskActions() {
       queryClient.invalidateQueries(trpc.tasks.pathFilter()),
       queryClient.invalidateQueries(trpc.projects.pathFilter()),
       queryClient.invalidateQueries(trpc.development.pathFilter()),
+      // 自制力 (M10.5) is scored from task status changes.
+      queryClient.invalidateQueries(trpc.character.pathFilter()),
     ]);
   const onError = (error: unknown) => toast.show(errorMessage(error), "error");
 
@@ -186,6 +188,12 @@ export function useTaskActions() {
       trpc.tasks.complete.mutationOptions({
         ...rollbackOnError,
         onMutate: ({ id }) => forTask(id, withCategory("completed")),
+      }),
+    ),
+    fail: useMutation(
+      trpc.tasks.fail.mutationOptions({
+        ...rollbackOnError,
+        onMutate: ({ id }) => forTask(id, withCategory("failed")),
       }),
     ),
     reopen: useMutation(

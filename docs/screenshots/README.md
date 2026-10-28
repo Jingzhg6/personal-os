@@ -211,3 +211,21 @@ worker is configured, so the scheduler is reported as not running.
 | `08-mobile-rules.png`       | `/automation` (phone)        | iPhone 13, full page                                                               |
 | `09-mobile-rule-detail.png` | `/automation/[id]` (phone)   | iPhone 13, rule detail and history                                                 |
 | `10-dark-rule-detail.png`   | `/automation/[id]` (dark)    | Dark theme                                                                         |
+
+## M10.5 — 自制力 / Discipline (`m10-5/`)
+
+Data made through the app's API: planned tasks completed early, on time and late, a task marked
+failed, an overdue task penalised by 立即检查 (no worker configured), and a task completed,
+reopened and completed again. Planning times were backdated three days in `tasks.planned_at` (the
+only direct write, as a deadline cannot be "planned in advance" within one run).
+
+| File                            | Page                                      | Shows                                                                          |
+| ------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------ |
+| `01-discipline-page.png`        | `/development/attributes/[id]`            | Score, level, worker state, fixed rules, scoring history with reasons and nets |
+| `02-development-attributes.png` | `/development`                            | Growth attribute cards; 自制力 shows its score and fixed rules                 |
+| `03-character-radar.png`        | `/character`                              | Radar and attribute list including 自制力 (分, not XP); XP figures unchanged   |
+| `04-settings-locked.png`        | `/character/attributes`                   | 自制力 locked as a system attribute; only radar visibility and order           |
+| `05-task-failed.png`            | `/tasks?task=`                            | Task panel: status 已失败, 自制力 −5 (任务失败), failure time                  |
+| `06-mobile-discipline.png`      | `/development/attributes/[id]` (phone)    | iPhone 13                                                                      |
+| `07-dark-discipline.png`        | `/development/attributes/[id]` (dark)     | Dark theme                                                                     |
+| `08-empty.png`                  | `/development/attributes/[id]` (new user) | 0 分, empty history, rules, worker notice                                      |

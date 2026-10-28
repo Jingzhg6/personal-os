@@ -1,4 +1,4 @@
-import { Circle, CircleCheck, CircleDashed, CircleDot, CircleX } from "lucide-react";
+import { Circle, CircleCheck, CircleDashed, CircleDot, CircleX, OctagonX } from "lucide-react";
 
 import type { ColorId } from "@/shared/lib/colors";
 import { cn } from "@/shared/lib/cn";
@@ -11,6 +11,7 @@ const icons = {
   started: CircleDot,
   completed: CircleCheck,
   cancelled: CircleX,
+  failed: OctagonX,
 } as const;
 
 const tones: Record<ColorId, string> = {

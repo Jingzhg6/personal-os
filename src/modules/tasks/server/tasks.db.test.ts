@@ -35,7 +35,7 @@ beforeEach(() => resetDb(db));
 afterAll(() => close());
 
 describe("statuses", () => {
-  it("seeds the five default statuses on registration", async () => {
+  it("seeds the default statuses on registration (five workflow statuses and 已失败)", async () => {
     const bus = createEventBus();
     registerTasksEventHandlers(bus);
     const user = await createSeededUser(db);
@@ -46,6 +46,7 @@ describe("statuses", () => {
       ["in_progress", "started"],
       ["done", "completed"],
       ["cancelled", "cancelled"],
+      ["failed", "failed"],
     ]);
   });
 

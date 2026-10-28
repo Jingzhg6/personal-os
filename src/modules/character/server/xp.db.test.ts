@@ -86,6 +86,7 @@ describe("development attributes", () => {
       ["reading", null, true, null],
       ["strength", null, true, null],
       ["cardio", null, true, null],
+      ["discipline", null, true, null],
     ]);
   });
 
@@ -431,6 +432,7 @@ describe("history and the radar source", () => {
       "reading",
       "strength",
       "cardio",
+      "discipline",
     ]);
     // Archived XP still counts towards development XP and the overall total.
     expect([overview.totals.lifetimeActiveXp, overview.totals.growthXp]).toEqual([
@@ -454,6 +456,7 @@ describe("history and the radar source", () => {
       "english",
       "reading",
       "cardio",
+      "discipline",
     ]);
     // Nothing else exists for the radar: no table, no stored values.
     const tables = await db.execute<{ tablename: string }>(

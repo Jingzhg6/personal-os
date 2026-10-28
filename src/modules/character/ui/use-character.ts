@@ -8,7 +8,12 @@ import { useTRPC } from "@/shared/trpc/react";
 import { useToast } from "@/shared/ui/toast";
 import { useErrorMessage } from "@/shared/ui/use-error-message";
 
-import type { DevelopmentAttribute, XpEntryKind, XpSourceType } from "../domain";
+import {
+  isDisciplineAttribute,
+  type DevelopmentAttribute,
+  type XpEntryKind,
+  type XpSourceType,
+} from "../domain";
 
 /*
  * XP changes as a side effect of other modules' actions (completing a task anywhere). Instead of
@@ -74,4 +79,16 @@ export function sourceHref(type: XpSourceType, id: string): string | null {
   if (type === "task") return `/tasks?task=${id}`;
   if (type === "project") return `/projects/${id}`;
   return null;
+}
+
+/** An attribute's amount: Growth XP, or for 自制力 its score in points (may be negative). */
+export function useAttributeAmount() {
+  const t = useTranslations("character.attributes");
+  return useCallback(
+    (attribute: Pick<DevelopmentAttribute, "systemKey" | "xp" | "points">) =>
+      isDisciplineAttribute(attribute)
+        ? t("points", { points: attribute.points ?? 0 })
+        : t("xp", { xp: attribute.xp }),
+    [t],
+  );
 }

@@ -45,6 +45,13 @@ export interface Task {
   openBlockerCount: number;
   completedAt: Date | null;
   cancelledAt: Date | null;
+  /** When the task was marked failed (M10.5). */
+  failedAt: Date | null;
+  /**
+   * When the current deadline (due date) was first set (M10.5): 自制力 only scores tasks whose
+   * deadline was planned in advance. Null without a due date.
+   */
+  plannedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -4,7 +4,7 @@ import { Plus, Settings2, Sprout, X } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-import { splitByWeight, xpRules } from "@/modules/character/domain";
+import { splitByWeight, xpRules, isGrowthTarget } from "@/modules/character/domain";
 import { useAttributeLabel, useDevelopmentAttributes } from "@/modules/character/ui";
 import { Button } from "@/shared/ui/button";
 import { ColorDot } from "@/shared/ui/color";
@@ -29,7 +29,8 @@ export function ContributionsField({ task }: { task: TaskDetail }) {
   const { data: attributes = [] } = useDevelopmentAttributes();
   const byId = new Map(attributes.map((a) => [a.id, a]));
   const available = attributes.filter(
-    (a) => !a.archivedAt && !task.contributions.some((c) => c.attributeId === a.id),
+    (a) =>
+      !a.archivedAt && isGrowthTarget(a) && !task.contributions.some((c) => c.attributeId === a.id),
   );
 
   const save = (contributions: TaskContribution[]) =>

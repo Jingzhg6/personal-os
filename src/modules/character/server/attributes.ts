@@ -5,9 +5,11 @@ import type { ColorId } from "@/shared/lib/colors";
 import { DomainError } from "@/shared/lib/errors";
 import { keyAfter, keyForMove, keysForNewItems } from "@/shared/lib/order";
 
-import { developmentAttributes, xpAttributeCredits } from "../db";
+import { developmentAttributes, disciplineLedger, xpAttributeCredits } from "../db";
 import {
   defaultDevelopmentAttributes,
+  disciplineAttributeSeed,
+  isDisciplineAttribute,
   type AttributeLabelKey,
   type CreateAttributeInput,
   type DevelopmentAttribute,
@@ -21,7 +23,7 @@ import {
 
 type Row = typeof developmentAttributes.$inferSelect;
 
-function toAttribute(row: Row, xp: number): DevelopmentAttribute {
+function toAttribute(row: Row, xp: number, points: number | null = null): DevelopmentAttribute {
   return {
     id: row.id,
     systemKey: row.systemKey as AttributeLabelKey | null,
@@ -32,16 +34,49 @@ function toAttribute(row: Row, xp: number): DevelopmentAttribute {
     archivedAt: row.archivedAt,
     sortKey: row.sortKey,
     xp,
+    points: isDisciplineAttribute(row) ? (points ?? 0) : null,
   };
 }
 
-/** Seeds the example attributes for a new account. */
+/** Seeds the example attributes and the fixed 自制力 attribute for a new account. */
 export async function seedDevelopmentAttributes(db: DbExecutor, userId: string): Promise<void> {
-  const keys = keysForNewItems(defaultDevelopmentAttributes.length);
+  const seeds = [...defaultDevelopmentAttributes, disciplineAttributeSeed];
+  const keys = keysForNewItems(seeds.length);
   await db
     .insert(developmentAttributes)
-    .values(defaultDevelopmentAttributes.map((a, i) => ({ userId, ...a, sortKey: keys[i]! })))
+    .values(seeds.map((a, i) => ({ userId, ...a, sortKey: keys[i]! })))
     .onConflictDoNothing();
+}
+
+/**
+ * The user's 自制力 attribute id, creating it if missing (idempotent: the unique (user, system
+ * key) index makes concurrent or repeated calls converge on one row).
+ */
+export async function ensureDisciplineAttribute(db: DbExecutor, userId: string): Promise<string> {
+  const find = () =>
+    db
+      .select({ id: developmentAttributes.id })
+      .from(developmentAttributes)
+      .where(
+        and(
+          eq(developmentAttributes.userId, userId),
+          eq(developmentAttributes.systemKey, disciplineAttributeSeed.systemKey),
+        ),
+      );
+  const [existing] = await find();
+  if (existing) return existing.id;
+  const [last] = await db
+    .select({ sortKey: developmentAttributes.sortKey })
+    .from(developmentAttributes)
+    .where(eq(developmentAttributes.userId, userId))
+    .orderBy(desc(developmentAttributes.sortKey))
+    .limit(1);
+  await db
+    .insert(developmentAttributes)
+    .values({ userId, ...disciplineAttributeSeed, sortKey: keyAfter(last?.sortKey ?? null) })
+    .onConflictDoNothing();
+  const [row] = await find();
+  return row!.id;
 }
 
 /** All of the user's attributes (archived included), in display order, with their XP. */
@@ -49,7 +84,7 @@ export async function listAttributes(
   db: DbExecutor,
   userId: string,
 ): Promise<DevelopmentAttribute[]> {
-  const [rows, totals] = await Promise.all([
+  const [rows, totals, discipline] = await Promise.all([
     db
       .select()
       .from(developmentAttributes)
@@ -63,9 +98,14 @@ export async function listAttributes(
       .from(xpAttributeCredits)
       .where(eq(xpAttributeCredits.userId, userId))
       .groupBy(xpAttributeCredits.attributeId),
+    db
+      .select({ points: sql<number>`coalesce(sum(${disciplineLedger.points}), 0)::int` })
+      .from(disciplineLedger)
+      .where(eq(disciplineLedger.userId, userId)),
   ]);
   const xpOf = new Map(totals.map((t) => [t.attributeId, t.xp]));
-  return rows.map((row) => toAttribute(row, xpOf.get(row.id) ?? 0));
+  const points = discipline[0]?.points ?? 0;
+  return rows.map((row) => toAttribute(row, xpOf.get(row.id) ?? 0, points));
 }
 
 async function getOwned(db: DbExecutor, userId: string, id: string): Promise<Row> {
@@ -101,12 +141,20 @@ export async function createAttribute(
   return toAttribute(row!, 0);
 }
 
+/** 自制力 is fixed: only its radar visibility (and position) may change (M10.5). */
+function assertNotLocked(row: Row, patch: Record<string, unknown> = {}) {
+  if (!isDisciplineAttribute(row)) return;
+  const changes = Object.keys(patch).filter((key) => key !== "onRadar");
+  if (changes.length > 0) throw new DomainError("invalid", "attribute.system_locked");
+}
+
 export async function updateAttribute(
   db: DbExecutor,
   userId: string,
   input: UpdateAttributeInput,
 ): Promise<void> {
   const row = await getOwned(db, userId, input.id);
+  assertNotLocked(row, input.patch);
   const { archived, ...patch } = input.patch;
   if (patch.name === null && !row.systemKey) {
     throw new DomainError("invalid", "attribute.name_required");
@@ -145,7 +193,8 @@ export async function moveAttribute(
 
 /** Deletes an attribute that never earned XP; one with history can only be archived. */
 export async function deleteAttribute(db: DbExecutor, userId: string, id: string): Promise<void> {
-  await getOwned(db, userId, id);
+  const row = await getOwned(db, userId, id);
+  if (isDisciplineAttribute(row)) throw new DomainError("invalid", "attribute.system_locked");
   const [used] = await db
     .select({ id: xpAttributeCredits.id })
     .from(xpAttributeCredits)
