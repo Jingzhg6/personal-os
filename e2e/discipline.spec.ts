@@ -3,6 +3,7 @@ import { Pool } from "pg";
 
 import { register, uniqueEmail } from "./helpers";
 import { mutate, query } from "./screenshots/support";
+import { disciplineWorkerText, workerMode } from "./worker-mode";
 
 /*
  * M10.5 自制力, as one story for one fresh user. Tasks are created and changed through the app's
@@ -70,7 +71,10 @@ test("1 — every user has a fixed 自制力 attribute in the growth system", as
   await expect(panel.getByTestId("discipline-score")).toHaveText("0 分");
   await expect(panel.getByTestId("discipline-rules")).toContainText("+15");
   await expect(panel.getByTestId("discipline-rules")).toContainText("-5");
-  await expect(panel.getByTestId("discipline-worker")).toContainText("后台 worker 未运行");
+  // The overdue check's state depends on the deployment (e2e/worker-mode.ts).
+  await expect(panel.getByTestId("discipline-worker")).toContainText(
+    disciplineWorkerText[workerMode],
+  );
   await expect(panel.getByTestId("discipline-history")).toContainText("还没有计分记录");
 });
 

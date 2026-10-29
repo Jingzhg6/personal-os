@@ -6,7 +6,18 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: Docker deployment preparation** (branch `docker-deployment`). One command starts the
+> **Status: Phase 1 final acceptance** (branch `phase1-final`). All Phase 1 stages are integrated
+> in order:
+>
+> - full tests on clean databases;
+> - E2E on the host and against the Docker containers, with and without the automation worker;
+> - migration history checked by hash;
+> - the Windows deployment guide reviewed.
+>
+> Not deployed to the internet. See [`docs/reports/phase1-final.md`](docs/reports/phase1-final.md),
+> including the production checklist.
+>
+> **Docker deployment preparation** (branch `docker-deployment`). One command starts the
 > whole system on your own computer: `cd deploy && cp .env.example .env` (fill in the values), then
 > `docker compose up -d --build`. The database starts first, then the migration, the app and the
 > automation worker. Health checks, data persistence and restart behaviour were verified in real
@@ -109,12 +120,19 @@ To close sign-up after creating your own account, set `AUTH_ALLOW_SIGNUP=false` 
 
 First time running E2E tests on a new machine: `pnpm exec playwright install chromium`.
 
+The tests expect **no automation worker** by default (the server Playwright starts has no
+`AUTOMATION_WORKER_SECRET`). When running them against a deployment whose worker runs (for
+example `deploy/compose.yaml` on port 3100, which Playwright then reuses), set
+`E2E_AUTOMATION_WORKER=running`. The worker-dependent tests then assert the running state
+instead (`e2e/worker-mode.ts`).
+
 ## Database checks
 
 ```bash
 pnpm db:migrate     # apply pending migrations (forward-only)
-pnpm db:integrity   # read-only: pending migrations, unvalidated constraints and 38 invariants;
-                    # exits 1 on any violation. Uses DATABASE_URL.
+pnpm db:integrity   # read-only: migration history (none pending, none unknown to this code),
+                    # unvalidated constraints and 38 invariants; exits 1 on any violation.
+                    # Uses DATABASE_URL.
 ```
 
 The invariants are mostly that every cross-table reference stays within one user, plus domain

@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { register, uniqueEmail } from "./helpers";
 import { mutate, query } from "./screenshots/support";
+import { schedulerText, workerMode } from "./worker-mode";
 
 /*
  * M10 automation, as one story for one fresh user (sign-up is rate-limited). Rules are built in
@@ -52,7 +53,8 @@ test("1 — a fresh user sees the automation empty state", async ({ page }) => {
   await expect(page).toHaveURL(/\/automation$/);
   await expect(page.getByTestId("automation-empty")).toContainText("还没有自动化规则");
   await expect(page.getByTestId("automation-empty")).toContainText("新建的规则默认是停用的");
-  await expect(page.getByTestId("health-scheduler")).toContainText("未配置后台 worker");
+  // The scheduler state depends on the deployment (e2e/worker-mode.ts).
+  await expect(page.getByTestId("health-scheduler")).toContainText(schedulerText[workerMode]);
 });
 
 test("2 — the guided builder saves a disabled rule", async ({ page }) => {
@@ -207,21 +209,8 @@ test("9 — a saved finance batch triggers a rule, without exposing balances", a
   await expect(page.getByTestId("automation-detail")).not.toContainText("4321");
 });
 
-test("10 — schedules state their runtime requirement; the manual path runs due ones", async ({
-  page,
-}) => {
-  test.setTimeout(150_000);
-  await page.goto("/automation/new");
-  await page.getByTestId("trigger-schedule").click();
-  await expect(page.getByTestId("schedule-runtime")).toContainText(
-    "当前没有检测到后台 worker，计划规则不会自动运行",
-  );
-  await expect(page.getByTestId("schedule-fields")).toContainText("夏令时");
-  // Without AUTOMATION_WORKER_SECRET the worker endpoint is off, and says so.
-  const tick = await page.request.post("/api/automation/tick");
-  expect(tick.status()).toBe(503);
-
-  // A one-time schedule a minute from now, in UTC.
+/** A one-time UTC schedule a minute from now, enabled. */
+async function oneTimeRuleSoon(page: Page) {
   const at = new Date(Date.now() + 60_000);
   const rule = await mutate<{ id: string }>(page, "automation.rules.create", {
     name: "一次性提醒",
@@ -237,6 +226,27 @@ test("10 — schedules state their runtime requirement; the manual path runs due
     actions: [{ type: "notify", title: "计划提醒：记录本月余额" }],
   });
   await mutate(page, "automation.rules.setEnabled", { id: rule.id, enabled: true });
+  return { rule, at };
+}
+
+// Test 10 has one version per deployment (e2e/worker-mode.ts); each runs where it applies.
+test("10 (no worker) — schedules state their runtime requirement; the manual path runs due ones", async ({
+  page,
+}) => {
+  test.skip(workerMode !== "off", "covered by 10 (worker running) in this deployment");
+  test.setTimeout(150_000);
+  await page.goto("/automation/new");
+  await page.getByTestId("trigger-schedule").click();
+  await expect(page.getByTestId("schedule-runtime")).toContainText(
+    "当前没有检测到后台 worker，计划规则不会自动运行",
+  );
+  await expect(page.getByTestId("schedule-fields")).toContainText("夏令时");
+  // Without AUTOMATION_WORKER_SECRET the worker endpoint is off, and says so.
+  const tick = await page.request.post("/api/automation/tick");
+  expect(tick.status()).toBe(503);
+
+  // A one-time schedule a minute from now, in UTC.
+  const { rule, at } = await oneTimeRuleSoon(page);
   await page.goto("/automation");
   await expect(page.getByTestId("health-scheduler")).toContainText("1 条计划规则等待下次运行");
   // Enabled, but honestly marked as not running on its own.
@@ -257,6 +267,46 @@ test("10 — schedules state their runtime requirement; the manual path runs due
   await expect(ruleRow(page, "一次性提醒")).toContainText("一次性计划已执行完毕");
   await expect(ruleRow(page, "一次性提醒").getByTestId("rule-awaiting-worker")).toHaveCount(0);
   await expect(page.getByTestId("health-scheduler")).toContainText("0 条计划规则等待下次运行");
+  await page.goto("/automation/notifications");
+  await expect(
+    page.getByTestId("notification").filter({ hasText: "计划提醒：记录本月余额" }),
+  ).toHaveCount(1);
+});
+
+test("10 (worker running) — the worker runs a due schedule by itself, exactly once", async ({
+  page,
+}) => {
+  test.skip(workerMode !== "running", "covered by 10 (no worker) in this deployment");
+  test.setTimeout(240_000);
+  await page.goto("/automation/new");
+  await page.getByTestId("trigger-schedule").click();
+  await expect(page.getByTestId("schedule-runtime")).toContainText("后台 worker 正在运行");
+  // The worker endpoint is on, and refuses a caller without the worker secret.
+  const tick = await page.request.post("/api/automation/tick");
+  expect(tick.status()).toBe(401);
+
+  const { rule } = await oneTimeRuleSoon(page);
+  await page.goto("/automation");
+  await expect(page.getByTestId("health-scheduler")).toContainText("计划调度运行中");
+  // Enabled, and not marked as waiting for a worker: one is running.
+  await expect(ruleRow(page, "一次性提醒")).toBeVisible();
+  await expect(ruleRow(page, "一次性提醒").getByTestId("rule-awaiting-worker")).toHaveCount(0);
+  // The worker ticks every minute: within ~2 minutes it has run the rule, without any click.
+  await expect
+    .poll(
+      async () => {
+        await page.reload();
+        return ruleRow(page, "一次性提醒").textContent();
+      },
+      { timeout: 180_000, intervals: [10_000] },
+    )
+    .toContain("一次性计划已执行完毕");
+  // A manual check afterwards finds nothing left: the worker ran it exactly once.
+  await page.getByTestId("health-run-due").click();
+  await expect(page.getByText("已执行 0 个计划")).toBeVisible();
+  await page.goto(`/automation/${rule.id}`);
+  await expect(page.getByTestId("execution-row")).toHaveCount(1);
+  await expect(page.getByTestId("execution-row").first()).toContainText("成功");
   await page.goto("/automation/notifications");
   await expect(
     page.getByTestId("notification").filter({ hasText: "计划提醒：记录本月余额" }),

@@ -582,7 +582,12 @@ Every module ships domain unit tests and DB integration tests for its repository
 - **M10 Automation engine** ✅: user-owned typed rules (5 event triggers + schedules), allowlisted conditions and actions through the owning services, transactional outbox, at-most-once effects, duplicate and loop protection, execution history with safe retries, in-app notifications, health view, worker endpoint for schedules; no AI, no external services.
 - **M11 AI advisor** ⏸ **on hold since 2026-10-28.** Built on the branches `m11-ai-advisor` and
   `m11-1-real-provider-verification` (ADR 0022 is there). It is kept but not part of this line, and
-  will be re-evaluated after deployment and real use.
+  will be re-evaluated after deployment and real use. **Before reviving it**, regenerate its
+  migration (`0016_ai_advisor` there) as the next free number **with a new timestamp**.
+  - Its journal `when` (1793192016916) is older than this line's `0016_task_recurrences`
+    (1793216616727), and drizzle's migrator applies only migrations newer than the last one
+    applied, so the old file would be skipped silently on every database of this line.
+  - `pnpm db:integrity` reports applied migrations that the code does not contain.
 - **Phase 1 integration** (branch `phase1-integration`, from M10.6):
   - M0–M10.6 verified as one linear history;
   - a fresh-database migration check;

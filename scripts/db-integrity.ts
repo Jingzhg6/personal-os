@@ -6,8 +6,10 @@
  *   pnpm db:integrity                     uses DATABASE_URL (.env.local / .env)
  *   DATABASE_URL=postgres://… pnpm db:integrity
  *
- * Exit code 1 if any check finds a violation, or if migrations are pending.
+ * Exit code 1 if any check finds a violation, if migrations are pending, or if the database has
+ * applied migrations that this code does not contain.
  */
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { config } from "dotenv";
@@ -143,20 +145,38 @@ async function main() {
   await client.connect();
   let failed = 0;
   try {
-    // Pending migrations: every migration in the journal must be applied.
+    // Migration history must equal this code's migrations, compared by hash as drizzle records
+    // them: none pending, and none applied that this code does not have (e.g. from another
+    // branch — the migrator would then skip a later-numbered but older-dated file silently).
     const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as {
       entries: { tag: string }[];
     };
-    const applied = await client.query<{ n: string }>(
-      "select count(*)::text as n from drizzle.__drizzle_migrations",
+    const files = new Map(
+      journal.entries.map((e) => [
+        createHash("sha256")
+          .update(readFileSync(`drizzle/${e.tag}.sql`, "utf8"))
+          .digest("hex"),
+        e.tag,
+      ]),
     );
-    const appliedCount = Number(applied.rows[0]!.n);
-    const expected = journal.entries.length;
-    const migrationsOk = appliedCount >= expected;
+    const applied = await client.query<{ hash: string; created_at: string }>(
+      "select hash, created_at::text from drizzle.__drizzle_migrations order by created_at",
+    );
+    const appliedHashes = new Set(applied.rows.map((r) => r.hash));
+    const pending = [...files].filter(([hash]) => !appliedHashes.has(hash)).map(([, tag]) => tag);
+    const unknown = applied.rows.filter((r) => !files.has(r.hash));
     console.log(
-      `${migrationsOk ? "ok  " : "FAIL"}  migrations applied: ${appliedCount} (journal: ${expected})`,
+      `${pending.length === 0 ? "ok  " : "FAIL"}  migrations applied: ${files.size - pending.length} of ${files.size}` +
+        (pending.length ? ` — pending: ${pending.join(", ")}` : ""),
     );
-    if (!migrationsOk) failed += 1;
+    if (pending.length) failed += 1;
+    console.log(
+      `${unknown.length === 0 ? "ok  " : "FAIL"}  applied migrations not in this code: ${unknown.length}` +
+        (unknown.length
+          ? ` — ${unknown.map((r) => `${r.hash.slice(0, 10)}… (created_at ${r.created_at})`).join(", ")}`
+          : ""),
+    );
+    if (unknown.length) failed += 1;
     const invalid = await client.query("select conname from pg_constraint where not convalidated");
     console.log(
       `${invalid.rowCount === 0 ? "ok  " : "FAIL"}  unvalidated constraints: ${invalid.rowCount}`,
@@ -173,7 +193,7 @@ async function main() {
     await client.query("rollback");
     const users = await client.query<{ n: string }>("select count(*)::text as n from users");
     console.log(
-      `\n${checks.length + 2} checks, ${failed} failed, over ${users.rows[0]!.n} user(s).`,
+      `\n${checks.length + 3} checks, ${failed} failed, over ${users.rows[0]!.n} user(s).`,
     );
   } finally {
     await client.end();
