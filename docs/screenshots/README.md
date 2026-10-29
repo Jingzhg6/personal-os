@@ -282,3 +282,17 @@ A demo user with a project and two tasks exports the data from 设置 › 通用
 | `03-export-failed.png` | `/settings`              | The server answering 500 (intercepted): 导出失败，请稍后再试。, nothing saved      |
 | `04-mobile-export.png` | `/settings` (phone)      | iPhone 13 after a real download: button and 上次导出, no horizontal overflow       |
 | `05-dark-export.png`   | `/settings` (dark theme) | Dark theme                                                                         |
+
+## Docker deployment (`docker-deployment/`)
+
+Captured from the **containers** (`deploy/compose.yaml` on port 3100 with the worker configured).
+Playwright reused that server, so every page was served by the app, database and worker containers.
+
+| File                        | Page               | Shows                                                                                       |
+| --------------------------- | ------------------ | ------------------------------------------------------------------------------------------- |
+| `01-dashboard.png`          | `/`                | The dashboard after registration in the container (Active XP +15 from a completed task)     |
+| `02-tasks-recurring.png`    | `/tasks`           | 晨间复盘's next occurrence (↻, 明天), created in the container when the first was completed |
+| `03-automation-worker.png`  | `/automation`      | 计划调度 运行中: worker heartbeat; the one-time rule 成功, 一次性计划已执行完毕             |
+| `04-rule-run-by-worker.png` | `/automation/[id]` | 执行记录: 成功, 按计划时间, 1 / 1 个动作完成, run by the worker container                   |
+| `05-settings-export.png`    | `/settings`        | JSON export downloaded from the container: 上次导出 … (32 条记录)                           |
+| `06-mobile-dashboard.png`   | `/` (phone)        | iPhone 13, no horizontal overflow                                                           |

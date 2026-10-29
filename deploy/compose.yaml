@@ -1,0 +1,84 @@
+# Personal OS on Docker Compose (ADR 0026, guide: docs/deployment.md).
+#
+#   cp .env.example .env      # then fill in the values
+#   docker compose up -d --build
+#
+# Start order: db (healthy) → migrate (runs once, must succeed) → app (healthy) → worker.
+# The app listens on 127.0.0.1 only; the database is not published at all. This is for a single
+# machine you control; putting it on the internet needs HTTPS in front of it (see the guide).
+
+# Its own project name: the development database (root docker-compose.yml, project
+# "personal-os") keeps its own containers and volume, and the two never share data.
+name: personal-os-deploy
+
+x-app-env: &app-env
+  DATABASE_URL: postgres://${POSTGRES_USER:-personal_os}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}@db:5432/${POSTGRES_DB:-personal_os}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-personal_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-personal_os}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Applies pending migrations (forward only) and exits. Runs on every `up`; a no-op when the
+  # schema is current. The app does not start if it fails.
+  migrate:
+    build: { context: .., target: tools }
+    image: personal-os-tools:local
+    restart: "no"
+    environment:
+      <<: *app-env
+    command: ["drizzle-kit", "migrate"]
+    depends_on:
+      db: { condition: service_healthy }
+
+  app:
+    build: { context: .., target: runner }
+    image: personal-os-app:local
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in deploy/.env}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      AUTH_ALLOW_SIGNUP: ${AUTH_ALLOW_SIGNUP:-true}
+      AUTOMATION_WORKER_SECRET: ${AUTOMATION_WORKER_SECRET:-}
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    stop_grace_period: 20s
+
+  # Runs scheduled automation rules and the 自制力 overdue check every minute (ADR 0020, 0021).
+  worker:
+    image: personal-os-app:local
+    restart: unless-stopped
+    environment:
+      APP_URL: http://app:3000
+      AUTOMATION_WORKER_SECRET: ${AUTOMATION_WORKER_SECRET:-}
+    command: ["sh", "/app/docker/worker.sh"]
+    # The image's health check probes the web server, which does not run in this container;
+    # the worker's own log shows each tick.
+    healthcheck: { disable: true }
+    depends_on:
+      app: { condition: service_healthy }
+
+volumes:
+  # All data lives here. `docker compose down` keeps it; only `down -v` deletes it.
+  pgdata:

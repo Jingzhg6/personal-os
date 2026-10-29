@@ -6,7 +6,15 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: JSON export** (branch `json-export`). 设置 › 通用 › 导出数据 downloads one JSON file
+> **Status: Docker deployment preparation** (branch `docker-deployment`). One command starts the
+> whole system on your own computer: `cd deploy && cp .env.example .env` (fill in the values), then
+> `docker compose up -d --build`. The database starts first, then the migration, the app and the
+> automation worker. Health checks, data persistence and restart behaviour were verified in real
+> containers. Chinese step-by-step guide: [`docs/deployment.md`](docs/deployment.md). See ADR 0026
+> and [`docs/reports/docker-deployment.md`](docs/reports/docker-deployment.md). Nothing is
+> deployed to the internet.
+>
+> **JSON export** (branch `json-export`). 设置 › 通用 › 导出数据 downloads one JSON file
 > with everything the user owns, for backup or a later move:
 >
 > - tasks with tags, dependencies and recurrences;
@@ -142,6 +150,32 @@ The worker runs due schedules, applies 自制力 overdue penalties (M10.5) (misf
 at most 6 h late, otherwise recorded as missed) and processes pending events, and writes a
 heartbeat; the health view reports the scheduler as running only with a heartbeat younger than
 5 minutes. Details and guarantees: [ADR 0020](docs/decisions/0020-automation-engine.md).
+
+## Running with Docker (deployment)
+
+Three ways to run Personal OS:
+
+- **Local development:** the root `docker-compose.yml` runs only the dev and test database
+  (`pnpm db:up`); the app runs with `pnpm dev`.
+- **Docker on one machine:** `deploy/compose.yaml` runs everything: database, migrations, app and
+  automation worker.
+- **Production on the internet:** not done. It needs a server, a domain, HTTPS and off-site
+  backups.
+
+```bash
+cd deploy
+cp .env.example .env          # replace every change-me value (openssl rand -hex 32)
+docker compose up -d --build  # db → migrate → app → worker
+docker compose ps             # app/db healthy, migrate Exited (0), worker Up
+open http://localhost:3000    # health: http://localhost:3000/api/health
+```
+
+- **Stopping and data:** `docker compose down` keeps the data (volume
+  `personal-os-deploy_pgdata`); **`down -v` deletes it**.
+- **Backups:** use 设置 › 导出数据 (JSON) and `pg_dump`. The commands are in the guide.
+- **Network exposure:** the app listens on `127.0.0.1` only, and the database is not published.
+
+Full guide (Chinese, for non-developers): [`docs/deployment.md`](docs/deployment.md).
 
 ## Project layout
 

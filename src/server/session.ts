@@ -8,7 +8,10 @@ import { getAuth } from "./auth";
 
 /** Current session, or null. Deduplicated per request. */
 export const getSession = cache(async () => {
-  return getAuth().api.getSession({ headers: await headers() });
+  // Headers first: it marks the page as per-request, so a build never needs the runtime
+  // environment (secrets, database URL) that getAuth() reads.
+  const requestHeaders = await headers();
+  return getAuth().api.getSession({ headers: requestHeaders });
 });
 
 export interface CurrentUser {

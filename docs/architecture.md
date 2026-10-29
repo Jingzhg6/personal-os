@@ -457,6 +457,24 @@ The file is a consistent read-only snapshot of every table the user owns, groupe
 Values are as stored: UTC instants, plain dates, decimal-string money, and `null` for unknown. A
 test keeps the exported and excluded lists equal to the schema.
 
+### 5.2.12 Deployment (Phase 1, ADR 0026)
+
+`Dockerfile` has two targets:
+
+- `runner`: the standalone Next.js server, running as a non-root user, with a `HEALTHCHECK` on
+  `/api/health`;
+- `tools`: the full workspace, for `drizzle-kit migrate` and `db:integrity`.
+
+`deploy/compose.yaml` (project `personal-os-deploy`) starts four services:
+
+- `db`: Postgres 16 with volume `pgdata`;
+- `migrate`: a one-off job that must exit 0;
+- `app`: published on `127.0.0.1` only;
+- `worker`: calls the automation tick every minute.
+
+The server validates its environment at startup (`src/instrumentation.ts`) and refuses example
+secrets. `next build` needs no runtime secrets.
+
 ### 5.3 Phase 1 (planned, after M9)
 
 ```
@@ -581,6 +599,16 @@ Every module ships domain unit tests and DB integration tests for its repository
   browser suggestion, local-time preview) and week start, applied to "today", the dashboard,
   the Gantt week scale and the weekday pickers; recurring series and schedule rules keep their
   own zone.
+- **Docker deployment preparation** ✅ (branch `docker-deployment`, ADR 0026):
+  - `Dockerfile` with two targets: `runner` (standalone server) and `tools` (migrations, checks);
+  - `deploy/compose.yaml`: db → migrate → app → worker, with health checks, a persistent volume
+    and restart policies;
+  - the app listens on localhost only;
+  - `/api/health`;
+  - a Chinese guide, `docs/deployment.md`.
+
+  Verified in real containers. No production deployment.
+
 - **JSON export** ✅ (branch `json-export`, ADR 0025): 导出数据 on 设置 › 通用. One JSON file
   (`version` 1) with every owned record, history and ledger, ids kept, values as stored, no
   credentials; built on request, never uploaded.
