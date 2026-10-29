@@ -22,6 +22,9 @@ RUN --mount=type=secret,id=build_ca,required=false \
 # --- Build -------------------------------------------------------------------------------------
 FROM deps AS build
 COPY . .
+# public/ holds no files yet, and Git does not keep empty folders, so a fresh clone or ZIP has
+# none; the runner stage copies it, so make sure it exists.
+RUN mkdir -p public
 # No secrets at build time: the environment is read when the server starts (src/shared/config).
 RUN NEXT_OUTPUT=standalone pnpm build
 

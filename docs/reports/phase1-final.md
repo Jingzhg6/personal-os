@@ -151,6 +151,23 @@ Every command is now marked ✅ (run here on Linux with real Docker, same Compos
 - [ ] AI Advisor stays off (frozen). Reviving it needs its own review, a new migration (§2) and
       a cost decision.
 
+## 8a. Fix after acceptance: Docker build from a fresh download
+
+- **Symptom:** the first Windows installation from the `phase1-final` ZIP failed at
+  `COPY --from=build /app/public ./public` with `"/app/public": not found`.
+- **Cause:**
+  - `public/` holds no files, and Git does not store empty folders, so a clone or ZIP has no
+    `public/`.
+  - All earlier image builds used the working copy, where the empty folder existed. That is why
+    they did not show the problem.
+- **Fix:** the `Dockerfile` build stage runs `mkdir -p public`.
+- **Verified:** I reproduced the failure from a clean copy of `a569811` (`git archive`, the same
+  content as the GitHub ZIP). With the fix, `docker compose up -d --build` from that clean copy
+  built and started in 135 s: migrate `Exited (0)`, app and db healthy, health ok, login 200,
+  worker ticking.
+- **Lesson for future checks:** build images from a clean export of the commit, not from a
+  working copy.
+
 ## 9. Known limitations
 
 - Single machine, single app instance. No HTTPS, reverse proxy or automatic backups in the
