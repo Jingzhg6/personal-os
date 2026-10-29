@@ -36,13 +36,23 @@ Docker 运行方式会启动四个部分，并自动按顺序启动：
    docker compose version
    ```
 
-3. 下载 Personal OS 的代码（例如从 GitHub 下载 ZIP 并解压），然后在终端进入代码目录里的 `deploy` 文件夹：
+3. 下载 Personal OS 的代码。
+
+   > ⚠️ **重要**：当前的 Phase 1 最终版本位于 **`phase1-final`** 分支。在它合并到 `main` 之前，**必须下载 `phase1-final` 分支的 ZIP**。不要在仓库首页直接点 Code → Download ZIP：那样下载的是默认分支 `main`，里面还没有部署所需的 `deploy` 文件夹。
+   - 下载链接：<https://github.com/Jingzhg6/personal-os/archive/refs/heads/phase1-final.zip>
+     （如果仓库是私有的，请先在浏览器里登录 GitHub。）
+   - 也可以在 GitHub 页面左上角把分支从 `main` 切换到 `phase1-final`，再点 Code → Download ZIP。
+   - 解压后的文件夹通常叫 `personal-os-phase1-final`。⚠️ Windows 的“全部解压缩”可能会多套一层同名文件夹，请进入里面那一层。
+   - **解压后请确认**：文件夹里有 `deploy` 文件夹，并且其中有 `compose.yaml` 文件，也就是存在 `deploy/compose.yaml`。如果没有，说明下载的不是 `phase1-final` 分支，请重新下载。
+
+   然后在终端进入 `deploy` 文件夹：
 
    ```bash
-   cd 你的路径/personal-os/deploy
+   cd 你的路径/personal-os-phase1-final/deploy
    ```
 
-   - ⚠️ Windows 示例：`cd C:\Users\你的用户名\Downloads\personal-os\deploy`。路径里有空格时要加引号，例如 `cd "C:\My Files\personal-os\deploy"`。
+   - ⚠️ Windows 示例：`cd "$HOME\Downloads\personal-os-phase1-final\deploy"`。路径里有空格时，整个路径要用引号括起来（如本例）。
+   - 进入后可以运行 `ls compose.yaml` 确认文件存在：能列出文件即正确，报错则说明不在正确的文件夹里。
    - 小技巧：在资源管理器里打开 `deploy` 文件夹，在地址栏输入 `powershell` 后按回车，会直接在这个文件夹里打开 PowerShell。
 
 ## 二、填写配置
