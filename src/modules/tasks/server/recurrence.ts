@@ -1,10 +1,8 @@
 import { and, asc, count, eq, max } from "drizzle-orm";
 
 import { milestones, projects } from "@/modules/projects/db";
-import { userSettings } from "@/modules/settings/db";
 import type { DbExecutor } from "@/shared/db/types";
 import type { EventBus } from "@/shared/events/bus";
-import { defaultTimeZone } from "@/shared/i18n/config";
 import { DomainError } from "@/shared/lib/errors";
 import { localDate, zonedInstant } from "@/shared/lib/zoned-time";
 
@@ -24,6 +22,7 @@ import {
 } from "../domain";
 import { getTask } from "./repository";
 import { cancelTask, createTask, type TaskDeps } from "./service";
+import { timeZoneOf } from "./time-zone";
 
 /*
  * Recurring tasks (ADR 0023). A series is a rule; its instances are ordinary tasks, so every view
@@ -36,14 +35,6 @@ import { cancelTask, createTask, type TaskDeps } from "./service";
  */
 
 type RecurrenceRow = typeof taskRecurrences.$inferSelect;
-
-async function timeZoneOf(db: DbExecutor, userId: string) {
-  const [row] = await db
-    .select({ timeZone: userSettings.timeZone })
-    .from(userSettings)
-    .where(eq(userSettings.userId, userId));
-  return row?.timeZone ?? defaultTimeZone;
-}
 
 /** Start of the due date (or the due time) in the series' zone, for `next_due_at`. */
 function dueInstant(task: { dueDate: string; dueTime: string | null }, timeZone: string) {

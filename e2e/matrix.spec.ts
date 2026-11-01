@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { confirmCompletion } from "./helpers";
+
 const unique = (label: string) => `${label}${Math.random().toString(36).slice(2, 7)}`;
 const zone = (page: Page, placement: string) => page.getByTestId(`matrix-zone-${placement}`);
 const card = (page: Page, title: string) =>
@@ -100,6 +102,7 @@ test("opens the shared detail panel and completes tasks from a card", async ({ p
   await card(page, title)
     .getByRole("checkbox", { name: `完成「${title}」` })
     .click();
+  await confirmCompletion(page);
   await expect(card(page, title)).toHaveCount(0); // the matrix shows open tasks only
 });
 

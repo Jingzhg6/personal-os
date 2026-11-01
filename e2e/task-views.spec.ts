@@ -33,6 +33,8 @@ async function dragUpByKeyboard(page: Page, handleName: string, title: string) {
 async function openTask(page: Page, title: string) {
   await row(page, title).locator("[data-row-main]").click();
   await expect(panel(page)).toBeVisible();
+  // The panel may still show the previous task: wait until it shows this one.
+  await expect(panel(page).getByRole("textbox", { name: "标题" })).toHaveValue(title);
 }
 
 test.describe("search, filters and sorting", () => {
@@ -75,7 +77,7 @@ test.describe("search, filters and sorting", () => {
     await page.getByLabel("搜索任务").fill(key);
     await expect(page.getByTestId("task-row")).toHaveCount(3);
 
-    await page.getByRole("button", { name: "优先级" }).click();
+    await page.getByRole("button", { name: "优先级", exact: true }).click();
     await page.getByRole("menuitemcheckbox", { name: "高", exact: true }).click();
     await page.getByRole("menuitemcheckbox", { name: "最高" }).click();
     await page.keyboard.press("Escape");
@@ -138,6 +140,9 @@ test("navigates the list with the keyboard", async ({ page }) => {
 
   await page.keyboard.press("j");
   await page.keyboard.press("x");
+  // x asks for the completion date with 确认完成 focused: Enter completes today.
+  await expect(page.getByRole("button", { name: "确认完成" })).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: /显示已完成/ })).toBeVisible();
 
   await page.keyboard.press("/");
@@ -228,6 +233,9 @@ test("groups open tasks with due dates in the deadlines view", async ({ page }) 
   await expect(panel(page).getByLabel("截止日期")).toHaveValue(todayUtc());
   await quickAdd(page, overdue);
   await openTask(page, overdue);
+  // New tasks start today; a past due date needs the start date cleared first.
+  await panel(page).getByLabel("开始日期").fill("");
+  await expect(panel(page).getByLabel("开始日期")).toHaveValue("");
   await panel(page).getByLabel("截止日期").fill("2026-01-05");
   await expect(panel(page).getByLabel("截止日期")).toHaveValue("2026-01-05");
 

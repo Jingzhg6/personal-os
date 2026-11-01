@@ -86,6 +86,8 @@ export interface NavSection {
   items: NavItem[];
 }
 
+// Order (2026-11): daily work and administration come first, then tasks, personal growth and
+// life, records, finance, and the system. Unbuilt modules stay visible with their phase.
 export const navigation: NavSection[] = [
   {
     id: "overview",
@@ -98,10 +100,73 @@ export const navigation: NavSection[] = [
         phase: 1,
         milestone: "M7",
       },
+      { id: "personalStats", href: "/analytics", icon: ChartColumn, module: "analytics", phase: 3 },
       {
-        id: "development",
-        href: "/development",
-        icon: Sprout,
+        id: "productivity",
+        href: "/analytics/productivity",
+        icon: Gauge,
+        module: "analytics",
+        phase: 3,
+      },
+    ],
+  },
+  {
+    id: "work",
+    items: [
+      { id: "work", href: "/work", icon: Briefcase, module: "tasks", phase: 1, milestone: "M2" },
+      {
+        id: "business",
+        href: "/work/business",
+        icon: TrendingUp,
+        module: "tasks",
+        phase: 1,
+        milestone: "M2",
+      },
+      {
+        id: "adminTasks",
+        href: "/admin",
+        icon: ClipboardList,
+        module: "tasks",
+        phase: 1,
+        milestone: "M2",
+      },
+      {
+        id: "deadlines",
+        href: "/admin/deadlines",
+        icon: AlarmClock,
+        module: "tasks",
+        phase: 1,
+        milestone: "M2",
+      },
+      {
+        id: "allProjects",
+        href: "/projects",
+        icon: FolderKanban,
+        module: "projects",
+        phase: 1,
+        milestone: "M4",
+      },
+      {
+        id: "kanban",
+        href: "/projects/kanban",
+        icon: Columns3,
+        module: "projects",
+        phase: 1,
+        milestone: "M4",
+      },
+      {
+        id: "gantt",
+        href: "/projects/gantt",
+        icon: ChartGantt,
+        module: "projects",
+        phase: 1,
+        milestone: "M5",
+      },
+      // Development goals (M8) live in 成长; this item opens them.
+      {
+        id: "goals",
+        href: "/projects/goals",
+        icon: Target,
         module: "development",
         phase: 1,
         milestone: "M8",
@@ -128,6 +193,13 @@ export const navigation: NavSection[] = [
         milestone: "M3",
       },
       {
+        id: "scheduled",
+        href: "/calendar/scheduled",
+        icon: CalendarClock,
+        module: "calendar",
+        phase: 2,
+      },
+      {
         id: "trash",
         href: "/tasks/trash",
         icon: Trash2,
@@ -138,40 +210,19 @@ export const navigation: NavSection[] = [
     ],
   },
   {
-    id: "projects",
-    items: [
-      {
-        id: "allProjects",
-        href: "/projects",
-        icon: FolderKanban,
-        module: "projects",
-        phase: 1,
-        milestone: "M4",
-      },
-      {
-        id: "kanban",
-        href: "/projects/kanban",
-        icon: Columns3,
-        module: "projects",
-        phase: 1,
-        milestone: "M4",
-      },
-      {
-        id: "gantt",
-        href: "/projects/gantt",
-        icon: ChartGantt,
-        module: "projects",
-        phase: 1,
-        milestone: "M5",
-      },
-      { id: "goals", href: "/projects/goals", icon: Target, module: "goals", phase: 2 },
-    ],
-  },
-  {
     id: "life",
     items: [
+      {
+        id: "development",
+        href: "/development",
+        icon: Sprout,
+        module: "development",
+        phase: 1,
+        milestone: "M8",
+      },
       { id: "learning", href: "/life/learning", icon: GraduationCap, module: "learning", phase: 2 },
       { id: "fitness", href: "/life/fitness", icon: Dumbbell, module: "fitness", phase: 3 },
+      { id: "skills", href: "/character/skills", icon: Sparkles, module: "skills", phase: 2 },
       {
         id: "personal",
         href: "/life/personal",
@@ -180,6 +231,58 @@ export const navigation: NavSection[] = [
         phase: 1,
         milestone: "M2",
       },
+      { id: "calendar", href: "/calendar", icon: CalendarDays, module: "calendar", phase: 2 },
+      {
+        id: "character",
+        href: "/character",
+        icon: Shield,
+        module: "character",
+        phase: 1,
+        milestone: "M6",
+      },
+      {
+        id: "xp",
+        href: "/character/xp",
+        icon: Zap,
+        module: "character",
+        phase: 1,
+        milestone: "M6",
+      },
+      {
+        id: "rewards",
+        href: "/rewards",
+        icon: Gift,
+        module: "rewards",
+        phase: 1,
+        milestone: "M6",
+      },
+      {
+        id: "progression",
+        href: "/character/progression",
+        icon: Milestone,
+        module: "character",
+        phase: 2,
+      },
+      {
+        id: "learningStats",
+        href: "/analytics/learning",
+        icon: ChartLine,
+        module: "analytics",
+        phase: 3,
+      },
+      {
+        id: "fitnessStats",
+        href: "/analytics/fitness",
+        icon: Activity,
+        module: "analytics",
+        phase: 3,
+      },
+    ],
+  },
+  {
+    id: "records",
+    items: [
+      { id: "documents", href: "/admin/documents", icon: FileText, module: "documents", phase: 2 },
     ],
   },
   {
@@ -204,7 +307,7 @@ export const navigation: NavSection[] = [
     ],
   },
   {
-    id: "automation",
+    id: "system",
     items: [
       {
         id: "automationRules",
@@ -222,136 +325,12 @@ export const navigation: NavSection[] = [
         phase: 1,
         milestone: "M10",
       },
-    ],
-  },
-  {
-    id: "work",
-    items: [
-      { id: "work", href: "/work", icon: Briefcase, module: "tasks", phase: 1, milestone: "M2" },
-      {
-        id: "business",
-        href: "/work/business",
-        icon: TrendingUp,
-        module: "tasks",
-        phase: 1,
-        milestone: "M2",
-      },
-    ],
-  },
-  {
-    id: "administration",
-    items: [
-      {
-        id: "adminTasks",
-        href: "/admin",
-        icon: ClipboardList,
-        module: "tasks",
-        phase: 1,
-        milestone: "M2",
-      },
-      { id: "documents", href: "/admin/documents", icon: FileText, module: "documents", phase: 2 },
-      {
-        id: "deadlines",
-        href: "/admin/deadlines",
-        icon: AlarmClock,
-        module: "tasks",
-        phase: 1,
-        milestone: "M2",
-      },
-    ],
-  },
-  {
-    id: "calendar",
-    items: [
-      { id: "calendar", href: "/calendar", icon: CalendarDays, module: "calendar", phase: 2 },
-      {
-        id: "scheduled",
-        href: "/calendar/scheduled",
-        icon: CalendarClock,
-        module: "calendar",
-        phase: 2,
-      },
-    ],
-  },
-  {
-    id: "character",
-    items: [
-      {
-        id: "character",
-        href: "/character",
-        icon: Shield,
-        module: "character",
-        phase: 1,
-        milestone: "M6",
-      },
-      { id: "skills", href: "/character/skills", icon: Sparkles, module: "skills", phase: 2 },
-      {
-        id: "xp",
-        href: "/character/xp",
-        icon: Zap,
-        module: "character",
-        phase: 1,
-        milestone: "M6",
-      },
-      {
-        id: "rewards",
-        href: "/rewards",
-        icon: Gift,
-        module: "rewards",
-        phase: 1,
-        milestone: "M6",
-      },
-      {
-        id: "progression",
-        href: "/character/progression",
-        icon: Milestone,
-        module: "character",
-        phase: 2,
-      },
-    ],
-  },
-  {
-    id: "analytics",
-    items: [
-      { id: "personalStats", href: "/analytics", icon: ChartColumn, module: "analytics", phase: 3 },
-      {
-        id: "productivity",
-        href: "/analytics/productivity",
-        icon: Gauge,
-        module: "analytics",
-        phase: 3,
-      },
-      {
-        id: "learningStats",
-        href: "/analytics/learning",
-        icon: ChartLine,
-        module: "analytics",
-        phase: 3,
-      },
-      {
-        id: "fitnessStats",
-        href: "/analytics/fitness",
-        icon: Activity,
-        module: "analytics",
-        phase: 3,
-      },
+      { id: "settings", href: "/settings", icon: Settings, module: "settings", phase: 1 },
     ],
   },
 ];
 
-/** Items outside the sections, pinned to the bottom of the sidebar. */
-export const settingsNavItem: NavItem = {
-  id: "settings",
-  href: "/settings",
-  icon: Settings,
-  module: "settings",
-  phase: 1,
-};
-
-export const allNavItems: NavItem[] = [
-  ...navigation.flatMap((section) => section.items),
-  settingsNavItem,
-];
+export const allNavItems: NavItem[] = navigation.flatMap((section) => section.items);
 
 export function findNavItem(pathname: string): NavItem | null {
   return allNavItems.find((item) => item.href === pathname) ?? null;

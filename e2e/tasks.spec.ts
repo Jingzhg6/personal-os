@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { confirmCompletion } from "./helpers";
+import { day } from "./screenshots/support";
+
 const unique = (label: string) => `${label} ${Math.random().toString(36).slice(2, 7)}`;
 
 async function quickAdd(page: Page, text: string) {
@@ -98,13 +101,15 @@ test("rejects a start date after the due date with a translated message", async 
   const title = unique("日期校验");
   await quickAdd(page, title);
   const panel = await openTask(page, title);
-  await panel.getByLabel("截止日期").fill("2026-10-27");
-  await expect(panel.getByLabel("截止日期")).toHaveValue("2026-10-27");
-  await panel.getByLabel("开始日期").fill("2026-12-31");
+  // New tasks start today (2026-11); the due date goes after it, the start date past it.
+  await expect(panel.getByLabel("开始日期")).toHaveValue(day(0));
+  await panel.getByLabel("截止日期").fill(day(5));
+  await expect(panel.getByLabel("截止日期")).toHaveValue(day(5));
+  await panel.getByLabel("开始日期").fill(day(30));
   await expect(
     page.getByRole("alert").filter({ hasText: "开始日期不能晚于截止日期。" }),
   ).toBeVisible();
-  await expect(panel.getByLabel("开始日期")).toHaveValue("");
+  await expect(panel.getByLabel("开始日期")).toHaveValue(day(0));
 });
 
 test("manages subtasks", async ({ page }) => {
@@ -120,6 +125,7 @@ test("manages subtasks", async ({ page }) => {
   }
 
   await panel.getByRole("checkbox", { name: "完成「打包书籍」" }).click();
+  await confirmCompletion(page);
   await expect(panel.getByRole("checkbox", { name: "重新打开「打包书籍」" })).toBeChecked();
   await expect(row(page, title)).toContainText("1/2");
 
@@ -140,6 +146,7 @@ test("completes and reopens a task from the list", async ({ page }) => {
   await row(page, title)
     .getByRole("checkbox", { name: `完成「${title}」` })
     .click();
+  await confirmCompletion(page);
   await expect(row(page, title)).toHaveCount(0); // moved to the collapsed "completed" group
 
   await page.getByRole("button", { name: /显示已完成/ }).click();

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
@@ -38,6 +38,13 @@ export function GoalsSection({
   onCreate: () => void;
 }) {
   const t = useTranslations("development.goals");
+  // The sidebar's 目标 opens /development#goals; the section renders after the data loads, too
+  // late for the browser's own jump to the anchor.
+  useEffect(() => {
+    if (window.location.hash === "#goals") {
+      document.getElementById("goals")?.scrollIntoView({ block: "start" });
+    }
+  }, []);
   const groups = [
     { key: "active" as const, goals: data.goals.filter((s) => s.goal.status === "active") },
     { key: "paused" as const, goals: data.goals.filter((s) => s.goal.status === "paused") },
@@ -49,6 +56,7 @@ export function GoalsSection({
       icon={<Target className="size-4" aria-hidden />}
       title={t("title")}
       testId="goals"
+      id="goals"
       action={
         data.goals.length > 0 ? (
           <Button variant="ghost" size="sm" onClick={onCreate}>

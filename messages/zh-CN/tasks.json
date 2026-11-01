@@ -77,7 +77,13 @@
     "reopen": "重新打开「{title}」",
     "subtasks": "子任务 {done}/{total}",
     "priority": "优先级：{priority}",
-    "due": "截止：{date}"
+    "due": "截止：{date}",
+    "expandSubtasks": "展开「{title}」的子任务",
+    "collapseSubtasks": "收起「{title}」的子任务",
+    "expand": "展开子任务",
+    "collapse": "收起子任务",
+    "loadingSubtasks": "正在加载子任务…",
+    "subtaskList": "子任务"
   },
   "detail": {
     "label": "任务详情",
@@ -456,5 +462,26 @@
     "countN": "共 {count} 次",
     "save": "保存",
     "cancel": "取消"
+  },
+  "completeDialog": {
+    "title": "确认完成",
+    "description": "「{title}」是在哪一天完成的？",
+    "date": "完成日期",
+    "today": "今天",
+    "yesterday": "昨天",
+    "hintToday": "按现在的时间记录完成。",
+    "hintPast": "补录：记为这一天完成（当天中午）。",
+    "invalid": "请选择今天或更早的日期。",
+    "subtasks": "同时完成 {count} 个未完成的子任务（同一日期）",
+    "confirm": "确认完成"
+  },
+  "quickEdit": {
+    "label": "「{title}」的属性",
+    "field": "「{title}」的{field}",
+    "noPriority": "无优先级",
+    "noArea": "无领域",
+    "noProject": "无项目",
+    "value": "「{title}」的{field}：{value}",
+    "noDate": "未设置"
   }
 }

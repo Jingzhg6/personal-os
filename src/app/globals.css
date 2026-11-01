@@ -183,3 +183,9 @@
     @apply pointer-events-none float-left h-0 text-muted-foreground;
   }
 }
+
+/* Quick-edit date fields (task lists): hide the browser's empty date mask until focused; the
+   field shows 「未设置」 instead. */
+.quick-date[data-empty="true"]:not(:focus)::-webkit-datetime-edit {
+  color: transparent;
+}

@@ -120,11 +120,37 @@ describe("TaskRow", () => {
     expect(screen.getByTitle("截止：今天 19:30")).toBeInTheDocument();
   });
 
-  it("completes an open task and reopens a completed one", async () => {
+  it("asks for the completion date (today by default) before completing", async () => {
     const user = userEvent.setup();
     const { complete } = renderRow();
     await user.click(screen.getByRole("checkbox", { name: "完成「完成法语听力练习」" }));
-    expect(complete).toHaveBeenCalledWith({ id: "t1" });
+    expect(complete).not.toHaveBeenCalled();
+    const dialog = screen.getByTestId("complete-dialog");
+    expect(screen.getByTestId("complete-date")).toHaveValue("2026-10-25"); // today in Shanghai
+    expect(screen.getByTestId("complete-date")).toHaveAttribute("max", "2026-10-25");
+    // Two of three subtasks are open: completing them too is offered (and preselected).
+    expect(dialog).toHaveTextContent("同时完成 2 个未完成的子任务");
+    await user.click(screen.getByRole("button", { name: "确认完成" }));
+    expect(complete).toHaveBeenCalledWith({
+      id: "t1",
+      completedOn: "2026-10-25",
+      includeSubtasks: true,
+    });
+  });
+
+  it("records an earlier completion date, and cancelling completes nothing", async () => {
+    const user = userEvent.setup();
+    const { complete } = renderRow({ subtaskCount: 0, completedSubtaskCount: 0 });
+    await user.click(screen.getByRole("checkbox", { name: "完成「完成法语听力练习」" }));
+    await user.click(screen.getByRole("button", { name: "取消" }));
+    expect(complete).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("checkbox", { name: "完成「完成法语听力练习」" }));
+    await user.click(screen.getByRole("button", { name: "昨天" }));
+    expect(screen.getByTestId("complete-date")).toHaveValue("2026-10-24");
+    expect(screen.getByTestId("complete-dialog")).toHaveTextContent("补录");
+    await user.click(screen.getByRole("button", { name: "确认完成" }));
+    expect(complete).toHaveBeenCalledWith({ id: "t1", completedOn: "2026-10-24" });
   });
 
   it("strikes through completed tasks and offers reopen", async () => {

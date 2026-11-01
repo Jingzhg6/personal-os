@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { register, uniqueEmail } from "./helpers";
+import { confirmCompletion, register, uniqueEmail } from "./helpers";
 import { mutate, query } from "./screenshots/support";
 
 /*
@@ -95,6 +95,7 @@ test("completing plan tasks updates the goal's statistics", async ({ page }) => 
   const daily = plan(page, "建立每日法语输入习惯");
   for (const title of ["学习法语 30 分钟", "精听一期法语播客"]) {
     await daily.getByTestId("goal-task").filter({ hasText: title }).getByRole("checkbox").click();
+    await confirmCompletion(page);
   }
   // 10 XP (priority 0, 法语 from the goal) + 20 XP (priority 2), each 100 % to the only goal.
   await expect(page.getByTestId("goal-attributed-xp")).toHaveText("30");

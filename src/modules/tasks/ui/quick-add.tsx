@@ -25,6 +25,8 @@ export interface QuickAddDefaults {
   projectId?: string | null;
   /** Inside a Kanban column. */
   statusId?: string;
+  /** The task list views start new tasks today. */
+  startDate?: string;
 }
 
 /**
@@ -76,10 +78,12 @@ export function QuickAdd({
       const task = await actions.create.mutateAsync({
         title: parsed.title,
         priority: parsed.priority ?? undefined,
-        areaId: parsed.areaId ?? defaults.areaId ?? null,
+        // Unset (not null) when no area was given, so a project's area can apply.
+        areaId: parsed.areaId ?? defaults.areaId ?? undefined,
         isUrgent: defaults.isUrgent ?? undefined,
         isImportant: defaults.isImportant ?? undefined,
         projectId: defaults.projectId ?? undefined,
+        startDate: defaults.startDate ?? undefined,
         statusId: defaults.statusId,
         tagIds: [...parsed.tagIds, ...created],
       });

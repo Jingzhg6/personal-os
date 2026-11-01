@@ -6,7 +6,19 @@ character, built on one shared data model — **capture once, use everywhere**.
 The UI is in Simplified Chinese (简体中文) only; every string still goes through the
 translation catalogue (`messages/zh-CN`).
 
-> **Status: Phase 1 final acceptance** (branch `phase1-final`). All Phase 1 stages are integrated
+> **Status: Navigation and task handling** (branch `phase1-nav-tasks`).
+>
+> - The sidebar is reordered into seven collapsible sections, with work and administration first.
+> - A project's area becomes the default area of its tasks.
+> - Unassigned tasks can be dragged into projects.
+> - 全部任务 edits fields in place and expands subtasks.
+> - Completing a task confirms its date (earlier days allowed).
+>
+> There is no database change. Chinese guide: [`docs/user-guide.md`](docs/user-guide.md). Report,
+> including the module inventory and the 文件 analysis:
+> [`docs/reports/nav-task-ux.md`](docs/reports/nav-task-ux.md).
+>
+> **Phase 1 final acceptance** (branch `phase1-final`). All Phase 1 stages are integrated
 > in order:
 >
 > - full tests on clean databases;

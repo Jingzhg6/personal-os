@@ -1,13 +1,25 @@
 "use client";
 
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import { CalendarClock, Flag, FolderKanban, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { AreaBadge, useAreas } from "@/modules/areas/ui";
-import { useToday } from "@/modules/tasks/ui";
+import type { Task } from "@/modules/tasks/domain";
+import { useTaskActions, useTaskList, useToday } from "@/modules/tasks/ui";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { colorClasses } from "@/shared/ui/color";
@@ -17,7 +29,10 @@ import { useToast } from "@/shared/ui/toast";
 import { openProjectStatuses, type Project, type ProjectStatus } from "../domain";
 import { ProjectProgress, ProjectStatusBadge, useDateOnly } from "./project-bits";
 import { ProjectFormDialog } from "./project-form-dialog";
+import { ProjectDropZone, projectDropId, UnassignedTasks } from "./unassigned-tasks";
 import { useProjectActions, useProjects } from "./use-projects";
+
+const OPEN_TASKS = ["backlog", "unstarted", "started"] as const;
 
 const tabs = {
   open: [...openProjectStatuses],
@@ -38,6 +53,59 @@ export function ProjectsListView({ title }: { title: string }) {
   const { data: allProjects = [] } = useProjects();
   const actions = useProjectActions();
   const [creating, setCreating] = useState(false);
+  const today = useToday();
+  const taskActions = useTaskActions();
+  const { data: unassignedData = [] } = useTaskList({
+    today,
+    sort: "manual",
+    includeSubtasks: false,
+    filter: { noProject: true, categories: [...OPEN_TASKS] },
+  });
+  // Hide a moved task at once (the list refreshes after the update).
+  const unassigned = unassignedData.filter((task) => !task.projectId);
+  const openProjects = allProjects.filter((p) =>
+    (openProjectStatuses as readonly string[]).includes(p.status),
+  );
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  function moveToProject(task: Task, projectId: string) {
+    const project = allProjects.find((p) => p.id === projectId);
+    if (!project) return;
+    taskActions.update.mutate(
+      { id: task.id, patch: { projectId } },
+      {
+        onSuccess: () =>
+          toast.show(t("unassigned.moved", { title: task.title, project: project.name })),
+      },
+    );
+  }
+
+  const dndId = useId();
+  const [dragging, setDragging] = useState<Task | null>(null);
+  const titleOf = (id: unknown) => unassigned.find((x) => x.id === id)?.title ?? "";
+  const projectOf = (id: unknown) => allProjects.find((p) => projectDropId(p.id) === id);
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => t("unassigned.dragStart", { title: titleOf(active.id) }),
+    onDragOver: ({ active, over }) =>
+      over && projectOf(over.id)
+        ? t("unassigned.dragOver", { title: titleOf(active.id), project: projectOf(over.id)!.name })
+        : undefined,
+    onDragEnd: ({ active, over }) =>
+      over && projectOf(over.id)
+        ? t("unassigned.moved", { title: titleOf(active.id), project: projectOf(over.id)!.name })
+        : t("unassigned.dragCancel", { title: titleOf(active.id) }),
+    onDragCancel: ({ active }) => t("unassigned.dragCancel", { title: titleOf(active.id) }),
+  };
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    setDragging(null);
+    const task = unassigned.find((x) => x.id === active.id);
+    const project = over ? projectOf(over.id) : undefined;
+    if (task && project) moveToProject(task, project.id);
+  }
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -87,11 +155,36 @@ export function ProjectsListView({ title }: { title: string }) {
         </div>
       ) : null}
 
-      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label={title}>
-        {projects.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
-      </ul>
+      <DndContext
+        id={dndId}
+        sensors={sensors}
+        // Drop on the card under the pointer.
+        collisionDetection={pointerWithin}
+        onDragStart={({ active }) =>
+          setDragging(unassigned.find((x) => x.id === active.id) ?? null)
+        }
+        onDragEnd={onDragEnd}
+        onDragCancel={() => setDragging(null)}
+        accessibility={{
+          announcements,
+          screenReaderInstructions: { draggable: t("unassigned.instructions") },
+        }}
+      >
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label={title}>
+          {projects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
+        </ul>
+
+        <UnassignedTasks tasks={unassigned} projects={openProjects} onMove={moveToProject} />
+        <DragOverlay dropAnimation={null}>
+          {dragging ? (
+            <div className="w-72 rounded-md border border-primary/40 bg-surface-raised px-3 py-2 text-sm shadow-md">
+              {dragging.title}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {creating ? (
         <ProjectFormDialog
@@ -124,44 +217,51 @@ function ProjectCard({ project }: { project: Project }) {
 
   return (
     <li data-testid="project-card">
-      <Link
-        href={`/projects/${project.id}`}
-        className="group flex h-full flex-col gap-3 overflow-hidden rounded-lg border border-border bg-surface p-4 shadow-xs transition-colors hover:border-input"
-      >
-        <div className="flex items-start gap-2.5">
-          <span
-            aria-hidden
-            className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", colorClasses[project.color].dot)}
-          />
-          <h2 className="min-w-0 flex-1 leading-snug font-medium group-hover:underline">
-            {project.name}
-          </h2>
-          <ProjectStatusBadge status={project.status} />
-        </div>
-        {area ? <AreaBadge area={area} className="w-fit" /> : null}
-        <ProjectProgress progress={project.progress} className="mt-auto" />
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {project.targetDate ? (
-            <span className={cn("inline-flex items-center gap-1", targetPassed && "text-danger")}>
-              <CalendarClock className="size-3.5" aria-hidden />
-              {targetPassed
-                ? t("targetPassed", { date: dateOnly(project.targetDate) })
-                : t("target", { date: dateOnly(project.targetDate) })}
-            </span>
-          ) : null}
-          {project.progress.overdue > 0 ? (
-            <span className="text-danger">{t("overdue", { count: project.progress.overdue })}</span>
-          ) : null}
-          {project.nextMilestone ? (
-            <span className="inline-flex min-w-0 items-center gap-1">
-              <Flag className="size-3.5 shrink-0" aria-hidden />
-              <span className="truncate">
-                {t("nextMilestone", { name: project.nextMilestone.name })}
+      <ProjectDropZone projectId={project.id}>
+        <Link
+          href={`/projects/${project.id}`}
+          className="group flex h-full flex-col gap-3 overflow-hidden rounded-lg border border-border bg-surface p-4 shadow-xs transition-colors hover:border-input"
+        >
+          <div className="flex items-start gap-2.5">
+            <span
+              aria-hidden
+              className={cn(
+                "mt-1.5 size-2.5 shrink-0 rounded-full",
+                colorClasses[project.color].dot,
+              )}
+            />
+            <h2 className="min-w-0 flex-1 leading-snug font-medium group-hover:underline">
+              {project.name}
+            </h2>
+            <ProjectStatusBadge status={project.status} />
+          </div>
+          {area ? <AreaBadge area={area} className="w-fit" /> : null}
+          <ProjectProgress progress={project.progress} className="mt-auto" />
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {project.targetDate ? (
+              <span className={cn("inline-flex items-center gap-1", targetPassed && "text-danger")}>
+                <CalendarClock className="size-3.5" aria-hidden />
+                {targetPassed
+                  ? t("targetPassed", { date: dateOnly(project.targetDate) })
+                  : t("target", { date: dateOnly(project.targetDate) })}
               </span>
-            </span>
-          ) : null}
-        </div>
-      </Link>
+            ) : null}
+            {project.progress.overdue > 0 ? (
+              <span className="text-danger">
+                {t("overdue", { count: project.progress.overdue })}
+              </span>
+            ) : null}
+            {project.nextMilestone ? (
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <Flag className="size-3.5 shrink-0" aria-hidden />
+                <span className="truncate">
+                  {t("nextMilestone", { name: project.nextMilestone.name })}
+                </span>
+              </span>
+            ) : null}
+          </div>
+        </Link>
+      </ProjectDropZone>
     </li>
   );
 }

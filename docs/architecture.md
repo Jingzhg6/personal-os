@@ -475,6 +475,20 @@ test keeps the exported and excluded lists equal to the schema.
 The server validates its environment at startup (`src/instrumentation.ts`) and refuses example
 secrets. `next build` needs no runtime secrets.
 
+### 5.2.13 Navigation and task handling (2026-11, ADR 0027)
+
+No schema change. The sidebar has seven collapsible sections (概览, 工作与事务, 任务, 个人成长与生活,
+资料与记录, 财务, 系统与自动化). 目标 opens the M8 goals.
+
+- **Project areas as defaults** (task service): new tasks in a project take its area; moving
+  a task into a project fills only an empty area.
+- **未分配项目的任务:** shown on the project list and moved by drag or menu, as a plain
+  `projectId` update.
+- **List views:** edit status, priority, area, project and dates in place, and expand subtasks.
+- **Completion:** confirms its date (`tasks.complete({ completedOn, statusId?,
+includeSubtasks? })`: today means now, earlier days noon local time, the future refused, an
+  existing completion never overwritten).
+
 ### 5.3 Phase 1 (planned, after M9)
 
 ```
@@ -604,6 +618,10 @@ Every module ships domain unit tests and DB integration tests for its repository
   browser suggestion, local-time preview) and week start, applied to "today", the dashboard,
   the Gantt week scale and the weekday pickers; recurring series and schedule rules keep their
   own zone.
+- **Navigation and task handling** ✅ (branch `phase1-nav-tasks`, ADR 0027): new sidebar order with
+  collapsible sections; project areas as task defaults; unassigned tasks dragged into projects;
+  in-place editing and expandable subtasks in the list views; completion with a confirmed date.
+  Module inventory and the 文件 analysis: `docs/reports/nav-task-ux.md`.
 - **Docker deployment preparation** ✅ (branch `docker-deployment`, ADR 0026):
   - `Dockerfile` with two targets: `runner` (standalone server) and `tools` (migrations, checks);
   - `deploy/compose.yaml`: db → migrate → app → worker, with health checks, a persistent volume

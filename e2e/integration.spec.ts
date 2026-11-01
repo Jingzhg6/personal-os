@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { register, uniqueEmail } from "./helpers";
+import { confirmCompletion, register, uniqueEmail } from "./helpers";
 import { day, mutate, query } from "./screenshots/support";
 
 /*
@@ -104,6 +104,7 @@ test("2 — completing it updates projects, goals, XP, the dashboard and automat
     .getByRole("checkbox", { name: `完成「${TITLE}」` })
     .first()
     .click();
+  await confirmCompletion(page);
   await expect(page.getByRole("checkbox", { name: `完成「${TITLE}」` })).toHaveCount(0);
 
   // The checkbox updates optimistically; wait for the server-side effects.

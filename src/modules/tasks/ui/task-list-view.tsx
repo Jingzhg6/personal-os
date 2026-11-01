@@ -37,7 +37,7 @@ import { ViewScopeBar, ViewScopeEditor } from "./view-scope";
 /**
  * Which slice of the one tasks table this screen shows:
  *  - all:       every top-level task
- *  - scoped:    tasks in the areas assigned to a navigation view (工作, 业务, 行政任务, 个人生活)
+ *  - scoped:    tasks in the areas assigned to a navigation view (工作, 业务, 行政事务, 个人生活)
  *  - deadlines: open tasks and subtasks with a due date, grouped by when they are due
  *  - project:   the top-level tasks of one project (embedded in the project page)
  */
@@ -142,6 +142,7 @@ export function TaskListView({
       sortable={sortable}
       showParent={flat}
       showProject={variant.kind !== "project"}
+      quickEdit
     />
   );
 
@@ -276,8 +277,11 @@ export function TaskListView({
         {variant.kind !== "deadlines" && !scopeEmpty ? (
           <QuickAdd
             defaults={{
-              areaId: scope?.areaIds[0] ?? null,
+              // Unset rather than null, so a project's area can apply on the server.
+              areaId: scope?.areaIds[0] ?? undefined,
               projectId: variant.kind === "project" ? variant.projectId : null,
+              // New tasks start today unless a start date is given (never applied to edits).
+              startDate: today,
             }}
           />
         ) : null}

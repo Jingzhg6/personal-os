@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { register, uniqueEmail } from "./helpers";
+import { confirmCompletion, register, uniqueEmail } from "./helpers";
 import { day, mutate, query } from "./screenshots/support";
 
 /*
@@ -78,6 +78,7 @@ test("2 — completing it creates the next instance, visible in every view", asy
     .getByRole("checkbox", { name: `完成「${TITLE}」` })
     .first()
     .click();
+  await confirmCompletion(page);
   await expect
     .poll(async () => (await openInstances(page)).map((t) => t.dueDate))
     .toEqual([day(1)]);

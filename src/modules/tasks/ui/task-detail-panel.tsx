@@ -27,6 +27,7 @@ import {
   type UpdateTaskInput,
 } from "../domain";
 import { useDurationLabel, useStatusLabel, useToday } from "./labels";
+import { CompleteDialog, useStatusChange } from "./complete-dialog";
 import { ContributionsField } from "./contributions-field";
 import { DependenciesField } from "./dependencies-field";
 import { GoalsField } from "./goals-field";
@@ -114,6 +115,8 @@ function TaskDetailContent({
   const [estimate, setEstimate] = useState(task.estimatedMinutes?.toString() ?? "");
   const [subtaskTitle, setSubtaskTitle] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingCompletion, setConfirmingCompletion] = useState(false);
+  const statusChange = useStatusChange(actions, statuses);
   const [descriptionState, setDescriptionState] = useState<"idle" | "saving" | "saved">("idle");
 
   const closed = isClosedCategory(task.statusCategory);
@@ -176,7 +179,9 @@ function TaskDetailContent({
           <Button
             variant={closed ? "secondary" : "primary"}
             size="sm"
-            onClick={() => (closed ? actions.reopen : actions.complete).mutate({ id: task.id })}
+            onClick={() =>
+              closed ? actions.reopen.mutate({ id: task.id }) : setConfirmingCompletion(true)
+            }
           >
             {closed ? t("detail.reopen") : t("detail.complete")}
           </Button>
@@ -246,9 +251,7 @@ function TaskDetailContent({
               <Select
                 aria-label={t("fields.status")}
                 value={task.statusId}
-                onChange={(event) =>
-                  actions.setStatus.mutate({ id: task.id, statusId: event.target.value })
-                }
+                onChange={(event) => statusChange.change(task, event.target.value)}
               >
                 {statusCategories.map((category) => (
                   <optgroup key={category} label={t(`statusCategory.${category}`)}>
@@ -520,6 +523,14 @@ function TaskDetailContent({
         </div>
       </div>
 
+      {confirmingCompletion ? (
+        <CompleteDialog
+          task={task}
+          actions={actions}
+          onClose={() => setConfirmingCompletion(false)}
+        />
+      ) : null}
+      {statusChange.dialog}
       <ConfirmDialog
         open={confirmingDelete}
         title={t("detail.deleteTitle")}

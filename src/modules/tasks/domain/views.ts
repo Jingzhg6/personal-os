@@ -5,7 +5,7 @@ import type { AreaSystemKey } from "@/modules/areas/domain";
 import { addDays, type IsoDate } from "./dates";
 
 /*
- * Task views behind navigation items (工作, 业务, 行政任务, 个人生活). Each view shows the
+ * Task views behind navigation items (工作, 业务, 行政事务, 个人生活). Each view shows the
  * tasks of the areas the user assigns to it. Navigation stays independent of area rows: a view
  * is a stored scope, defaulting to the matching seeded area.
  */

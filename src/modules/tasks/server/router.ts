@@ -15,6 +15,7 @@ import {
   taskListQuery,
   taskViewKeyInput,
   taskIdInput,
+  completeTaskInput,
   updateStatusInput,
   updateTagInput,
   updateTaskInput,
@@ -136,9 +137,10 @@ export const tasksRouter = router({
   setStatus: protectedProcedure
     .input(setTaskStatusInput)
     .mutation(({ ctx, input }) => setTaskStatus(ctx, ctx.userId, input)),
+  /** Completes on a confirmed date (today by default; earlier days allowed, never the future). */
   complete: protectedProcedure
-    .input(taskIdInput)
-    .mutation(({ ctx, input }) => completeTask(ctx, ctx.userId, input.id)),
+    .input(completeTaskInput)
+    .mutation(({ ctx, input: { id, ...options } }) => completeTask(ctx, ctx.userId, id, options)),
   /** M10.5: give the task up (a "failed" status; distinct from cancelling). */
   fail: protectedProcedure
     .input(taskIdInput)

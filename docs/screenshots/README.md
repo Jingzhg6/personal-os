@@ -296,3 +296,17 @@ Playwright reused that server, so every page was served by the app, database and
 | `04-rule-run-by-worker.png` | `/automation/[id]` | 执行记录: 成功, 按计划时间, 1 / 1 个动作完成, run by the worker container                   |
 | `05-settings-export.png`    | `/settings`        | JSON export downloaded from the container: 上次导出 … (32 条记录)                           |
 | `06-mobile-dashboard.png`   | `/` (phone)        | iPhone 13, no horizontal overflow                                                           |
+
+## Navigation and task handling (`nav-task-ux/`)
+
+A demo user with two projects, a task with three subtasks and loose tasks, made through the app's API.
+
+| File                         | Page                   | Shows                                                                                      |
+| ---------------------------- | ---------------------- | ------------------------------------------------------------------------------------------ |
+| `01-all-tasks.png`           | `/tasks`               | New sidebar order; each task's property strip; 准备搬家's three subtasks expanded under it |
+| `02-quick-edit-menu.png`     | `/tasks`               | A property menu (领域) open on one row; options exist only while open                      |
+| `03-complete-dialog.png`     | `/tasks`               | 确认完成: date set to 昨天 (补录 hint), 同时完成 3 个未完成的子任务, 取消 / 确认完成       |
+| `04-projects-unassigned.png` | `/projects`            | Project cards with their areas; 未分配项目的任务 with drag handles and 移到项目 menus      |
+| `05-sidebar-collapsed.png`   | `/projects` (reloaded) | 个人成长与生活 and 财务 collapsed and remembered after reload                              |
+| `06-mobile-tasks.png`        | `/tasks` (phone)       | iPhone 13: property menus on one line, dates below; no horizontal overflow                 |
+| `07-mobile-navigation.png`   | navigation drawer      | iPhone 13 drawer with the same collapsible sections                                        |

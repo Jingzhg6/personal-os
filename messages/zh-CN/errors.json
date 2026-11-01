@@ -7,7 +7,9 @@
     "order_conflict": "顺序已在别处被修改，列表已刷新，请再试一次。",
     "parent_cycle": "不能把任务移到它自己或它的子任务下面。",
     "not_in_trash": "这个任务不在回收站中。",
-    "subtask_project": "子任务属于上级任务的项目，不能单独设置项目。"
+    "subtask_project": "子任务属于上级任务的项目，不能单独设置项目。",
+    "completed_in_future": "完成日期不能晚于今天。",
+    "not_a_completion": "请选择一个“已完成”类别的状态。"
   },
   "status": {
     "not_found": "状态不存在。",

@@ -8,6 +8,7 @@ export { KanbanBoard } from "./kanban-board";
 export { GanttChart } from "./gantt-chart";
 export { useTaskPanel } from "./use-task-panel";
 export { usePriorityLabel, useStatusLabel, useToday } from "./labels";
+export { useTaskActions, useTaskList } from "./use-task-data";
 export { TaskPicker } from "./task-picker";
 export { TaskCompletionToggle } from "./status-toggle";
 export { StatusIcon } from "./status-icon";

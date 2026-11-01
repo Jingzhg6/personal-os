@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { confirmCompletion } from "./helpers";
+
 const unique = (label: string) => `${label}${Math.random().toString(36).slice(2, 7)}`;
 const panel = (page: Page) => page.getByRole("complementary", { name: "任务详情" });
 
@@ -38,6 +40,7 @@ test("a task in an area contributes to two development attributes without doubli
   await expect(panel(page).getByRole("combobox", { name: "领域" })).toHaveValue(/.+/);
 
   await panel(page).getByRole("button", { name: "完成" }).click();
+  await confirmCompletion(page);
   await expect(panel(page).getByRole("button", { name: "重新打开" })).toBeVisible();
 
   await nav.getByRole("link", { name: "角色", exact: true }).click();

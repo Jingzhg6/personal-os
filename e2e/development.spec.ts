@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { register, uniqueEmail } from "./helpers";
+import { confirmCompletion, register, uniqueEmail } from "./helpers";
 import { mutate, query } from "./screenshots/support";
 
 /*
@@ -125,6 +125,7 @@ test("links an existing task and creates a new one from the goal", async ({ page
     .filter({ hasText: "法语口语练习 30 分钟" })
     .getByRole("checkbox")
     .click();
+  await confirmCompletion(page);
   await expect(page.getByTestId("goal-actions").first()).toHaveText("已完成 1 / 2 项行动");
   await expect(page.getByTestId("recent-completed")).toHaveText("1"); // M9 evidence card
 

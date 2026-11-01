@@ -24,6 +24,7 @@ import { PageHeader } from "@/shared/ui/page-header";
 import { isClosedCategory, type Task, type TaskListQuery, type TaskStatus } from "../domain";
 import { FilterBar } from "./filter-bar";
 import { useStatusLabel, useToday } from "./labels";
+import { useStatusChange } from "./complete-dialog";
 import { useMilestoneLookup } from "./project-chip";
 import { QuickAdd } from "./quick-add";
 import { StatusIcon } from "./status-icon";
@@ -107,8 +108,9 @@ export function KanbanBoard({
     return status ? statusLabel(status) : "";
   };
   const titleOf = (id: unknown) => tasks.find((task) => task.id === id)?.title ?? "";
-  const setStatus = (task: Task, statusId: string) =>
-    actions.setStatus.mutate({ id: task.id, statusId });
+  // Moving a card into a "completed" column asks for the completion date first.
+  const statusChange = useStatusChange(actions, statuses);
+  const setStatus = (task: Task, statusId: string) => statusChange.change(task, statusId);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -135,6 +137,7 @@ export function KanbanBoard({
 
   return (
     <div className={cn("transition-[padding]", openTaskId && !embedded && "lg:pr-[480px]")}>
+      {statusChange.dialog}
       <div className="flex flex-col gap-5">
         {embedded || !title ? null : <PageHeader title={title} description={t("description")} />}
 

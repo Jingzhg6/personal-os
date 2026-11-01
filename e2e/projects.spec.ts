@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { confirmCompletion } from "./helpers";
+
 const unique = (label: string) => `${label}${Math.random().toString(36).slice(2, 7)}`;
 const panel = (page: Page) => page.getByRole("complementary", { name: "任务详情" });
 const row = (page: Page, title: string) => page.getByTestId("task-row").filter({ hasText: title });
@@ -36,6 +38,7 @@ test("creates a project, adds tasks to it and computes progress", async ({ page 
   await expect(page.getByText("0/2 个任务")).toBeVisible();
 
   await row(page, "报名").getByRole("checkbox", { name: "完成「报名」" }).click();
+  await confirmCompletion(page);
   await expect(page.getByText("1/2 个任务")).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "1/2 个任务" })).toHaveAttribute(
     "aria-valuenow",
@@ -76,6 +79,8 @@ test("moves tasks between statuses on the board", async ({ page }) => {
   await page.mouse.move(from.x + from.width / 2 + 15, from.y + from.height / 2 + 15, { steps: 5 });
   await page.mouse.move(to.x + to.width / 2, to.y + 80, { steps: 20 });
   await page.mouse.up();
+  // Moving into a completed column asks for the completion date.
+  await confirmCompletion(page);
   await expect(column(page, "已完成").getByText("排版")).toBeVisible();
   await expect(page.getByText("1/2 个任务")).toBeVisible();
 

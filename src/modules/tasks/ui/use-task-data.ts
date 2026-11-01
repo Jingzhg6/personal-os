@@ -187,7 +187,11 @@ export function useTaskActions() {
     complete: useMutation(
       trpc.tasks.complete.mutationOptions({
         ...rollbackOnError,
-        onMutate: ({ id }) => forTask(id, withCategory("completed")),
+        onMutate: ({ id, statusId }) =>
+          forTask(id, (task) => ({
+            ...withCategory("completed")(task),
+            ...(statusId ? { statusId } : {}),
+          })),
       }),
     ),
     fail: useMutation(

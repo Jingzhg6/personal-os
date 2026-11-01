@@ -48,6 +48,7 @@ export function SectionCard({
   children,
   className,
   testId,
+  id,
 }: {
   icon: ReactNode;
   title: string;
@@ -55,9 +56,11 @@ export function SectionCard({
   children: ReactNode;
   className?: string;
   testId?: string;
+  /** Anchor for links to this section (e.g. /development#goals). */
+  id?: string;
 }) {
   return (
-    <Card className={cn("flex flex-col", className)} data-testid={testId}>
+    <Card id={id} className={cn("flex scroll-mt-20 flex-col", className)} data-testid={testId}>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle className="flex items-center gap-2">
           <span className="text-primary">{icon}</span>

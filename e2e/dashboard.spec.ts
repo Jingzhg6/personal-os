@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { register, uniqueEmail } from "./helpers";
+import { confirmCompletion, register, uniqueEmail } from "./helpers";
 import { mutate, query } from "./screenshots/support";
 
 /*
@@ -109,6 +109,7 @@ test("B — an ordinary task shows Active XP and activity, but no Growth or Leve
     .filter({ hasText: "回复银行邮件" })
     .getByRole("checkbox", { name: "完成「回复银行邮件」" })
     .click();
+  await confirmCompletion(page);
   // Completed tasks move into the collapsed "显示已完成" group.
   await expect(page.getByTestId("task-row").filter({ hasText: "回复银行邮件" })).toBeHidden();
 

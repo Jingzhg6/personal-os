@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { register, uniqueEmail } from "./helpers";
+import { confirmCompletion, register, uniqueEmail } from "./helpers";
 import { mutate, query } from "./screenshots/support";
 
 /*
@@ -93,6 +93,7 @@ test("A — an ordinary task earns Active XP only, the level stays", async ({ pa
     .filter({ hasText: "回复邮件" })
     .getByRole("checkbox", { name: "完成「回复邮件」" })
     .click();
+  await confirmCompletion(page);
 
   await page
     .getByRole("navigation", { name: "主导航" })
@@ -122,6 +123,7 @@ test("B — a growth task earns Active, Growth and Level XP", async ({ page }) =
   await page.getByRole("option", { name: "法语" }).click();
   await expect(panel(page).getByTestId("contribution")).toHaveCount(1);
   await panel(page).getByRole("button", { name: "完成" }).click();
+  await confirmCompletion(page);
   await expect(panel(page).getByRole("button", { name: "重新打开" })).toBeVisible();
 
   await page.goto("/character");

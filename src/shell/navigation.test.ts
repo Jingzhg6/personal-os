@@ -27,6 +27,29 @@ describe("navigation", () => {
     }
   });
 
+  it("orders the sections as agreed: work before finance and the system", () => {
+    expect(navigation.map((s) => s.id)).toEqual([
+      "overview",
+      "work",
+      "tasks",
+      "life",
+      "records",
+      "finance",
+      "system",
+    ]);
+    const items = (id: string) => navigation.find((s) => s.id === id)!.items.map((i) => i.id);
+    expect(items("work")).toEqual(
+      expect.arrayContaining(["work", "adminTasks", "allProjects", "kanban", "gantt", "goals"]),
+    );
+    expect(items("tasks")).toEqual(["allTasks", "matrix", "scheduled", "trash"]);
+    expect(items("life")).toEqual(
+      expect.arrayContaining(["learning", "fitness", "skills", "personal", "calendar"]),
+    );
+    expect(items("records")).toEqual(["documents"]);
+    expect(items("finance")).toEqual(["financeOverview", "financeAccounts"]);
+    expect(items("system")).toEqual(["automationRules", "automationNotifications", "settings"]);
+  });
+
   it("assigns a milestone to every Phase 1 view except settings", () => {
     for (const item of allNavItems.filter((i) => i.phase === 1 && i.id !== "settings")) {
       expect(item.milestone, item.id).toMatch(/^M\d+$/);
@@ -51,5 +74,6 @@ describe("navigation", () => {
       expect.arrayContaining(["allTasks", "matrix", "work", "business", "adminTasks"]),
     );
     expect(findNavSection(findNavItem("/work")!)?.id).toBe("work");
+    expect(findNavSection(findNavItem("/admin")!)?.id).toBe("work");
   });
 });

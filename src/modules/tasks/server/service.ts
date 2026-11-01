@@ -9,11 +9,14 @@ import { keyAfter, keyBetween } from "@/shared/lib/order";
 
 import { tasks, taskTags } from "../db";
 import {
+  completionInstant,
   defaultStatusFor,
   isClosedCategory,
   richTextToPlainText,
   statusTransition,
+  todayIn,
   validateSchedule,
+  type CompleteTaskInput,
   type CreateTaskInput,
   type StatusCategory,
   type Task,
@@ -23,6 +26,7 @@ import { getTask } from "./repository";
 import { getOwnedStatus, listStatuses } from "./statuses";
 import { assertContributionsUsable, replaceContributions } from "./contributions";
 import { assertTagsOwned } from "./tags";
+import { timeZoneOf } from "./time-zone";
 
 /*
  * Write side of the task module. Each command runs in one transaction; domain events are
@@ -45,15 +49,19 @@ async function assertAreaOwned(db: DbExecutor, userId: string, areaId: string | 
  * Validates project / milestone references for a task and returns the values to store.
  * Subtasks have no project of their own; a milestone must belong to the task's project.
  */
+/**
+ * Validates a task's project and milestone (the milestone implies its project). Also returns the
+ * project's area, the default area of tasks placed in the project (not stored by this function).
+ */
 async function resolveProjectRefs(
   db: DbExecutor,
   userId: string,
   input: { projectId: string | null; milestoneId: string | null; isSubtask: boolean },
-): Promise<{ projectId: string | null; milestoneId: string | null }> {
+): Promise<{ projectId: string | null; milestoneId: string | null; projectAreaId: string | null }> {
   if (input.isSubtask) {
     if (input.projectId || input.milestoneId)
       throw new DomainError("invalid", "task.subtask_project");
-    return { projectId: null, milestoneId: null };
+    return { projectId: null, milestoneId: null, projectAreaId: null };
   }
   let { projectId } = input;
   if (input.milestoneId) {
@@ -67,14 +75,16 @@ async function resolveProjectRefs(
     }
     projectId = milestone.projectId;
   }
+  let projectAreaId: string | null = null;
   if (projectId) {
     const [project] = await db
-      .select({ id: projects.id })
+      .select({ id: projects.id, areaId: projects.areaId })
       .from(projects)
       .where(and(eq(projects.id, projectId), eq(projects.userId, userId)));
     if (!project) throw new DomainError("not_found", "project.not_found");
+    projectAreaId = project.areaId;
   }
-  return { projectId, milestoneId: input.milestoneId };
+  return { projectId, milestoneId: input.milestoneId, projectAreaId };
 }
 
 /** Project of the top-level ancestor of a task. */
@@ -192,11 +202,14 @@ export function createTask(
     await assertAreaOwned(tx, userId, input.areaId);
     await assertTagsOwned(tx, userId, input.tagIds ?? []);
     await assertContributionsUsable(tx, userId, input.contributions ?? []);
-    const refs = await resolveProjectRefs(tx, userId, {
+    const { projectAreaId, ...refs } = await resolveProjectRefs(tx, userId, {
       projectId: input.projectId ?? null,
       milestoneId: input.milestoneId ?? null,
       isSubtask: parentTaskId !== null,
     });
+    // A task created in a project takes the project's area unless an area was chosen
+    // (an explicit null means "no area" and is kept).
+    const areaId = input.areaId !== undefined ? input.areaId : projectAreaId;
 
     const status = input.statusId
       ? await getOwnedStatus(tx, userId, input.statusId)
@@ -224,7 +237,7 @@ export function createTask(
         title: input.title,
         description: input.description ?? null,
         descriptionText: richTextToPlainText(input.description),
-        areaId: input.areaId ?? null,
+        areaId,
         ...refs,
         parentTaskId,
         statusId: status.id,
@@ -278,14 +291,23 @@ export function updateTask(
           : projectChanged
             ? null
             : current.milestoneId;
-      Object.assign(
-        fields,
-        await resolveProjectRefs(tx, userId, {
-          projectId: rest.milestoneId && rest.projectId === undefined ? null : projectId,
-          milestoneId,
-          isSubtask: current.parentTaskId !== null,
-        }),
-      );
+      const { projectAreaId, ...refs } = await resolveProjectRefs(tx, userId, {
+        projectId: rest.milestoneId && rest.projectId === undefined ? null : projectId,
+        milestoneId,
+        isSubtask: current.parentTaskId !== null,
+      });
+      Object.assign(fields, refs);
+      // Moved into a project without an area of its own: take the project's area. An area the
+      // task already has (the user's choice) is never overwritten.
+      if (
+        refs.projectId !== current.projectId &&
+        refs.projectId !== null &&
+        rest.areaId === undefined &&
+        current.areaId === null &&
+        projectAreaId !== null
+      ) {
+        fields.areaId = projectAreaId;
+      }
     }
 
     await assertAreaOwned(tx, userId, fields.areaId);
@@ -328,6 +350,8 @@ export function setTaskStatus(
   { db, bus }: TaskDeps,
   userId: string,
   input: { id: string; statusId: string },
+  /** The moment of the change; a confirmed earlier completion date passes its instant. */
+  at: Date = new Date(),
 ): Promise<Task> {
   return db.transaction(async (tx) => {
     await lockTask(tx, userId, input.id);
@@ -343,7 +367,7 @@ export function setTaskStatus(
         failedAt: current.failedAt,
       },
       next.category,
-      new Date(),
+      at,
     );
     await tx
       .update(tasks)
@@ -388,9 +412,61 @@ async function moveToCategory(
   return setTaskStatus(deps, userId, { id, statusId: target.id });
 }
 
-/** Moves the task to the first "completed" status. No-op when already completed. */
-export function completeTask(deps: TaskDeps, userId: string, id: string): Promise<Task> {
-  return moveToCategory(deps, userId, id, "completed", (t) => t.statusCategory !== "completed");
+/**
+ * Completes a task on a confirmed date (today when omitted; an earlier day is recorded at noon
+ * local time). No-op when already completed, so an existing completion date is never overwritten.
+ * With `includeSubtasks`, its open subtasks are completed first, on the same date.
+ */
+export async function completeTask(
+  deps: TaskDeps,
+  userId: string,
+  id: string,
+  options: Omit<CompleteTaskInput, "id"> = {},
+): Promise<Task> {
+  const current = await getTask(deps.db, userId, id);
+  if (current.statusCategory === "completed") return current;
+
+  const timeZone = await timeZoneOf(deps.db, userId);
+  const now = new Date();
+  const at = completionInstant(options.completedOn, todayIn(timeZone, now), now, timeZone);
+  if (!at) throw new DomainError("invalid", "task.completed_in_future");
+
+  const statuses = await listStatuses(deps.db, userId);
+  const target = options.statusId
+    ? statuses.find((s) => s.id === options.statusId)
+    : defaultStatusFor(statuses, "completed");
+  if (!target) {
+    throw options.statusId
+      ? new DomainError("not_found", "status.not_found")
+      : new DomainError("conflict", "status.missing_defaults");
+  }
+  if (target.category !== "completed") throw new DomainError("invalid", "task.not_a_completion");
+
+  if (options.includeSubtasks) {
+    for (const subtaskId of await openDescendants(deps.db, userId, current.id)) {
+      await setTaskStatus(deps, userId, { id: subtaskId, statusId: target.id }, at);
+    }
+  }
+  return setTaskStatus(deps, userId, { id: current.id, statusId: target.id }, at);
+}
+
+/** Open (not closed, not deleted) subtasks at any depth, deepest first. */
+async function openDescendants(db: DbExecutor, userId: string, taskId: string): Promise<string[]> {
+  const result = await db.execute<{ id: string }>(sql`
+    with recursive down as (
+      select id, 1 as depth from tasks
+        where parent_task_id = ${taskId} and user_id = ${userId} and deleted_at is null
+      union all
+      select t.id, d.depth + 1 from tasks t join down d on t.parent_task_id = d.id
+        where t.user_id = ${userId} and t.deleted_at is null
+    )
+    select d.id from down d
+      join tasks t on t.id = d.id
+      join task_statuses s on s.id = t.status_id
+      where s.category in ('backlog', 'unstarted', 'started')
+      order by d.depth desc
+  `);
+  return result.rows.map((row) => row.id);
 }
 
 /** Moves the task to the first "cancelled" status. No-op when already cancelled. */

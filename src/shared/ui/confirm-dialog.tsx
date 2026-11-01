@@ -13,6 +13,8 @@ interface ConfirmDialogProps {
   tone?: "danger" | "primary";
   pending?: boolean;
   children?: ReactNode;
+  /** Focus the confirm button on open (default: the first field or button, as the browser does). */
+  initialFocus?: "confirm";
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -26,20 +28,25 @@ export function ConfirmDialog({
   tone = "danger",
   pending,
   children,
+  initialFocus,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   const t = useTranslations("common");
   const ref = useRef<HTMLDialogElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const descriptionId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      if (initialFocus === "confirm") confirmRef.current?.focus();
+    }
     if (!open && dialog.open) dialog.close();
-  }, [open]);
+  }, [open, initialFocus]);
 
   return (
     <dialog
@@ -67,6 +74,7 @@ export function ConfirmDialog({
             {t("cancel")}
           </Button>
           <Button
+            ref={confirmRef}
             variant={tone === "danger" ? "danger" : "primary"}
             onClick={onConfirm}
             disabled={pending}

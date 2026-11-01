@@ -13,3 +13,4 @@ export * from "./tags";
 export * from "./tasks";
 export * from "./timeline";
 export * from "./views";
+export * from "./completion";

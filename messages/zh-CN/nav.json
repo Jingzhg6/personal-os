@@ -2,16 +2,12 @@
   "mainNavigation": "主导航",
   "sections": {
     "overview": "概览",
+    "work": "工作与事务",
     "tasks": "任务",
-    "projects": "项目",
-    "life": "生活",
+    "life": "个人成长与生活",
+    "records": "资料与记录",
     "finance": "财务",
-    "automation": "自动化",
-    "work": "工作",
-    "administration": "行政事务",
-    "calendar": "日历",
-    "character": "角色",
-    "analytics": "分析"
+    "system": "系统与自动化"
   },
   "items": {
     "dashboard": "仪表盘",
@@ -28,7 +24,7 @@
     "personal": "个人生活",
     "work": "工作",
     "business": "业务",
-    "adminTasks": "行政任务",
+    "adminTasks": "行政事务",
     "documents": "文件",
     "deadlines": "重要截止日期",
     "calendar": "日历",
@@ -45,7 +41,9 @@
     "settings": "设置",
     "financeOverview": "资产总览",
     "financeAccounts": "账户",
-    "automationRules": "规则",
+    "automationRules": "自动化规则",
     "automationNotifications": "通知"
-  }
+  },
+  "expandSection": "展开「{section}」",
+  "collapseSection": "收起「{section}」"
 }

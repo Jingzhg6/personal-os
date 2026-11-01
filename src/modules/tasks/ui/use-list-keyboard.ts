@@ -14,8 +14,12 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
+// A row's main button sits in its first line (data-row-line); expanded subtasks are rows too,
+// so j / k walk through them in the order shown.
 const rowButtons = (container: HTMLElement) =>
-  Array.from(container.querySelectorAll<HTMLElement>("[data-task-id] > [data-row-main]"));
+  Array.from(
+    container.querySelectorAll<HTMLElement>("[data-task-id] > [data-row-line] > [data-row-main]"),
+  );
 
 /**
  * List keyboard shortcuts (ignored while typing or when a dialog is open):
