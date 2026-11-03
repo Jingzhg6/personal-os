@@ -85,6 +85,8 @@ export const taskRecurrences = pgTable(
     nextDueAt: timestamp("next_due_at", { withTimezone: true }),
     /** Set when the series stops (by the user, or after its UNTIL / COUNT). */
     endedAt: timestamp("ended_at", { withTimezone: true }),
+    /** Set while the user has paused the series (V2): nothing is generated until resumed. */
+    pausedAt: timestamp("paused_at", { withTimezone: true }),
     ...timestamps(),
   },
   (t) => [

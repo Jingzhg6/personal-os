@@ -120,6 +120,13 @@
       "when": 1793216616727,
       "tag": "0016_task_recurrences",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793693487979,
+      "tag": "0017_v2_planner",
+      "breakpoints": true
     }
   ]
 }

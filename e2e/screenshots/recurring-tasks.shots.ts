@@ -13,7 +13,7 @@ type Created = { id: string };
 async function seed(page: Page) {
   const task = (input: Record<string, unknown>) => mutate<Created>(page, "tasks.create", input);
   const set = (taskId: string, rule: Record<string, unknown>, mode = "fixed") =>
-    mutate(page, "tasks.recurrence.set", { taskId, rule, mode });
+    mutate(page, "tasks.recurrence.set", { taskId, rule, mode, startDate: day(0) });
 
   const project = await mutate<Created>(page, "projects.create", { name: "团队周会" });
   const weekly = await task({

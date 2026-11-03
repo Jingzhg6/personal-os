@@ -35,9 +35,14 @@ export {
   generateNextInstance,
   getTaskRecurrence,
   listInstances,
+  pauseRecurrence,
+  refreshRecurrences,
+  resumeRecurrence,
   setRecurrence,
   skipOccurrence,
   stopRecurrence,
+  topUpAllRecurrences,
+  topUpSeries,
 } from "./recurrence";
 export { listStatuses, seedDefaultStatuses } from "./statuses";
 export { listTags } from "./tags";

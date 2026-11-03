@@ -310,3 +310,18 @@ A demo user with two projects, a task with three subtasks and loose tasks, made 
 | `05-sidebar-collapsed.png`   | `/projects` (reloaded) | 个人成长与生活 and 财务 collapsed and remembered after reload                              |
 | `06-mobile-tasks.png`        | `/tasks` (phone)       | iPhone 13: property menus on one line, dates below; no horizontal overflow                 |
 | `07-mobile-navigation.png`   | navigation drawer      | iPhone 13 drawer with the same collapsible sections                                        |
+
+## V2 planner (`v2-planner/`)
+
+A demo user (UTC, CNY) with quadrant tasks, a daily series, schedule blocks, investments and a custom dashboard order, all made through the app's API.
+
+| File                            | Page                   | Shows                                                                                              |
+| ------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
+| `01-schedule-day.png`           | `/schedule?view=day`   | 重要且紧急 list; day timeline with a recurring block, two overlapping blocks flagged; block editor |
+| `02-schedule-week.png`          | `/schedule` (week)     | 重要不紧急 with this week's 晨跑 instances only; timed blocks per day, an all-day bar 11/6–11/8    |
+| `03-schedule-month.png`         | `/schedule?view=month` | Month grid: timed chips with times, multi-day 规划旅行 bar                                         |
+| `04-investments.png`            | `/finance/investments` | Cost and value totals; three holdings, one 未估值 (counted at cost)                                |
+| `05-finance-overview.png`       | `/finance`             | Investments card (value, cost, difference) included in assets and net worth                        |
+| `06-dashboard-custom-order.png` | `/`                    | Saved panel order (本周 and 最近动态 above XP), drag handle, 恢复默认布局                          |
+| `07-gantt-series.png`           | `/projects/gantt`      | Completed hidden by default; the daily series on one row, one bar per instance                     |
+| `08-mobile-schedule.png`        | `/schedule` (phone)    | iPhone 13: quadrant list above the calendar; no horizontal overflow                                |

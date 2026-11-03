@@ -9,12 +9,15 @@ export interface UserSettings {
   timeZone: string | null;
   /** 0 = Sunday … 6 = Saturday. */
   weekStartsOn: number;
+  /** Dashboard panel ids in the user's order; null = the default order. */
+  dashboardPanels: string[] | null;
 }
 
 export const defaultUserSettings: UserSettings = {
   locale: defaultLocale,
   timeZone: null,
   weekStartsOn: 1,
+  dashboardPanels: null,
 };
 
 export function isValidTimeZone(value: string): boolean {
@@ -30,6 +33,10 @@ export const updateUserSettingsInput = z
   .object({
     timeZone: z.string().refine(isValidTimeZone, { message: "Invalid IANA timezone" }),
     weekStartsOn: z.number().int().min(0).max(6),
+    dashboardPanels: z
+      .array(z.string().regex(/^[a-zA-Z]{1,40}$/))
+      .max(30)
+      .nullable(),
   })
   .partial()
   .refine((value) => Object.keys(value).length > 0, { message: "Nothing to update" });

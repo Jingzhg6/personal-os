@@ -6,12 +6,14 @@ import {
   archiveInput,
   batchDraftInput,
   createAccountInput,
+  createInvestmentInput,
   createProviderInput,
   historyInput,
   idInput,
   moveInput,
   saveBatchInput,
   updateAccountInput,
+  updateInvestmentInput,
   updateProviderInput,
   updateSettingsInput,
 } from "../domain";
@@ -21,6 +23,12 @@ import {
   getFinanceOverview,
   getFinanceStructure,
 } from "./read-model";
+import {
+  createInvestment,
+  deleteInvestment,
+  listInvestments,
+  updateInvestment,
+} from "./investments";
 import { deleteSnapshot, getBatchDraft, saveBatch } from "./snapshots";
 import {
   archiveAccount,
@@ -89,6 +97,18 @@ export const financeRouter = router({
     delete: protectedProcedure
       .input(idInput)
       .mutation(({ ctx, input }) => deleteAccount(ctx.db, ctx.userId, input.id)),
+  }),
+  investments: router({
+    list: protectedProcedure.query(({ ctx }) => listInvestments(ctx.db, ctx.userId)),
+    create: protectedProcedure
+      .input(createInvestmentInput)
+      .mutation(({ ctx, input }) => createInvestment(ctx.db, ctx.userId, input)),
+    update: protectedProcedure
+      .input(updateInvestmentInput)
+      .mutation(({ ctx, input }) => updateInvestment(ctx.db, ctx.userId, input)),
+    delete: protectedProcedure
+      .input(idInput)
+      .mutation(({ ctx, input }) => deleteInvestment(ctx.db, ctx.userId, input.id)),
   }),
   snapshots: router({
     draft: protectedProcedure

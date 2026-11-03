@@ -23,7 +23,9 @@ import {
   type HistoryPointView,
   type HistoryRange,
   type Snapshot,
+  add,
 } from "../domain";
+import { investmentTotals, listInvestments } from "./investments";
 import { listSnapshots } from "./snapshots";
 import { getBaseCurrency, listAccounts, listProviders } from "./structure";
 
@@ -67,6 +69,10 @@ export async function getFinanceOverview(db: DbExecutor, userId: string): Promis
   const money = (value: Parameters<typeof toMoney>[0]) => toMoney(value, baseCurrency);
   const positions = positionsAt(accounts, snapshots, date, baseCurrency);
   const totals = totalsOf(positions);
+  const { valueDec, ...investments } = investmentTotals(
+    await listInvestments(db, userId),
+    baseCurrency,
+  );
   const dates = [...new Set(snapshots.map((s) => s.valuationDate))].filter((d) => d <= date).sort();
   const last = dates.at(-1) ?? null;
   const previous = dates.at(-2) ?? null;
@@ -94,8 +100,8 @@ export async function getFinanceOverview(db: DbExecutor, userId: string): Promis
     today: date,
     hasAccounts: accounts.length > 0,
     hasSnapshots: snapshots.length > 0,
-    netWorth: money(totals.netWorth),
-    assets: money(totals.assets),
+    netWorth: money(add(totals.netWorth, valueDec)),
+    assets: money(add(totals.assets, valueDec)),
     liabilities: money(totals.liabilities),
     lastValuationDate: last,
     change,
@@ -135,6 +141,7 @@ export async function getFinanceOverview(db: DbExecutor, userId: string): Promis
       currency: p.snapshot.currency,
       amount: p.snapshot.amount,
     })),
+    investments,
   };
 }
 

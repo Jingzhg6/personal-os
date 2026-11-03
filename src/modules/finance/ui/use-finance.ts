@@ -30,6 +30,11 @@ export function useFinanceStructure() {
   return useQuery({ ...trpc.finance.structure.queryOptions(), ...alwaysFresh });
 }
 
+export function useInvestments() {
+  const trpc = useTRPC();
+  return useQuery({ ...trpc.finance.investments.list.queryOptions(), ...alwaysFresh });
+}
+
 export function useAccountHistory(id: string) {
   const trpc = useTRPC();
   return useQuery({
@@ -75,5 +80,8 @@ export function useFinanceActions() {
     deleteAccount: useMutation(a.delete.mutationOptions(options)),
     saveBatch: useMutation(s.saveBatch.mutationOptions(options)),
     deleteSnapshot: useMutation(s.delete.mutationOptions(options)),
+    createInvestment: useMutation(trpc.finance.investments.create.mutationOptions(options)),
+    updateInvestment: useMutation(trpc.finance.investments.update.mutationOptions(options)),
+    deleteInvestment: useMutation(trpc.finance.investments.delete.mutationOptions(options)),
   };
 }

@@ -2,6 +2,7 @@ import { and, asc, count, eq, gte, isNull, lte, notInArray, sql } from "drizzle-
 
 import { sweepOverdueDiscipline } from "@/modules/character/server";
 import { getUserSettings } from "@/modules/settings/server";
+import { topUpAllRecurrences } from "@/modules/tasks/server";
 import type { Database, DbExecutor } from "@/shared/db/types";
 import type { EventBus } from "@/shared/events/bus";
 import { defaultTimeZone } from "@/shared/i18n/config";
@@ -512,6 +513,8 @@ export async function workerTick(deps: EngineDeps, now = new Date()) {
   const schedules = await tickSchedules(deps, { now });
   const events = await drainEvents(deps);
   const discipline = await sweepOverdueDiscipline(deps.db, { now });
+  // Recurring calendar series stay filled up to their horizon (V2).
+  const recurrences = await topUpAllRecurrences(deps, now);
   const summary = {
     executed: schedules.executed,
     missed: schedules.missed,
@@ -520,6 +523,7 @@ export async function workerTick(deps: EngineDeps, now = new Date()) {
     failedEvents: events.failed,
     disciplineOverdue: discipline.penalised,
     disciplineFailed: discipline.failed,
+    recurringCreated: recurrences.created,
   };
   await deps.db
     .insert(automationWorkerStatus)

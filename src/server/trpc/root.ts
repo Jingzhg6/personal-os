@@ -6,6 +6,7 @@ import { developmentRouter } from "@/modules/development/server";
 import { financeRouter } from "@/modules/finance/server";
 import { projectsRouter } from "@/modules/projects/server";
 import { rewardsRouter } from "@/modules/rewards/server";
+import { scheduleRouter } from "@/modules/schedule/server";
 import { settingsRouter } from "@/modules/settings/server";
 import { tasksRouter } from "@/modules/tasks/server";
 import { router } from "@/shared/trpc/init";
@@ -22,6 +23,7 @@ export const appRouter = router({
   development: developmentRouter,
   finance: financeRouter,
   automation: automationRouter,
+  schedule: scheduleRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -32,6 +32,7 @@ export function GanttBar({
   color,
   overdue,
   label,
+  hideTitle = false,
   onOpen,
   onCommit,
 }: {
@@ -43,6 +44,8 @@ export function GanttBar({
   overdue: boolean;
   /** Accessible name: title, dates and keyboard help. */
   label: string;
+  /** Instances of a recurring series share a row named once: no title beside each bar. */
+  hideTitle?: boolean;
   onOpen: () => void;
   onCommit: (patch: Patch) => void;
 }) {
@@ -133,7 +136,7 @@ export function GanttBar({
         {shownWidth >= 16 ? (
           <span data-edit="start" className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize" />
         ) : null}
-        {!outsideLabel ? (
+        {!outsideLabel && !hideTitle ? (
           <span className={cn("truncate px-2 font-medium", closed && "line-through")}>
             {task.title}
           </span>
@@ -142,7 +145,7 @@ export function GanttBar({
           <span data-edit="end" className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize" />
         ) : null}
       </button>
-      {outsideLabel ? (
+      {outsideLabel && !hideTitle ? (
         // Short bars name the task beside them; the button keeps the accessible name.
         <span
           aria-hidden

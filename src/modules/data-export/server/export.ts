@@ -28,12 +28,14 @@ import {
 import {
   financeAccounts,
   financeFxDefaults,
+  financeInvestments,
   financeProviders,
   financeSettings,
   financeSnapshots,
 } from "@/modules/finance/db";
 import { milestones, projects } from "@/modules/projects/db";
 import { levelRewards, rewardLedger, rewards } from "@/modules/rewards/db";
+import { scheduleBlocks } from "@/modules/schedule/db";
 import { userSettings } from "@/modules/settings/db";
 import {
   taskDependencies,
@@ -206,6 +208,13 @@ async function collect(db: DbExecutor, id: string) {
         financeSnapshots.id,
       ]),
       fxDefaults: await owned(financeFxDefaults, [financeFxDefaults.currencyCode]),
+      investments: await owned(financeInvestments, [
+        financeInvestments.purchaseDate,
+        financeInvestments.id,
+      ]),
+    },
+    schedule: {
+      blocks: await owned(scheduleBlocks, [scheduleBlocks.startAt, scheduleBlocks.id]),
     },
     automation: {
       rules: await owned(automationRules, [automationRules.createdAt, automationRules.id]),

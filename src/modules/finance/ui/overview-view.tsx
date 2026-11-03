@@ -25,6 +25,8 @@ import {
   historyRanges,
   isNegative,
   isZero,
+  sub,
+  toFixed,
   STALE_AFTER_DAYS,
   toDisplayNumber,
   type FinanceOverview,
@@ -66,12 +68,64 @@ export function FinanceOverviewView({ title }: { title: string }) {
           ) : null
         }
       />
-      {!data ? null : !data.hasSnapshots ? (
+      {!data ? null : !data.hasSnapshots && data.investments.count === 0 ? (
         <EmptyOverview hasAccounts={data.hasAccounts} />
       ) : (
         <Overview data={data} />
       )}
     </div>
+  );
+}
+
+function InvestmentsCard({ data }: { data: FinanceOverview }) {
+  const t = useTranslations("finance.overview");
+  const money = useMoney();
+  const base = data.baseCurrency;
+  const { cost, value, unvalued, otherCurrency } = data.investments;
+  const gain = toFixed(sub(dec(value), dec(cost)));
+  return (
+    <Card data-testid="finance-investments-card">
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle className="flex items-center gap-2">
+          <Coins className="size-4" aria-hidden />
+          {t("investmentsTitle")}
+        </CardTitle>
+        <Link
+          href="/finance/investments"
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          {t("investmentsManage")}
+          <ArrowRight aria-hidden />
+        </Link>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <dl className="grid grid-cols-3 gap-3 text-sm">
+          <div>
+            <dt className="text-xs text-muted-foreground">{t("investmentsValue")}</dt>
+            <dd className="font-semibold tabular-nums" data-testid="finance-investments-value">
+              {money(value, base)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">{t("investmentsCost")}</dt>
+            <dd className="tabular-nums">{money(cost, base)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">{t("investmentsGain")}</dt>
+            <dd
+              className={cn("tabular-nums", isNegative(dec(gain)) ? "text-danger" : "text-success")}
+            >
+              {money(gain, base, { signed: true })}
+            </dd>
+          </div>
+        </dl>
+        <p className="text-xs text-muted-foreground">
+          {t("investmentsIncluded")}
+          {unvalued > 0 ? ` ${t("investmentsUnvalued", { count: unvalued })}` : ""}
+          {otherCurrency > 0 ? ` ${t("investmentsOtherCurrency", { count: otherCurrency })}` : ""}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -154,6 +208,10 @@ function Overview({ data }: { data: FinanceOverview }) {
           />
         </div>
       </div>
+
+      {data.investments.count > 0 || data.investments.otherCurrency > 0 ? (
+        <InvestmentsCard data={data} />
+      ) : null}
 
       {warnings > 0 ? (
         <Card className="border-warning/60" data-testid="finance-warnings">

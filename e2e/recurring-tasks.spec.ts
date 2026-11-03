@@ -1,11 +1,12 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { confirmCompletion, register, uniqueEmail } from "./helpers";
+import { register, uniqueEmail } from "./helpers";
 import { day, mutate, query } from "./screenshots/support";
 
 /*
- * Recurring tasks (ADR 0023), as one story for one fresh user: a series set up in the task panel,
- * its instances completed, skipped, edited and stopped in the UI, and checked across views.
+ * Recurring tasks (ADR 0023, V2 in ADR 0028), as one story for one fresh user: a calendar series
+ * generated ahead as independent instances, paused and resumed; a completion-based series with one
+ * open instance; stopping; isolation between users.
  */
 
 test.describe.configure({ mode: "serial" });
@@ -59,91 +60,97 @@ const openInstances = async (page: Page) =>
     (t) => t.title === TITLE && !["completed", "cancelled", "failed"].includes(t.statusCategory),
   );
 
-test("1 — a daily rule is set in the task panel", async ({ page }) => {
+const instancesOf = async (page: Page, title: string) =>
+  (await tasksOf(page)).filter((t) => t.title === title);
+const isOpen = (t: Task) => !["completed", "cancelled", "failed"].includes(t.statusCategory);
+
+test("1 — a calendar rule generates independent daily instances ahead", async ({ page }) => {
   await page.goto(`/tasks?task=${ids.first}`);
   const field = page.getByTestId("task-recurrence");
   await expect(field).toContainText("不重复");
   await field.getByTestId("recurrence-edit").click();
+  await expect(field.getByTestId("recurrence-mode")).toHaveValue("fixed");
   await field.getByTestId("recurrence-frequency").selectOption("daily");
+  await expect(field.getByTestId("recurrence-start")).toHaveValue(day(0));
   await field.getByTestId("recurrence-save").click();
-  await expect(field.getByTestId("recurrence-summary")).toContainText("每天 · 按固定日程");
-  await expect(field.getByTestId("recurrence-upcoming")).toBeVisible();
+  await expect(field.getByTestId("recurrence-summary")).toContainText("每天 · 按日历周期生成");
+  await expect.poll(async () => (await openInstances(page)).length).toBeGreaterThanOrEqual(28);
+  const open = await openInstances(page);
+  expect(open.slice(0, 3).map((t) => t.dueDate)).toEqual([day(0), day(1), day(2)]);
+  // Every instance is its own task with the template's fields.
+  expect(new Set(open.map((t) => t.id)).size).toBe(open.length);
+  expect(open[1]).toMatchObject({ projectId: ids.project, isUrgent: true });
+  ids.second = open[1]!.id;
   await page.goto("/tasks");
   await expect(page.getByTestId("recurring-mark").first()).toBeVisible();
 });
 
-test("2 — completing it creates the next instance, visible in every view", async ({ page }) => {
-  await page.goto("/tasks");
-  await page
-    .getByRole("checkbox", { name: `完成「${TITLE}」` })
-    .first()
-    .click();
-  await confirmCompletion(page);
+test("2 — completing one instance leaves the others; nothing is generated twice", async ({
+  page,
+}) => {
+  const before = (await openInstances(page)).length;
+  await mutate(page, "tasks.complete", { id: ids.first });
+  await mutate(page, "tasks.recurrence.refresh", {});
+  expect((await openInstances(page)).length).toBe(before - 1);
+  const all = await instancesOf(page, TITLE);
+  expect(new Set(all.map((t) => t.dueDate)).size).toBe(all.length);
+  // Matrix and Gantt read the same task rows; the Gantt keeps the series on one row.
+  await page.goto("/tasks/matrix");
+  await expect(page.getByText(TITLE).first()).toBeVisible();
+  await page.goto("/projects/gantt");
+  await expect(page.getByTestId("gantt-row").filter({ hasText: TITLE })).toHaveCount(1);
+});
+
+test("3 — pausing removes untouched future instances; resuming fills the window again", async ({
+  page,
+}) => {
+  await page.goto(`/tasks?task=${ids.second}`);
+  const field = page.getByTestId("task-recurrence");
+  await field.getByTestId("recurrence-pause").click();
+  await expect(field.getByTestId("recurrence-summary")).toContainText("已暂停");
+  // Untouched future instances are removed, except the one the series was paused from.
   await expect
     .poll(async () => (await openInstances(page)).map((t) => t.dueDate))
     .toEqual([day(1)]);
-  const [next] = await openInstances(page);
-  ids.second = next!.id;
-  expect(next).toMatchObject({ projectId: ids.project, isUrgent: true });
-  // Matrix, project and Gantt read the same task.
-  await page.goto("/tasks/matrix");
-  await expect(page.getByText(TITLE).first()).toBeVisible();
-  await page.goto(`/projects/${ids.project}`);
-  await expect(page.getByText(TITLE).first()).toBeVisible();
-  const timeline = await query<unknown>(page, "tasks.timeline", {
-    today: day(0),
-    sort: "manual",
-    includeSubtasks: false,
-    filter: {},
+  // The completed one stays as history.
+  expect((await instancesOf(page, TITLE)).filter((t) => !isOpen(t))).toHaveLength(1);
+  await field.getByTestId("recurrence-resume").click();
+  await expect.poll(async () => (await openInstances(page)).length).toBeGreaterThanOrEqual(28);
+  const all = await instancesOf(page, TITLE);
+  expect(new Set(all.map((t) => t.dueDate)).size).toBe(all.length);
+});
+
+test("4 — completion-based: one open instance, the next counted from completion", async ({
+  page,
+}) => {
+  const task = await mutate<{ id: string }>(page, "tasks.create", {
+    title: "复盘",
+    dueDate: day(-3),
   });
-  expect(JSON.stringify(timeline)).toContain(ids.second);
-  // Completing the first one again (after reopening) creates nothing new.
-  await mutate(page, "tasks.reopen", { id: ids.first });
-  await mutate(page, "tasks.complete", { id: ids.first });
-  expect(await openInstances(page)).toHaveLength(1);
-});
-
-test("3 — skipping an occurrence cancels it and schedules the next", async ({ page }) => {
-  await page.goto(`/tasks?task=${ids.second}`);
-  const field = page.getByTestId("task-recurrence");
-  await expect(field).toContainText("第 2 次");
-  await field.getByTestId("recurrence-skip").click();
-  await expect
-    .poll(async () => (await openInstances(page)).map((t) => t.dueDate))
-    .toEqual([day(2)]);
-  const skipped = (await tasksOf(page)).find((t) => t.id === ids.second);
-  expect(skipped?.statusCategory).toBe("cancelled");
-  ids.third = (await openInstances(page))[0]!.id;
-});
-
-test("4 — the rule is changed on the newest instance; older ones are history", async ({ page }) => {
-  await page.goto(`/tasks?task=${ids.first}`);
-  await expect(page.getByTestId("task-recurrence")).toContainText("较早的一次");
-  await expect(page.getByTestId("recurrence-edit")).toHaveCount(0);
-
-  await page.goto(`/tasks?task=${ids.third}`);
+  await page.goto(`/tasks?task=${task.id}`);
   const field = page.getByTestId("task-recurrence");
   await field.getByTestId("recurrence-edit").click();
-  await field.getByTestId("recurrence-frequency").selectOption("weekly");
   await field.getByTestId("recurrence-mode").selectOption("after_completion");
+  await field.getByTestId("recurrence-frequency").selectOption("weekly");
+  await field.getByTestId("recurrence-start").fill(day(-3));
   await field.getByTestId("recurrence-save").click();
-  await expect(field.getByTestId("recurrence-summary")).toContainText("每周 · 完成后再计");
-  await mutate(page, "tasks.complete", { id: ids.third });
-  // After completion (today), weekly: a week from today.
+  await expect(field.getByTestId("recurrence-summary")).toContainText("每周 · 完成上一次后再生成");
+  expect((await instancesOf(page, "复盘")).filter(isOpen)).toHaveLength(1);
+  await mutate(page, "tasks.complete", { id: task.id });
   await expect
-    .poll(async () => (await openInstances(page)).map((t) => t.dueDate))
+    .poll(async () => (await instancesOf(page, "复盘")).filter(isOpen).map((t) => t.dueDate))
     .toEqual([day(7)]);
-  ids.fourth = (await openInstances(page))[0]!.id;
+  ids.fourth = (await instancesOf(page, "复盘")).filter(isOpen)[0]!.id;
 });
 
 test("5 — stopping the series: no further instances", async ({ page }) => {
   await page.goto(`/tasks?task=${ids.fourth}`);
   const field = page.getByTestId("task-recurrence");
   await field.getByTestId("recurrence-stop").click();
-  await page.getByRole("dialog").getByRole("button", { name: "停止重复" }).click();
-  await expect(field).toContainText("已停止重复");
+  await page.getByRole("dialog").getByRole("button", { name: "终止重复" }).click();
+  await expect(field).toContainText("已终止");
   await mutate(page, "tasks.complete", { id: ids.fourth });
-  expect(await openInstances(page)).toHaveLength(0);
+  expect((await instancesOf(page, "复盘")).filter(isOpen)).toHaveLength(0);
 });
 
 test("6 — another user can neither read nor change the series", async ({ browser }, testInfo) => {
@@ -164,7 +171,14 @@ test("6 — another user can neither read nor change the series", async ({ brows
     expect(response.status(), path).toBe(404);
   }
   const set = await page.request.post("/api/trpc/tasks.recurrence.set", {
-    data: { json: { taskId: ids.first, rule: { frequency: "daily", interval: 1 }, mode: "fixed" } },
+    data: {
+      json: {
+        taskId: ids.first,
+        rule: { frequency: "daily", interval: 1 },
+        mode: "fixed",
+        startDate: day(0),
+      },
+    },
   });
   expect(set.status()).toBe(404);
   await other.close();

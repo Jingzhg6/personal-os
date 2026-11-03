@@ -2,10 +2,16 @@ import { RRule } from "rrule";
 import { z } from "zod";
 
 /*
- * Recurring tasks (Phase 1, ADR 0023). A series (`task_recurrences`) stores an RFC 5545 RRULE
- * and a mode; its instances are ordinary tasks (`recurrence_id`, `recurrence_index`). One instance
- * is open at a time: when it is closed (completed, cancelled = skipped, or failed), the next one is
- * created. Pure: dates are local calendar dates ("YYYY-MM-DD") in the series' time zone.
+ * Recurring tasks (ADR 0023, V2: ADR 0028). A series (`task_recurrences`) is the template: an
+ * RFC 5545 RRULE and a mode; its instances are ordinary tasks (`recurrence_id`,
+ * `recurrence_index`), each with its own date, status, time and XP.
+ *
+ * - **fixed** (按日历周期): one instance per occurrence, created ahead on a rolling horizon
+ *   (RECURRENCE_HORIZON_DAYS), whether or not earlier ones are done.
+ * - **after_completion** (完成后再生成): one open instance; the next is created when it is closed,
+ *   counted from the day it was closed.
+ *
+ * Pure: dates are local calendar dates ("YYYY-MM-DD") in the series' time zone.
  */
 
 export const recurrenceModes = ["fixed", "after_completion"] as const;
@@ -16,6 +22,9 @@ export type RecurrenceFrequency = (typeof recurrenceFrequencies)[number];
 
 /** Upper bound on instances of one series (a series with COUNT may ask for fewer). */
 export const MAX_RECURRENCE_COUNT = 1000;
+
+/** Calendar series keep instances created this many days ahead (never a long backlog). */
+export const RECURRENCE_HORIZON_DAYS = 30;
 
 const isoDate = z.iso.date();
 
@@ -59,6 +68,13 @@ export const setRecurrenceInput = z.object({
   taskId: z.uuid(),
   rule: recurrenceRule,
   mode: z.enum(recurrenceModes).default("fixed"),
+  /** First day of the series (required): the first instance falls on or after it. */
+  startDate: isoDate,
+  /**
+   * Editing a series: "future" replaces the not-yet-started future instances with the new rule;
+   * "new" leaves every existing instance as it is. History is never changed either way.
+   */
+  applyTo: z.enum(["future", "new"]).default("future"),
 });
 export const recurrenceTaskInput = z.object({ taskId: z.uuid() });
 
@@ -74,7 +90,12 @@ export interface TaskRecurrence {
   isLatest: boolean;
   /** Instances created so far. */
   instances: number;
+  /** Open (not completed / cancelled / failed) instances. */
+  openInstances: number;
+  /** The series' first day (DTSTART). */
+  startDate: string;
   endedAt: Date | null;
+  pausedAt: Date | null;
   /** The next due dates a fixed schedule would produce after this instance (preview). */
   upcoming: string[];
 }
@@ -215,6 +236,49 @@ export function planNext(input: {
   if (!next) return { end: rule.end.type === "until" ? "until" : "none" };
   if (rule.end.type === "until" && next > rule.end.date) return { end: "until" };
   return { dueDate: next };
+}
+
+/** The first occurrence on or after `date`. */
+export function occurrenceOnOrAfter(
+  rule: RecurrenceRule,
+  dtstart: string,
+  date: string,
+): string | null {
+  const scheduled = effectiveRule(rule, dtstart);
+  const next = occurrenceAfter(scheduled, dtstart, addDaysTo(date, -1));
+  if (!next || (rule.end.type === "until" && next > rule.end.date)) return null;
+  return next;
+}
+
+/**
+ * The dates a calendar series still needs, after the newest existing instance (`after`, or null
+ * for none) up to `horizon`. Occurrences before `today` are skipped (a series that was paused or
+ * not looked at for a while catches up from today, without a backlog). Stops at UNTIL, and at
+ * COUNT given the index of the newest instance (`lastIndex`).
+ */
+export function calendarDatesToCreate(input: {
+  rule: RecurrenceRule;
+  dtstart: string;
+  after: string | null;
+  lastIndex: number;
+  today: string;
+  horizon: string;
+}): { dates: string[]; ended: boolean } {
+  const { rule, dtstart } = input;
+  const scheduled = effectiveRule(rule, dtstart);
+  const dates: string[] = [];
+  let cursor = input.after ?? addDaysTo(dtstart, -1);
+  if (cursor < addDaysTo(input.today, -1)) cursor = addDaysTo(input.today, -1);
+  for (;;) {
+    if (rule.end.type === "count" && input.lastIndex + dates.length >= rule.end.count) {
+      return { dates, ended: true };
+    }
+    const next = occurrenceAfter(scheduled, dtstart, cursor);
+    if (!next || (rule.end.type === "until" && next > rule.end.date)) return { dates, ended: true };
+    if (next > input.horizon) return { dates, ended: false };
+    dates.push(next);
+    cursor = next;
+  }
 }
 
 /** Up to `n` due dates a fixed schedule produces after `from` (for the panel's preview). */

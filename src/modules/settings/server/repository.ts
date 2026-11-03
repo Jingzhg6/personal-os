@@ -18,6 +18,7 @@ function toDomain(row: typeof userSettings.$inferSelect): UserSettings {
     locale: isLocale(row.locale) ? row.locale : defaultUserSettings.locale,
     timeZone: row.timeZone,
     weekStartsOn: row.weekStartsOn,
+    dashboardPanels: row.dashboardPanels ?? null,
   };
 }
 

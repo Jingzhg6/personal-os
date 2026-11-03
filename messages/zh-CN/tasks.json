@@ -348,8 +348,9 @@
     "blockedLabel": "等待 {count} 个前置任务"
   },
   "gantt": {
-    "description": "按开始和截止日期排布任务，箭头表示依赖关系。拖动条形即可改期。",
+    "description": "按开始和截止日期排布任务，箭头表示依赖关系。拖动条形即可改期。默认隐藏已完成的任务，可在状态筛选中显示。",
     "chart": "甘特图",
+    "series": "重复任务（{count} 次）",
     "zoom": {
       "label": "时间尺度",
       "day": "日",
@@ -397,24 +398,23 @@
     "none": "不重复。",
     "badge": "重复任务",
     "modes": {
-      "fixed": "按固定日程",
-      "after_completion": "完成后再计"
+      "fixed": "按日历周期生成",
+      "after_completion": "完成上一次后再生成"
     },
-    "modeLabel": "下一次的日期",
+    "modeLabel": "生成方式",
     "modeHints": {
-      "fixed": "按日程推算；错过的日期会跳过，不会补出一串逾期任务。",
-      "after_completion": "从这一次结束的那天起重新计算。"
+      "fixed": "按日历提前生成每一天（最多未来 30 天）的独立任务；没完成的会保留，不影响之后的生成。",
+      "after_completion": "同一时间只有一个当前任务；完成后，从完成那天起按间隔生成下一次。"
     },
-    "position": "第 {index} 次 · 共已生成 {total} 次",
-    "ended": "已停止重复",
-    "history": "这是较早的一次，修改请到最新一次",
+    "position": "第 {index} 次 · 已生成 {total} 次",
+    "ended": "已终止",
+    "history": "较早的一次；修改请到最新一次",
     "upcoming": "之后：{dates}",
     "skip": "跳过本次",
-    "skipped": "已跳过本次，已生成下一次",
-    "stop": "停止重复",
-    "stopTitle": "停止重复？",
-    "stopBody": "不会再生成新的任务。已经生成的任务保持不变。",
-    "needsDueDate": "请先设置截止日期：重复的日期按它计算。",
+    "skipped": "已跳过本次",
+    "stop": "终止重复",
+    "stopTitle": "终止重复？",
+    "stopBody": "不会再生成新的任务。已完成的历史保持不变；未来尚未开始、也未安排日程的实例会被移除。",
     "frequency": "重复频率",
     "frequencies": {
       "none": "不重复",
@@ -461,7 +461,20 @@
     "untilDate": "到 {date} 为止",
     "countN": "共 {count} 次",
     "save": "保存",
-    "cancel": "取消"
+    "cancel": "取消",
+    "openCount": "{count} 个未完成",
+    "startsOn": "从 {date} 开始",
+    "startLabel": "开始日期",
+    "pause": "暂停",
+    "resume": "恢复",
+    "paused": "已暂停：不会再生成新的任务",
+    "resumed": "已恢复重复",
+    "pausedState": "已暂停",
+    "applyToLabel": "修改影响范围",
+    "applyTo": {
+      "future": "替换未来尚未开始的实例",
+      "new": "保留已有实例，只影响之后新生成的"
+    }
   },
   "completeDialog": {
     "title": "确认完成",

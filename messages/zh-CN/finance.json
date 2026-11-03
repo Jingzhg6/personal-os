@@ -38,7 +38,15 @@
     "unconverted": "{name}：{amount} 缺少汇率，未计入合计",
     "allGood": "所有计入的账户都有最近的记录和汇率。",
     "notMeasured": "本模块只记录余额，不记录收支、预算、收益或投资表现。",
-    "currency": "币种"
+    "currency": "币种",
+    "investmentsTitle": "投资",
+    "investmentsValue": "当前价值",
+    "investmentsCost": "投入成本",
+    "investmentsGain": "价值 − 成本",
+    "investmentsUnvalued": "{count} 项未填写当前价值，按成本计入",
+    "investmentsOtherCurrency": "{count} 项不是报告货币，未计入合计",
+    "investmentsIncluded": "已计入总资产和净资产。",
+    "investmentsManage": "管理投资"
   },
   "empty": {
     "title": "开始记录你的资产",
@@ -204,5 +212,43 @@
     "chart": "余额走势（原币）",
     "liabilityNote": "负债：显示的是欠款金额。",
     "notFound": "这个账户不存在。"
+  },
+  "investments": {
+    "description": "记录买入的股票、基金、ETF 等：投入成本与当前价值分开保存，当前价值只用你填写的数字，不做估算。",
+    "add": "添加投资",
+    "edit": "编辑投资",
+    "delete": "删除",
+    "deleteTitle": "删除「{name}」？",
+    "deleteDescription": "只删除这条投资记录，不影响账户和余额记录。",
+    "save": "保存",
+    "create": "添加",
+    "name": "名称",
+    "namePlaceholder": "例如：沪深300 ETF",
+    "kind": "类型",
+    "kinds": {
+      "stock": "股票",
+      "fund": "基金",
+      "etf": "ETF",
+      "other": "其他"
+    },
+    "cost": "投入成本（{currency}）",
+    "purchaseDate": "买入日期",
+    "quantity": "数量（可选）",
+    "currentValue": "当前价值（{currency}，可选）",
+    "currentValueHint": "留空时按成本计入合计，并标注“未估值”。",
+    "notes": "备注",
+    "empty": "还没有投资记录。",
+    "unvalued": "未估值",
+    "costLabel": "成本",
+    "valueLabel": "价值",
+    "quantityLabel": "数量 {quantity}",
+    "boughtOn": "{date} 买入",
+    "totalCost": "总成本",
+    "totalValue": "总价值",
+    "noDoubleCount": "投资单独记录。如果同一笔资金也作为券商账户余额记录，请不要重复添加，否则会被计算两次。",
+    "otherCurrency": "币种 {currency} 与报告货币不同，未计入合计",
+    "created": "已添加投资",
+    "saved": "已保存",
+    "deleted": "已删除"
   }
 }

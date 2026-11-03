@@ -76,12 +76,21 @@ const checks: [string, string][] = [
 
   // Domain invariants.
   [
-    "a recurring series has at most one open instance",
+    "a completion-based series has at most one open instance",
     `select count(*) from (select t.recurrence_id from tasks t join task_statuses s on s.id = t.status_id
-       where t.recurrence_id is not null and t.deleted_at is null
+       join task_recurrences r on r.id = t.recurrence_id
+       where r.mode = 'after_completion' and t.deleted_at is null
          and s.category in ('backlog', 'unstarted', 'started')
        group by t.recurrence_id having count(*) > 1) x`,
   ],
+  [
+    "a calendar series has at most one instance per date",
+    `select count(*) from (select t.recurrence_id, t.due_date from tasks t
+       join task_recurrences r on r.id = t.recurrence_id
+       where r.mode = 'fixed' and t.deleted_at is null
+       group by t.recurrence_id, t.due_date having count(*) > 1) x`,
+  ],
+  ["schedule block → task of the same user", sameUser("schedule_blocks", "task_id", "tasks")],
   [
     "task milestone belongs to the task's project",
     `select count(*) from tasks t join milestones m on m.id = t.milestone_id where t.project_id is distinct from m.project_id`,

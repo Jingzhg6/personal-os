@@ -2,9 +2,9 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { weekStart } from "@/modules/dashboard/domain";
-import { taskRecurrences, tasks } from "@/modules/tasks/db";
+import { taskRecurrences } from "@/modules/tasks/db";
 import { todayIn } from "@/modules/tasks/domain";
-import { generateNextInstance, listInstances } from "@/modules/tasks/server";
+import { listInstances, topUpSeries } from "@/modules/tasks/server";
 import { users } from "@/shared/auth/schema";
 import { createCallerFactory } from "@/shared/trpc/init";
 import { createTestDb, resetDb } from "@/test/db";
@@ -97,26 +97,22 @@ describe("time zone and week start", () => {
 describe("changing the time zone later", () => {
   it("keeps an existing recurring series in its own zone; new series take the new one", async () => {
     const { api, user } = await setup("Asia/Shanghai");
-    const first = await api.tasks.create({ title: "冥想", dueDate: "2026-10-20" });
+    const first = await api.tasks.create({ title: "冥想" });
     const recurrence = await api.tasks.recurrence.set({
       taskId: first.id,
       rule: { frequency: "daily", interval: 1 },
       mode: "fixed",
+      startDate: "2026-10-20",
     });
 
     await api.settings.update({ timeZone: "America/Los_Angeles" });
     expect((await api.tasks.recurrence.get({ taskId: first.id }))!.timeZone).toBe("Asia/Shanghai");
 
-    // 2026-11-04 17:00 UTC: 09:00 on the 4th in Los Angeles, already the 5th in Shanghai.
-    const now = new Date("2026-11-04T17:00:00Z");
-    const completed = (await api.tasks.statuses.list()).find((s) => s.category === "completed")!;
-    await db
-      .update(tasks)
-      .set({ completedAt: now, statusId: completed.id })
-      .where(eq(tasks.id, first.id));
-    await generateNextInstance({ db, bus }, user.id, first.id, now);
-    const [, next] = await listInstances(db, user.id, recurrence.id);
-    expect(next!.dueDate).toBe("2026-11-05");
+    // 2027-01-04 17:00 UTC: 09:00 on the 4th in Los Angeles, already the 5th in Shanghai. The
+    // series fills its 30-day horizon from its own (Shanghai) today.
+    await topUpSeries({ db, bus }, user.id, recurrence.id, new Date("2027-01-04T17:00:00Z"));
+    const rows = await listInstances(db, user.id, recurrence.id);
+    expect(rows.at(-1)!.dueDate).toBe("2027-02-04");
     const [row] = await db
       .select()
       .from(taskRecurrences)
@@ -131,6 +127,7 @@ describe("changing the time zone later", () => {
       taskId: other.id,
       rule: { frequency: "daily", interval: 1 },
       mode: "fixed",
+      startDate: todayIn("America/Los_Angeles"),
     });
     expect((await api.tasks.recurrence.get({ taskId: other.id }))!.timeZone).toBe(
       "America/Los_Angeles",

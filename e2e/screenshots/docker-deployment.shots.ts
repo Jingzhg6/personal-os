@@ -27,6 +27,7 @@ test("Docker deployment visual check", async ({ page, browser, baseURL }) => {
     taskId: daily.id,
     rule: { frequency: "daily", interval: 1 },
     mode: "fixed",
+    startDate: day(0),
   });
   await mutate(page, "tasks.complete", { id: daily.id });
   await mutate(page, "tasks.create", { title: "整理发票", dueDate: day(2) });

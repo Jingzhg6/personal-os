@@ -14,6 +14,7 @@ import { Select } from "@/shared/ui/select";
 import { useToast } from "@/shared/ui/toast";
 import { useErrorMessage } from "@/shared/ui/use-error-message";
 
+import { useToday } from "./labels";
 import {
   isClosedCategory,
   recurrenceFrequencies,
@@ -35,9 +36,15 @@ interface Draft {
   until: string;
   count: number;
   mode: RecurrenceMode;
+  startDate: string;
+  applyTo: "future" | "new";
 }
 
-const fromRule = (rule: RecurrenceRule | null, mode: RecurrenceMode | null): Draft => ({
+const fromRule = (
+  rule: RecurrenceRule | null,
+  mode: RecurrenceMode | null,
+  startDate: string,
+): Draft => ({
   frequency: rule?.frequency ?? "none",
   interval: rule?.interval ?? 1,
   weekdays: rule?.weekdays ?? [],
@@ -46,15 +53,22 @@ const fromRule = (rule: RecurrenceRule | null, mode: RecurrenceMode | null): Dra
   until: rule?.end.type === "until" ? rule.end.date : "",
   count: rule?.end.type === "count" ? rule.end.count : 10,
   mode: mode ?? "fixed",
+  startDate,
+  applyTo: "future",
 });
+
+/** Completion series repeat every N days or N weeks (counted from the day an instance closes). */
+const COMPLETION_FREQUENCIES = ["daily", "weekly"] as const;
 
 function toRule(draft: Draft): RecurrenceRule | null {
   if (draft.frequency === "none") return null;
+  const calendar = draft.mode === "fixed";
   return {
     frequency: draft.frequency,
     interval: Math.max(1, Math.min(365, Math.round(draft.interval) || 1)),
-    weekdays: draft.frequency === "weekly" ? [...draft.weekdays].sort() : [],
-    monthDay: draft.frequency === "monthly" && draft.monthDay ? Number(draft.monthDay) : null,
+    weekdays: calendar && draft.frequency === "weekly" ? [...draft.weekdays].sort() : [],
+    monthDay:
+      calendar && draft.frequency === "monthly" && draft.monthDay ? Number(draft.monthDay) : null,
     end:
       draft.endType === "until" && draft.until
         ? { type: "until", date: draft.until }
@@ -65,8 +79,10 @@ function toRule(draft: Draft): RecurrenceRule | null {
 }
 
 /**
- * 重复: the task's recurring series (ADR 0023). Each occurrence is an ordinary task; closing the
- * open one (完成 / 跳过 / 失败) creates the next. Only the newest occurrence edits the series.
+ * 重复: the task's recurring series (ADR 0023, V2 ADR 0028). Every occurrence is its own task.
+ * 按日历周期 creates them ahead on the calendar; 完成上一次后再生成 creates the next one when the
+ * open one is closed. The rule can be changed, paused, resumed or ended from any instance (a
+ * completion series: from its newest); history is never rewritten.
  */
 export function RecurrenceField({ task }: { task: TaskDetail }) {
   const t = useTranslations("tasks.recurrence");
@@ -81,7 +97,8 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
     retry: false,
   });
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Draft>(() => fromRule(null, null));
+  const today = useToday();
+  const [draft, setDraft] = useState<Draft>(() => fromRule(null, null, today));
   const [confirmStop, setConfirmStop] = useState(false);
   const refresh = () =>
     Promise.all([
@@ -112,6 +129,20 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
       onSuccess: () => setConfirmStop(false),
     }),
   );
+  const pause = useMutation(
+    trpc.tasks.recurrence.pause.mutationOptions({
+      onSettled: refresh,
+      onError,
+      onSuccess: () => toast.show(t("paused")),
+    }),
+  );
+  const resume = useMutation(
+    trpc.tasks.recurrence.resume.mutationOptions({
+      onSettled: refresh,
+      onError,
+      onSuccess: () => toast.show(t("resumed")),
+    }),
+  );
 
   if (recurrence === undefined || task.parentTaskId) return null;
   const date = (value: string) =>
@@ -121,11 +152,20 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
       day: "numeric",
       weekday: "short",
     });
-  const canEdit = !recurrence || (recurrence.isLatest && !recurrence.endedAt);
+  // A calendar series is edited from any instance; a completion series from its newest.
+  const canEdit =
+    !recurrence || (!recurrence.endedAt && (recurrence.mode === "fixed" || recurrence.isLatest));
   const startEditing = () => {
-    setDraft(fromRule(recurrence?.rule ?? null, recurrence?.mode ?? null));
+    setDraft(
+      fromRule(
+        recurrence?.rule ?? null,
+        recurrence?.mode ?? null,
+        recurrence?.startDate ?? task.startDate ?? task.dueDate ?? today,
+      ),
+    );
     setEditing(true);
   };
+  const frequencies = draft.mode === "fixed" ? recurrenceFrequencies : COMPLETION_FREQUENCIES;
   const rule = toRule(draft);
 
   return (
@@ -156,16 +196,21 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
             {summary(t, recurrence.rule)} · {t(`modes.${recurrence.mode}`)}
           </p>
           <p className="text-xs text-muted-foreground">
-            {t("position", { index: recurrence.index, total: recurrence.instances })}
+            {t("startsOn", { date: date(recurrence.startDate) })} ·{" "}
+            {t("position", { index: recurrence.index, total: recurrence.instances })} ·{" "}
+            {t("openCount", { count: recurrence.openInstances })}
             {recurrence.endedAt ? ` · ${t("ended")}` : ""}
-            {!recurrence.isLatest ? ` · ${t("history")}` : ""}
+            {recurrence.pausedAt && !recurrence.endedAt ? ` · ${t("pausedState")}` : ""}
+            {recurrence.mode === "after_completion" && !recurrence.isLatest
+              ? ` · ${t("history")}`
+              : ""}
           </p>
-          {recurrence.upcoming.length > 0 && recurrence.isLatest ? (
+          {recurrence.upcoming.length > 0 ? (
             <p className="text-xs text-muted-foreground" data-testid="recurrence-upcoming">
               {t("upcoming", { dates: recurrence.upcoming.map(date).join("、") })}
             </p>
           ) : null}
-          {recurrence.isLatest && !recurrence.endedAt ? (
+          {canEdit && recurrence ? (
             <div className="flex flex-wrap gap-2 pt-1">
               {!isClosedCategory(task.statusCategory) ? (
                 <Button
@@ -178,6 +223,27 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
                   {t("skip")}
                 </Button>
               ) : null}
+              {recurrence.pausedAt ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={resume.isPending}
+                  onClick={() => resume.mutate({ taskId: task.id })}
+                  data-testid="recurrence-resume"
+                >
+                  {t("resume")}
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={pause.isPending}
+                  onClick={() => pause.mutate({ taskId: task.id })}
+                  data-testid="recurrence-pause"
+                >
+                  {t("pause")}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -196,7 +262,28 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
           className="flex flex-col gap-3 rounded-lg border border-border p-3 text-sm"
           data-testid="recurrence-form"
         >
-          {!task.dueDate ? <p className="text-warning">{t("needsDueDate")}</p> : null}
+          <label className="flex flex-col gap-1">
+            <span>{t("modeLabel")}</span>
+            <Select
+              value={draft.mode}
+              onChange={(e) => {
+                const mode = e.target.value as RecurrenceMode;
+                // Completion series repeat by days or weeks only.
+                const frequency =
+                  mode === "after_completion" &&
+                  draft.frequency !== "none" &&
+                  !(COMPLETION_FREQUENCIES as readonly string[]).includes(draft.frequency)
+                    ? "daily"
+                    : draft.frequency;
+                setDraft({ ...draft, mode, frequency });
+              }}
+              data-testid="recurrence-mode"
+            >
+              <option value="fixed">{t("modes.fixed")}</option>
+              <option value="after_completion">{t("modes.after_completion")}</option>
+            </Select>
+            <span className="text-xs text-muted-foreground">{t(`modeHints.${draft.mode}`)}</span>
+          </label>
           <div className="flex flex-wrap items-center gap-2">
             <Select
               aria-label={t("frequency")}
@@ -208,7 +295,7 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
               data-testid="recurrence-frequency"
             >
               {!recurrence ? <option value="none">{t("frequencies.none")}</option> : null}
-              {recurrenceFrequencies.map((f) => (
+              {frequencies.map((f) => (
                 <option key={f} value={f}>
                   {t(`frequencies.${f}`)}
                 </option>
@@ -231,7 +318,7 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
             ) : null}
           </div>
 
-          {draft.frequency === "weekly" ? (
+          {draft.mode === "fixed" && draft.frequency === "weekly" ? (
             <div className="flex flex-wrap gap-1" role="group" aria-label={t("weekdays")}>
               {weekdays.map((d) => {
                 const on = draft.weekdays.includes(d);
@@ -261,7 +348,7 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
             </div>
           ) : null}
 
-          {draft.frequency === "monthly" ? (
+          {draft.mode === "fixed" && draft.frequency === "monthly" ? (
             <label className="flex items-center gap-2">
               {t("monthDay")}
               <Select
@@ -283,6 +370,17 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
           {draft.frequency !== "none" ? (
             <>
               <label className="flex flex-wrap items-center gap-2">
+                {t("startLabel")}
+                <Input
+                  type="date"
+                  className="w-40"
+                  required
+                  value={draft.startDate}
+                  onChange={(e) => setDraft({ ...draft, startDate: e.target.value })}
+                  data-testid="recurrence-start"
+                />
+              </label>
+              <label className="flex flex-wrap items-center gap-2">
                 {t("endLabel")}
                 <Select
                   className="w-28"
@@ -299,7 +397,7 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
                     className="w-40"
                     aria-label={t("ends.until")}
                     value={draft.until}
-                    min={task.dueDate ?? undefined}
+                    min={draft.startDate || undefined}
                     onChange={(e) => setDraft({ ...draft, until: e.target.value })}
                   />
                 ) : null}
@@ -315,28 +413,38 @@ export function RecurrenceField({ task }: { task: TaskDetail }) {
                   />
                 ) : null}
               </label>
-              <label className="flex flex-col gap-1">
-                <span>{t("modeLabel")}</span>
-                <Select
-                  value={draft.mode}
-                  onChange={(e) => setDraft({ ...draft, mode: e.target.value as RecurrenceMode })}
-                  data-testid="recurrence-mode"
-                >
-                  <option value="fixed">{t("modes.fixed")}</option>
-                  <option value="after_completion">{t("modes.after_completion")}</option>
-                </Select>
-                <span className="text-xs text-muted-foreground">
-                  {t(`modeHints.${draft.mode}`)}
-                </span>
-              </label>
+              {recurrence && draft.mode === "fixed" ? (
+                <label className="flex flex-col gap-1">
+                  <span>{t("applyToLabel")}</span>
+                  <Select
+                    value={draft.applyTo}
+                    onChange={(e) =>
+                      setDraft({ ...draft, applyTo: e.target.value as Draft["applyTo"] })
+                    }
+                    data-testid="recurrence-apply-to"
+                  >
+                    <option value="future">{t("applyTo.future")}</option>
+                    <option value="new">{t("applyTo.new")}</option>
+                  </Select>
+                </label>
+              ) : null}
             </>
           ) : null}
 
           <div className="flex gap-2">
             <Button
               size="sm"
-              disabled={!rule || !task.dueDate || set.isPending}
-              onClick={() => rule && set.mutate({ taskId: task.id, rule, mode: draft.mode })}
+              disabled={!rule || !draft.startDate || set.isPending}
+              onClick={() =>
+                rule &&
+                set.mutate({
+                  taskId: task.id,
+                  rule,
+                  mode: draft.mode,
+                  startDate: draft.startDate,
+                  applyTo: draft.applyTo,
+                })
+              }
               data-testid="recurrence-save"
             >
               {t("save")}

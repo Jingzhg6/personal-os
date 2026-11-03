@@ -62,6 +62,8 @@ const exported: Record<string, string> = {
   finance_accounts: "finance.accounts",
   finance_snapshots: "finance.snapshots",
   finance_fx_defaults: "finance.fxDefaults",
+  finance_investments: "finance.investments",
+  schedule_blocks: "schedule.blocks",
   automation_rules: "automation.rules",
   automation_executions: "automation.executions",
   automation_effects: "automation.effects",
@@ -128,7 +130,8 @@ async function seed({ api, name }: Ctx) {
   await api.tasks.recurrence.set({
     taskId: repeat.id,
     rule: { frequency: "daily", interval: 1 },
-    mode: "fixed",
+    mode: "after_completion",
+    startDate: today,
   });
   await api.tasks.recurrence.skip({ taskId: repeat.id });
 
@@ -208,6 +211,18 @@ async function seed({ api, name }: Ctx) {
     entries: [{ accountId: eur.id, amount: "1499.99" }],
     rates: { CNY: "0.1282" },
     overwrite: true,
+  });
+  await api.finance.investments.create({
+    name: `${name}-ETF`,
+    kind: "etf",
+    costAmount: "1000.00",
+    purchaseDate: "2026-09-01",
+    currentValue: "1100.00",
+  });
+  await api.schedule.create({
+    taskId: task.id,
+    startAt: new Date("2026-10-20T01:00:00Z"),
+    endAt: new Date("2026-10-20T02:00:00Z"),
   });
   return { task, project, goal, rule, cny, eur };
 }

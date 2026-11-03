@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, ChevronDown, ChevronRight, Lock } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronRight, Lock, Repeat } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
@@ -41,6 +41,7 @@ import { useProjectOptions } from "./project-chip";
 import { StatusIcon } from "./status-icon";
 import { TaskDetailPanel } from "./task-detail-panel";
 import { useListUrlState } from "./use-list-state";
+import { useRecurrenceRefresh } from "./use-recurrence-refresh";
 import { useTaskPanel } from "./use-task-panel";
 import { useStatuses, useTags, useTaskActions, useTimeline } from "./use-task-data";
 
@@ -52,9 +53,14 @@ const ROW = 36;
 const MONTH_LABEL = { timeZone: "UTC", year: "numeric", month: "short" } as const;
 const WEEK_LABEL = { timeZone: "UTC", month: "numeric", day: "numeric" } as const;
 /** Cancelled tasks are left out unless the status filter asks for them. */
-const DEFAULT_CATEGORIES: StatusCategory[] = ["backlog", "unstarted", "started", "completed"];
+// Completed tasks are hidden by default (they stay in the database with their history; the status
+// filter shows them again).
+const DEFAULT_CATEGORIES: StatusCategory[] = ["backlog", "unstarted", "started"];
 
-type Row = { kind: "group"; key: string; project: Project | null } | { kind: "task"; task: Task };
+/** A row holds one task, or every visible instance of one recurring series (a bar each). */
+type Row =
+  | { kind: "group"; key: string; project: Project | null }
+  | { kind: "task"; task: Task; tasks: Task[] };
 
 /**
  * Gantt chart of top-level tasks by start / due date, grouped by project, with milestones and
@@ -80,6 +86,7 @@ export function GanttChart({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [state, setState] = useListUrlState();
+  useRecurrenceRefresh();
   const { openTaskId, openTask, closeTask } = useTaskPanel();
   const scroller = useRef<HTMLDivElement>(null);
   const corner = useRef<HTMLDivElement>(null);
@@ -139,15 +146,31 @@ export function GanttChart({
       ? projects.filter((p) => p.id === projectId)
       : projects.filter((p) => withDates.some((task) => task.projectId === p.id));
     const result: Row[] = [];
+    const pushTasks = (list: Task[]) => {
+      const series = new Map<string, Task[]>();
+      for (const task of list) {
+        if (!task.recurrenceId) {
+          result.push({ kind: "task", task, tasks: [task] });
+          continue;
+        }
+        const existing = series.get(task.recurrenceId);
+        if (existing) {
+          existing.push(task);
+          continue;
+        }
+        const instances = [task];
+        series.set(task.recurrenceId, instances);
+        result.push({ kind: "task", task, tasks: instances });
+      }
+    };
     for (const project of groups) {
       result.push({ kind: "group", key: project.id, project });
-      for (const task of withDates.filter((x) => x.projectId === project.id))
-        result.push({ kind: "task", task });
+      pushTasks(withDates.filter((x) => x.projectId === project.id));
     }
     const loose = projectId ? [] : withDates.filter((task) => !task.projectId);
     if (loose.length > 0) {
       result.push({ kind: "group", key: "none", project: null });
-      for (const task of loose) result.push({ kind: "task", task });
+      pushTasks(loose);
     }
     return result;
   }, [tasks, projects, projectId]);
@@ -171,8 +194,11 @@ export function GanttChart({
   const x = (date: string) => daysBetween(range.start, date) * dayWidth;
   const statusColor = new Map(statuses.map((s) => [s.id, s.color]));
   const rowOf = new Map(
-    rows.flatMap((row, index) => (row.kind === "task" ? [[row.task.id, index] as const] : [])),
+    rows.flatMap((row, index) =>
+      row.kind === "task" ? row.tasks.map((task) => [task.id, index] as const) : [],
+    ),
   );
+  const taskById = new Map(tasks.map((task) => [task.id, task]));
 
   // Scroll so that today sits a quarter of the way into the visible timeline (beside the
   // pinned task-name column, whose width depends on the screen).
@@ -204,8 +230,8 @@ export function GanttChart({
     const from = rowOf.get(dep.blockingTaskId);
     const to = rowOf.get(dep.blockedTaskId);
     if (from === undefined || to === undefined) return [];
-    const blocking = (rows[from] as { task: Task }).task;
-    const blocked = (rows[to] as { task: Task }).task;
+    const blocking = taskById.get(dep.blockingTaskId)!;
+    const blocked = taskById.get(dep.blockedTaskId)!;
     const a = scheduleSpan(blocking)!;
     const b = scheduleSpan(blocked)!;
     return [
@@ -341,16 +367,8 @@ export function GanttChart({
                   );
                 }
                 const task = row.task;
-                const span = scheduleSpan(task)!;
-                const overdue =
-                  !isClosedCategory(task.statusCategory) &&
-                  task.dueDate !== null &&
-                  task.dueDate < today;
+                const recurring = row.tasks.length > 1 || task.recurrenceId !== null;
                 const blocked = task.openBlockerCount > 0 && !isClosedCategory(task.statusCategory);
-                const dates =
-                  span.start === span.end
-                    ? shortDate(span.start)
-                    : t("range", { start: shortDate(span.start), end: shortDate(span.end) });
                 return (
                   <div key={task.id} className="contents">
                     <div
@@ -361,11 +379,18 @@ export function GanttChart({
                         task.id === openTaskId && "bg-accent",
                       )}
                     >
-                      <StatusIcon
-                        category={task.statusCategory}
-                        color={statusColor.get(task.statusId)}
-                        className="size-3.5 shrink-0"
-                      />
+                      {recurring ? (
+                        <Repeat
+                          className="size-3.5 shrink-0 text-muted-foreground"
+                          aria-label={t("series", { count: row.tasks.length })}
+                        />
+                      ) : (
+                        <StatusIcon
+                          category={task.statusCategory}
+                          color={statusColor.get(task.statusId)}
+                          className="size-3.5 shrink-0"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => openTask(task.id)}
@@ -388,17 +413,35 @@ export function GanttChart({
                       style={gridRow}
                       className="relative col-start-2 h-9 border-b border-border/60"
                     >
-                      <GanttBar
-                        task={task}
-                        left={x(span.start)}
-                        width={(daysBetween(span.start, span.end) + 1) * dayWidth}
-                        dayWidth={dayWidth}
-                        color={statusColor.get(task.statusId) ?? "gray"}
-                        overdue={overdue}
-                        label={t("bar", { title: task.title, dates })}
-                        onOpen={() => openTask(task.id)}
-                        onCommit={(patch) => commit(task, patch)}
-                      />
+                      {row.tasks.map((instance) => {
+                        const span = scheduleSpan(instance)!;
+                        const dates =
+                          span.start === span.end
+                            ? shortDate(span.start)
+                            : t("range", {
+                                start: shortDate(span.start),
+                                end: shortDate(span.end),
+                              });
+                        return (
+                          <GanttBar
+                            key={instance.id}
+                            task={instance}
+                            left={x(span.start)}
+                            width={(daysBetween(span.start, span.end) + 1) * dayWidth}
+                            dayWidth={dayWidth}
+                            color={statusColor.get(instance.statusId) ?? "gray"}
+                            overdue={
+                              !isClosedCategory(instance.statusCategory) &&
+                              instance.dueDate !== null &&
+                              instance.dueDate < today
+                            }
+                            label={t("bar", { title: instance.title, dates })}
+                            hideTitle={row.tasks.length > 1}
+                            onOpen={() => openTask(instance.id)}
+                            onCommit={(patch) => commit(instance, patch)}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 );

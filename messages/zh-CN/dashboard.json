@@ -132,5 +132,24 @@
     "growth": "{xp} 成长",
     "level": "{xp} 升级",
     "cancelled": "已撤销"
+  },
+  "layout": {
+    "reset": "恢复默认布局",
+    "handle": "拖动以调整「{name}」的位置",
+    "instructions": "按空格键拿起面板，用方向键移动，再按空格键放下；按 Esc 取消。",
+    "start": "已拿起「{name}」",
+    "over": "「{name}」移到第 {position} 个位置",
+    "end": "「{name}」已放到第 {position} 个位置",
+    "cancel": "已取消移动「{name}」",
+    "panels": {
+      "character": "角色",
+      "xp": "经验值",
+      "growth": "成长",
+      "focus": "成长重点",
+      "levelReward": "等级奖励",
+      "rewardStore": "奖励商店",
+      "week": "本周",
+      "activity": "最近动态"
+    }
   }
 }

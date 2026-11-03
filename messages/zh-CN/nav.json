@@ -28,7 +28,7 @@
     "documents": "文件",
     "deadlines": "重要截止日期",
     "calendar": "日历",
-    "scheduled": "已排程任务",
+    "schedule": "日程规划",
     "character": "角色",
     "skills": "技能",
     "xp": "经验值",
@@ -41,6 +41,7 @@
     "settings": "设置",
     "financeOverview": "资产总览",
     "financeAccounts": "账户",
+    "financeInvestments": "投资",
     "automationRules": "自动化规则",
     "automationNotifications": "通知"
   },

@@ -11,6 +11,7 @@ import errors from "../../../messages/zh-CN/errors.json";
 import nav from "../../../messages/zh-CN/nav.json";
 import projects from "../../../messages/zh-CN/projects.json";
 import rewards from "../../../messages/zh-CN/rewards.json";
+import schedule from "../../../messages/zh-CN/schedule.json";
 import settings from "../../../messages/zh-CN/settings.json";
 import shell from "../../../messages/zh-CN/shell.json";
 import tasks from "../../../messages/zh-CN/tasks.json";
@@ -33,6 +34,7 @@ export const sourceMessages = {
   development,
   finance,
   automation,
+  schedule,
 };
 
 export type Messages = typeof sourceMessages;

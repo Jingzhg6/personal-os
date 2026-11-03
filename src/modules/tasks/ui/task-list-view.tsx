@@ -30,6 +30,7 @@ import { TaskDetailPanel } from "./task-detail-panel";
 import { TaskRow, type TaskLookups } from "./task-row";
 import { useListKeyboard } from "./use-list-keyboard";
 import { useListUrlState } from "./use-list-state";
+import { useRecurrenceRefresh } from "./use-recurrence-refresh";
 import { useTaskPanel } from "./use-task-panel";
 import { useStatuses, useTags, useTaskActions, useTaskList } from "./use-task-data";
 import { ViewScopeBar, ViewScopeEditor } from "./view-scope";
@@ -64,6 +65,7 @@ export function TaskListView({
   const { openTaskId, openTask, closeTask } = useTaskPanel();
   const today = useToday();
   const [state, setState] = useListUrlState();
+  useRecurrenceRefresh();
   const listRef = useRef<HTMLDivElement>(null);
   const [showClosed, setShowClosed] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);

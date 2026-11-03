@@ -11,5 +11,7 @@ export const userSettings = pgTable("user_settings", {
   locale: text("locale").notNull().default("zh-CN"),
   timeZone: text("time_zone"),
   weekStartsOn: smallint("week_starts_on").notNull().default(1),
+  /** Dashboard panel ids in the user's order (V2); null = the default order. */
+  dashboardPanels: text("dashboard_panels").array(),
   ...timestamps(),
 });

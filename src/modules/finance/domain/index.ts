@@ -565,6 +565,40 @@ export const saveBatchInput = z.object({
 });
 export type SaveBatchInput = z.infer<typeof saveBatchInput>;
 
+export const investmentKinds = ["stock", "fund", "etf", "other"] as const;
+export type InvestmentKind = (typeof investmentKinds)[number];
+
+const optionalDecimal = z.string().trim().max(40).nullable();
+const investmentFields = z.object({
+  name,
+  kind: z.enum(investmentKinds),
+  /** What was paid, in the base currency. */
+  costAmount: z.string().trim().min(1).max(40),
+  purchaseDate: z.iso.date(),
+  quantity: optionalDecimal,
+  /** What it is worth now, as the user knows it; null = not valued (never estimated). */
+  currentValue: optionalDecimal,
+  notes,
+});
+export const createInvestmentInput = investmentFields.partial({
+  quantity: true,
+  currentValue: true,
+  notes: true,
+});
+export const updateInvestmentInput = z.object({ id: z.uuid(), patch: investmentFields.partial() });
+
+export interface FinanceInvestment {
+  id: string;
+  name: string;
+  kind: InvestmentKind;
+  costAmount: Money;
+  currency: string;
+  purchaseDate: string;
+  quantity: string | null;
+  currentValue: Money | null;
+  notes: string | null;
+}
+
 export const historyInput = z.object({ range: z.enum(historyRanges) });
 export const accountHistoryInput = z.object({ id: z.uuid() });
 export const batchDraftInput = z.object({ valuationDate: z.iso.date() });
@@ -601,6 +635,17 @@ export interface FinanceOverview {
   stale: { accountId: string; name: string; valuationDate: string }[];
   /** Counted but without a rate to the base currency (excluded from totals). */
   unconverted: { accountId: string; name: string; currency: string; amount: Money }[];
+  /**
+   * Investments recorded in the base currency, already included in `assets` and `netWorth` (at
+   * current value, or at cost while no value is entered). Others are left out and counted.
+   */
+  investments: {
+    count: number;
+    cost: Money;
+    value: Money;
+    unvalued: number;
+    otherCurrency: number;
+  };
 }
 
 export interface HistoryPointView {

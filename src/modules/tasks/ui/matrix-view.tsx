@@ -38,6 +38,7 @@ import { QuickAdd } from "./quick-add";
 import { TaskDetailPanel } from "./task-detail-panel";
 import type { TaskLookups } from "./task-row";
 import { useListUrlState } from "./use-list-state";
+import { useRecurrenceRefresh } from "./use-recurrence-refresh";
 import { useTaskPanel } from "./use-task-panel";
 import { useStatuses, useTags, useTaskActions, useTaskList } from "./use-task-data";
 import { TaskCard, TaskCardPreview } from "./task-card";
@@ -66,6 +67,7 @@ export function MatrixView({ title }: { title: string }) {
   const t = useTranslations("tasks.matrix");
   const dndId = useId();
   const today = useToday();
+  useRecurrenceRefresh();
   const [state, setState] = useListUrlState();
   const { openTaskId, openTask, closeTask } = useTaskPanel();
   const [dragging, setDragging] = useState<Task | null>(null);

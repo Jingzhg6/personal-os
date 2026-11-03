@@ -96,7 +96,9 @@
     "invalid_rate": "汇率必须是大于 0 的数字，最多 10 位小数。",
     "duplicate_entry": "同一个账户在一次记录中只能出现一次。",
     "snapshot_exists": "这一天已经有余额记录。请以修正方式保存。",
-    "snapshot_not_found": "余额记录不存在。"
+    "snapshot_not_found": "余额记录不存在。",
+    "investment_not_found": "投资记录不存在。",
+    "invalid_quantity": "数量必须是大于 0 的数字。"
   },
   "automation": {
     "rule_not_found": "自动化规则不存在。",
@@ -119,12 +121,17 @@
     "ended": "这个重复任务已停止，不能再修改规则。",
     "not_latest": "只能在最新一次任务上修改重复规则或跳过。",
     "none": "这个任务没有设置重复。",
-    "not_open": "这一次已经结束，不能再跳过。"
+    "not_open": "这一次已经结束，不能再跳过。",
+    "no_occurrence": "按这个规则，开始日期之后没有任何日期。",
+    "too_many_open": "改为「完成上一次后再生成」前，请先完成或跳过其他未完成的实例（只能保留一个）。"
   },
   "settings": {
     "user_not_found": "账户不存在，请重新登录。"
   },
   "export": {
     "user_not_found": "账户不存在，请重新登录。"
+  },
+  "schedule": {
+    "not_found": "这条日程安排不存在或已被删除。"
   }
 }

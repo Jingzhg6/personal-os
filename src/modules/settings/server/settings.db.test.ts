@@ -30,7 +30,12 @@ describe("settings repository", () => {
     const user = await createUser(db);
     await updateUserSettings(db, user.id, { weekStartsOn: 0 });
     const updated = await updateUserSettings(db, user.id, { timeZone: "Europe/Paris" });
-    expect(updated).toEqual({ locale: "zh-CN", timeZone: "Europe/Paris", weekStartsOn: 0 });
+    expect(updated).toEqual({
+      locale: "zh-CN",
+      timeZone: "Europe/Paris",
+      weekStartsOn: 0,
+      dashboardPanels: null,
+    });
   });
 
   it("ensureUserSettings is idempotent and never overwrites existing values", async () => {

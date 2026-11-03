@@ -41,12 +41,12 @@ describe("navigation", () => {
     expect(items("work")).toEqual(
       expect.arrayContaining(["work", "adminTasks", "allProjects", "kanban", "gantt", "goals"]),
     );
-    expect(items("tasks")).toEqual(["allTasks", "matrix", "scheduled", "trash"]);
+    expect(items("tasks")).toEqual(["allTasks", "matrix", "schedule", "trash"]);
     expect(items("life")).toEqual(
       expect.arrayContaining(["learning", "fitness", "skills", "personal", "calendar"]),
     );
     expect(items("records")).toEqual(["documents"]);
-    expect(items("finance")).toEqual(["financeOverview", "financeAccounts"]);
+    expect(items("finance")).toEqual(["financeOverview", "financeAccounts", "financeInvestments"]);
     expect(items("system")).toEqual(["automationRules", "automationNotifications", "settings"]);
   });
 

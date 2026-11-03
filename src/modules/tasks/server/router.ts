@@ -22,7 +22,15 @@ import {
   updateTaskViewInput,
 } from "../domain";
 import { addDependency, removeDependency } from "./dependencies";
-import { getTaskRecurrence, setRecurrence, skipOccurrence, stopRecurrence } from "./recurrence";
+import {
+  getTaskRecurrence,
+  pauseRecurrence,
+  refreshRecurrences,
+  resumeRecurrence,
+  setRecurrence,
+  skipOccurrence,
+  stopRecurrence,
+} from "./recurrence";
 import { getTaskDetail, listTasks, listTimeline } from "./repository";
 import {
   completeTask,
@@ -106,6 +114,15 @@ const recurrenceRouter = router({
   stop: protectedProcedure
     .input(recurrenceTaskInput)
     .mutation(({ ctx, input }) => stopRecurrence(ctx, ctx.userId, input.taskId)),
+  /** V2: pause (nothing new is created) and resume. */
+  pause: protectedProcedure
+    .input(recurrenceTaskInput)
+    .mutation(({ ctx, input }) => pauseRecurrence(ctx, ctx.userId, input.taskId)),
+  resume: protectedProcedure
+    .input(recurrenceTaskInput)
+    .mutation(({ ctx, input }) => resumeRecurrence(ctx, ctx.userId, input.taskId)),
+  /** Fills the user's calendar series up to the horizon (the task views call it on load). */
+  refresh: protectedProcedure.mutation(({ ctx }) => refreshRecurrences(ctx, ctx.userId)),
 });
 
 const dependenciesRouter = router({

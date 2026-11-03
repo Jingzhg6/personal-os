@@ -4,6 +4,7 @@ import {
   FolderKanban,
   Gift,
   ListTodo,
+  RotateCcw,
   Settings,
   Shield,
   Sprout,
@@ -22,6 +23,13 @@ import { ProgressBar } from "@/shared/ui/progress-bar";
 
 import type { DashboardOverview } from "../domain";
 import { GrowthSection } from "./growth-section";
+import {
+  DASHBOARD_PANELS,
+  PanelGrid,
+  usePanelOrder,
+  type DashboardPanelId,
+  type Panel,
+} from "./panel-layout";
 import { RecentActivity } from "./recent-activity";
 import { GrowthFocusCard, LevelRewardCard, RewardStoreCard, WeekCard } from "./side-cards";
 import { useDashboard } from "./use-dashboard";
@@ -39,12 +47,14 @@ const quickLinks: {
 ];
 
 /**
- * The authenticated home: a read-only view of the character. DOM order is the phone order
- * (character → XP → growth → focus → rewards → week → activity); wider screens rearrange it.
+ * The authenticated home: a read-only view of the character, in panels the user can reorder
+ * (saved per user). The default order is the phone order (character → XP → growth → focus →
+ * rewards → week → activity).
  */
 export function DashboardView({ title, userName }: { title: string; userName: string }) {
   const t = useTranslations("dashboard");
   const { data } = useDashboard();
+  const layout = usePanelOrder();
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6" data-testid="dashboard">
@@ -53,6 +63,17 @@ export function DashboardView({ title, userName }: { title: string; userName: st
         description={t("description")}
         actions={
           <nav aria-label={t("links.label")} className="flex flex-wrap gap-1.5">
+            {layout.custom ? (
+              <button
+                type="button"
+                onClick={() => layout.set([...DASHBOARD_PANELS])}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-surface-muted"
+                data-testid="dashboard-reset-layout"
+              >
+                <RotateCcw className="size-4" aria-hidden />
+                {t("layout.reset")}
+              </button>
+            ) : null}
             {quickLinks.map(({ key, href, icon: Icon }) => (
               <Link
                 key={key}
@@ -66,26 +87,43 @@ export function DashboardView({ title, userName }: { title: string; userName: st
           </nav>
         }
       />
-      {data ? (
-        <>
-          <CharacterHeader userName={userName} data={data} />
-          <XpCards data={data} />
-          <GrowthSection data={data} />
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <GrowthFocusCard data={data} />
-            <LevelRewardCard data={data} />
-            <RewardStoreCard data={data} className="md:col-span-2 lg:col-span-1" />
-          </div>
-          <div className="grid gap-6 lg:grid-cols-3">
-            <WeekCard data={data} />
-            <RecentActivity data={data} className="lg:col-span-2" />
-          </div>
-        </>
+      {data && layout.ready ? (
+        <PanelGrid
+          onReorder={layout.set}
+          panels={layout.order.map((id) => panelOf(id, data, userName))}
+        />
       ) : (
         <DashboardSkeleton />
       )}
     </div>
   );
+}
+
+const FULL = "md:col-span-2 lg:col-span-3";
+
+function panelOf(id: DashboardPanelId, data: DashboardOverview, userName: string): Panel {
+  switch (id) {
+    case "character":
+      return { id, className: FULL, content: <CharacterHeader userName={userName} data={data} /> };
+    case "xp":
+      return { id, className: FULL, content: <XpCards data={data} /> };
+    case "growth":
+      return { id, className: FULL, content: <GrowthSection data={data} /> };
+    case "focus":
+      return { id, content: <GrowthFocusCard data={data} /> };
+    case "levelReward":
+      return { id, content: <LevelRewardCard data={data} /> };
+    case "rewardStore":
+      return {
+        id,
+        className: "md:col-span-2 lg:col-span-1",
+        content: <RewardStoreCard data={data} />,
+      };
+    case "week":
+      return { id, content: <WeekCard data={data} /> };
+    case "activity":
+      return { id, className: "md:col-span-2", content: <RecentActivity data={data} /> };
+  }
 }
 
 function DashboardSkeleton() {

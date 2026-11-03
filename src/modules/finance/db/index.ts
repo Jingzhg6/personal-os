@@ -188,3 +188,40 @@ export const financeFxDefaults = pgTable(
     check("finance_fx_defaults_rate_positive", sql`${t.rate} > 0`),
   ],
 );
+
+/**
+ * Investment records (V2): what was bought, when, for how much, and optionally what it is worth
+ * now. Cost and current value are kept apart; a record without a current value is never given
+ * an estimated one. Amounts are in the record's currency (the base currency when recorded).
+ */
+export const financeInvestments = pgTable(
+  "finance_investments",
+  {
+    id: primaryId(),
+    userId: userId(),
+    name: text("name").notNull(),
+    /** stock · fund · etf · other */
+    kind: text("kind").notNull(),
+    /** What was paid (the invested cost). */
+    costAmount: numeric("cost_amount", MONEY).notNull(),
+    currencyCode: currency("currency_code"),
+    purchaseDate: date("purchase_date").notNull(),
+    /** Units or shares bought (optional). */
+    quantity: numeric("quantity", { precision: 24, scale: 8 }),
+    /** What it is worth now, as entered by the user (optional; never estimated). */
+    currentValue: numeric("current_value", MONEY),
+    notes: text("notes"),
+    ...timestamps(),
+  },
+  (t) => [
+    index("finance_investments_user_date_idx").on(t.userId, t.purchaseDate),
+    check("finance_investments_kind_valid", sql`${t.kind} in ('stock', 'fund', 'etf', 'other')`),
+    check("finance_investments_cost_nonnegative", sql`${t.costAmount} >= 0`),
+    check(
+      "finance_investments_value_nonnegative",
+      sql`${t.currentValue} is null or ${t.currentValue} >= 0`,
+    ),
+    check("finance_investments_quantity_positive", sql`${t.quantity} is null or ${t.quantity} > 0`),
+    check("finance_investments_currency_format", sql`${t.currencyCode} ~ '^[A-Z]{3}$'`),
+  ],
+);
