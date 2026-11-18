@@ -46,5 +46,13 @@
     "automationNotifications": "通知"
   },
   "expandSection": "展开「{section}」",
-  "collapseSection": "收起「{section}」"
+  "collapseSection": "收起「{section}」",
+  "customize": "调整顺序",
+  "customizeDone": "完成",
+  "resetLayout": "恢复默认",
+  "dragSection": "拖动分组「{section}」",
+  "dragItem": "拖动「{item}」",
+  "dragInstructions": "按空格键拿起，用方向键移动，再按空格键放下；按 Esc 取消。页面只能在所在分组内移动。",
+  "layoutSaved": "导航顺序已保存",
+  "layoutReset": "已恢复默认导航"
 }

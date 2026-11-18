@@ -21,7 +21,13 @@ import { useAreas } from "@/modules/areas/ui";
 import { cn } from "@/shared/lib/cn";
 import { PageHeader } from "@/shared/ui/page-header";
 
-import { isClosedCategory, type Task, type TaskListQuery, type TaskStatus } from "../domain";
+import {
+  isClosedCategory,
+  type Task,
+  type TaskFilter,
+  type TaskListQuery,
+  type TaskStatus,
+} from "../domain";
 import { FilterBar } from "./filter-bar";
 import { useStatusLabel, useToday } from "./labels";
 import { useStatusChange } from "./complete-dialog";
@@ -51,18 +57,29 @@ export function KanbanBoard({
   title,
   projectId,
   embedded = false,
+  hideFilters = false,
+  onOpenTask,
+  baseFilter,
 }: {
   title?: string;
   /** Limit the board to one project (inside the project page). */
   projectId?: string;
   embedded?: boolean;
+  /** Inside a project card (V3 area board): no filter bar of its own. */
+  hideFilters?: boolean;
+  /** Open tasks in a panel the host page owns (several boards on one page share one panel). */
+  onOpenTask?: (id: string) => void;
+  /** A fixed filter instead of the URL's (e.g. an area's tasks without a project). */
+  baseFilter?: TaskFilter;
 }) {
   const t = useTranslations("tasks.kanban");
   const dndId = useId();
   const today = useToday();
   const statusLabel = useStatusLabel();
   const [state, setState] = useListUrlState();
-  const { openTaskId, openTask, closeTask } = useTaskPanel();
+  const panel = useTaskPanel();
+  const { openTaskId, closeTask } = panel;
+  const openTask = onOpenTask ?? panel.openTask;
   const [dragging, setDragging] = useState<Task | null>(null);
 
   const query: TaskListQuery = useMemo(
@@ -73,9 +90,9 @@ export function KanbanBoard({
       includeSubtasks: false,
       filter: projectId
         ? { ...state.filter, projectIds: [projectId], noProject: undefined }
-        : state.filter,
+        : (baseFilter ?? state.filter),
     }),
-    [today, state.search, state.filter, projectId],
+    [today, state.search, state.filter, projectId, baseFilter],
   );
   const { data: tasks = [] } = useTaskList(query);
   const { data: statuses = [] } = useStatuses();
@@ -136,18 +153,25 @@ export function KanbanBoard({
   }
 
   return (
-    <div className={cn("transition-[padding]", openTaskId && !embedded && "lg:pr-[480px]")}>
+    <div
+      className={cn(
+        "transition-[padding]",
+        openTaskId && !embedded && !onOpenTask && "lg:pr-[480px]",
+      )}
+    >
       {statusChange.dialog}
       <div className="flex flex-col gap-5">
         {embedded || !title ? null : <PageHeader title={title} description={t("description")} />}
 
-        <FilterBar
-          state={state}
-          onChange={setState}
-          areas={areas}
-          tags={tags}
-          hide={{ sort: true, project: Boolean(projectId) }}
-        />
+        {hideFilters ? null : (
+          <FilterBar
+            state={state}
+            onChange={setState}
+            areas={areas}
+            tags={tags}
+            hide={{ sort: true, project: Boolean(projectId) }}
+          />
+        )}
 
         <DndContext
           id={dndId}
@@ -212,7 +236,7 @@ export function KanbanBoard({
           </DragOverlay>
         </DndContext>
 
-        {openTaskId ? (
+        {openTaskId && !onOpenTask ? (
           <TaskDetailPanel taskId={openTaskId} onClose={closeTask} onOpenTask={openTask} />
         ) : null}
       </div>

@@ -97,7 +97,17 @@
     "duplicate_entry": "同一个账户在一次记录中只能出现一次。",
     "snapshot_exists": "这一天已经有余额记录。请以修正方式保存。",
     "snapshot_not_found": "余额记录不存在。",
-    "investment_not_found": "投资记录不存在。",
+    "investment_not_found": "持仓不存在。",
+    "investment_account_not_found": "投资账户不存在。",
+    "investment_account_archived": "这个投资账户已归档，请先恢复。",
+    "investment_account_in_use": "账户已有持仓或交易记录，不能更改币种。",
+    "transaction_not_found": "交易记录不存在。",
+    "transaction_needs_holding": "买入和卖出需要选择持仓。",
+    "transaction_needs_amount": "请填写金额，或同时填写数量和单价。",
+    "holding_other_account": "这个持仓属于另一个账户。",
+    "sell_needs_quantity": "卖出需要填写数量。",
+    "sell_exceeds_units": "卖出数量超过了当时持有的数量。",
+    "sell_without_units": "这个持仓的数量未知（有未填数量的买入），不能记录卖出。",
     "invalid_quantity": "数量必须是大于 0 的数字。"
   },
   "automation": {

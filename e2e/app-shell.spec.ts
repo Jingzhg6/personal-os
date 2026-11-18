@@ -27,11 +27,11 @@ test("orders and collapses the sidebar sections, remembering the choice", async 
   const nav = page.getByRole("navigation", { name: "主导航" });
   await expect(nav.getByRole("heading", { level: 2 })).toHaveText([
     "概览",
-    "工作与事务",
     "任务",
+    "工作与事务",
     "个人成长与生活",
-    "资料与记录",
     "财务",
+    "资料与记录",
     "系统与自动化",
   ]);
   const finance = nav.getByRole("button", { name: "财务" });

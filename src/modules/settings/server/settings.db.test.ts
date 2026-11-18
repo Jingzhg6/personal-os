@@ -35,6 +35,7 @@ describe("settings repository", () => {
       timeZone: "Europe/Paris",
       weekStartsOn: 0,
       dashboardPanels: null,
+      navLayout: null,
     });
   });
 

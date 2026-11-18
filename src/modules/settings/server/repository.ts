@@ -19,6 +19,7 @@ function toDomain(row: typeof userSettings.$inferSelect): UserSettings {
     timeZone: row.timeZone,
     weekStartsOn: row.weekStartsOn,
     dashboardPanels: row.dashboardPanels ?? null,
+    navLayout: row.navLayout ?? null,
   };
 }
 

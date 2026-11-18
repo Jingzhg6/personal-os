@@ -92,6 +92,18 @@ const checks: [string, string][] = [
   ],
   ["schedule block → task of the same user", sameUser("schedule_blocks", "task_id", "tasks")],
   [
+    "investment holding → account of the same user and currency",
+    `select count(*) from finance_investments h join finance_investment_accounts a on a.id = h.account_id where a.user_id <> h.user_id or a.currency_code <> h.currency_code`,
+  ],
+  [
+    "every investment holding has an account (V3 migration)",
+    `select count(*) from finance_investments where account_id is null`,
+  ],
+  [
+    "investment transaction → its account and holding (same user, same account, same currency)",
+    `select count(*) from finance_investment_transactions t join finance_investment_accounts a on a.id = t.account_id left join finance_investments h on h.id = t.holding_id where a.user_id <> t.user_id or a.currency_code <> t.currency_code or (h.id is not null and (h.user_id <> t.user_id or h.account_id <> t.account_id))`,
+  ],
+  [
     "task milestone belongs to the task's project",
     `select count(*) from tasks t join milestones m on m.id = t.milestone_id where t.project_id is distinct from m.project_id`,
   ],

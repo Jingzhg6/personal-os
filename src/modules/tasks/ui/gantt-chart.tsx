@@ -1,7 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, ChevronDown, ChevronRight, Lock, Repeat } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronDown,
+  ChevronRight,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Lock,
+  Repeat,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
@@ -57,14 +65,39 @@ const WEEK_LABEL = { timeZone: "UTC", month: "numeric", day: "numeric" } as cons
 // filter shows them again).
 const DEFAULT_CATEGORIES: StatusCategory[] = ["backlog", "unstarted", "started"];
 
-/** A row holds one task, or every visible instance of one recurring series (a bar each). */
-type Row =
-  | { kind: "group"; key: string; project: Project | null }
-  | { kind: "task"; task: Task; tasks: Task[] };
+type Span = { start: string; end: string };
 
 /**
- * Gantt chart of top-level tasks by start / due date, grouped by project, with milestones and
- * finish-to-start dependency arrows. Moving a bar edits the task's dates — the same task record
+ * Rows: a project (its bar spans its tasks and subtasks), then its tasks, each followed by its
+ * subtasks (V3). A task row holds one task, or every visible instance of one recurring series.
+ */
+type Row =
+  | { kind: "group"; key: string; project: Project | null; span: Span | null; open: boolean }
+  | {
+      kind: "task";
+      task: Task;
+      tasks: Task[];
+      depth: 0 | 1;
+      /** Subtasks shown under this task (0 = no toggle). */
+      childCount: number;
+      open: boolean;
+    };
+
+const spanUnion = (spans: (Span | null)[]): Span | null => {
+  const list = spans.filter((x): x is Span => x !== null);
+  if (list.length === 0) return null;
+  return {
+    start: list.map((x) => x.start).sort()[0]!,
+    end: list
+      .map((x) => x.end)
+      .sort()
+      .at(-1)!,
+  };
+};
+
+/**
+ * Gantt chart by start / due date: project → task → subtask (V3), each level collapsible, with
+ * milestones and finish-to-start dependency arrows. Moving a bar edits the task's dates — the same task record
  * as every other view.
  */
 export function GanttChart({
@@ -110,7 +143,7 @@ export function GanttChart({
       today,
       search: state.search.trim() || undefined,
       sort: "manual",
-      includeSubtasks: false,
+      includeSubtasks: true,
       filter: {
         ...state.filter,
         categories: state.filter.categories ?? DEFAULT_CATEGORIES,
@@ -131,49 +164,113 @@ export function GanttChart({
   const scheduled = tasks.filter((task) => scheduleSpan(task));
   const unscheduled = tasks.filter((task) => !scheduleSpan(task));
 
+  // Collapsed projects and tasks (everything starts open).
+  const [closed, setClosed] = useState<Set<string>>(() => new Set());
+  const toggleRow = (key: string) =>
+    setClosed((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   const rows: Row[] = useMemo(() => {
+    const byId = new Map(tasks.map((task) => [task.id, task]));
+    // Subtasks whose parent is not shown (e.g. a completed parent) stand on their own.
+    const isChild = (task: Task) => task.parentTaskId !== null && byId.has(task.parentTaskId);
+    const children = new Map<string, Task[]>();
+    for (const task of tasks)
+      if (isChild(task) && scheduleSpan(task))
+        children.set(task.parentTaskId!, [...(children.get(task.parentTaskId!) ?? []), task]);
+    const ownSpan = (task: Task): Span | null => scheduleSpan(task) ?? null;
+    const fullSpan = (task: Task) =>
+      spanUnion([ownSpan(task), ...(children.get(task.id) ?? []).map(ownSpan)]);
     const byStart = (a: Task, b: Task) => {
-      const x = scheduleSpan(a)!;
-      const y = scheduleSpan(b)!;
+      const x = fullSpan(a)!;
+      const y = fullSpan(b)!;
       return (
         x.start.localeCompare(y.start) ||
         x.end.localeCompare(y.end) ||
         a.sortKey.localeCompare(b.sortKey)
       );
     };
-    const withDates = tasks.filter((task) => scheduleSpan(task)).sort(byStart);
+    for (const list of children.values()) list.sort(byStart);
+    const projectOf = (task: Task) =>
+      task.projectId ??
+      (task.parentTaskId ? (byId.get(task.parentTaskId)?.projectId ?? null) : null);
+    // Top-level rows: tasks with dates of their own or of their subtasks.
+    const top = tasks.filter((task) => !isChild(task) && fullSpan(task)).sort(byStart);
     const groups = projectId
       ? projects.filter((p) => p.id === projectId)
-      : projects.filter((p) => withDates.some((task) => task.projectId === p.id));
+      : projects.filter((p) => top.some((task) => projectOf(task) === p.id));
     const result: Row[] = [];
     const pushTasks = (list: Task[]) => {
       const series = new Map<string, Task[]>();
       for (const task of list) {
-        if (!task.recurrenceId) {
-          result.push({ kind: "task", task, tasks: [task] });
+        if (task.recurrenceId) {
+          const existing = series.get(task.recurrenceId);
+          if (existing) {
+            existing.push(task);
+            continue;
+          }
+          const instances = [task];
+          series.set(task.recurrenceId, instances);
+          result.push({
+            kind: "task",
+            task,
+            tasks: instances,
+            depth: 0,
+            childCount: 0,
+            open: false,
+          });
           continue;
         }
-        const existing = series.get(task.recurrenceId);
-        if (existing) {
-          existing.push(task);
-          continue;
-        }
-        const instances = [task];
-        series.set(task.recurrenceId, instances);
-        result.push({ kind: "task", task, tasks: instances });
+        const subtasks = children.get(task.id) ?? [];
+        const open = !closed.has(task.id);
+        result.push({
+          kind: "task",
+          task,
+          tasks: [task],
+          depth: 0,
+          childCount: subtasks.length,
+          open,
+        });
+        if (open)
+          for (const sub of subtasks)
+            result.push({
+              kind: "task",
+              task: sub,
+              tasks: [sub],
+              depth: 1,
+              childCount: 0,
+              open: false,
+            });
       }
     };
-    for (const project of groups) {
-      result.push({ kind: "group", key: project.id, project });
-      pushTasks(withDates.filter((x) => x.projectId === project.id));
-    }
-    const loose = projectId ? [] : withDates.filter((task) => !task.projectId);
-    if (loose.length > 0) {
-      result.push({ kind: "group", key: "none", project: null });
-      pushTasks(loose);
-    }
+    const pushGroup = (key: string, project: Project | null, list: Task[]) => {
+      const open = !closed.has(`p:${key}`);
+      // The project's bar comes from its tasks and subtasks; its own dates only without them.
+      const span =
+        spanUnion(list.map(fullSpan)) ??
+        (project?.startDate && project.targetDate
+          ? { start: project.startDate, end: project.targetDate }
+          : null);
+      result.push({ kind: "group", key, project, span, open });
+      if (open) pushTasks(list);
+    };
+    for (const project of groups)
+      pushGroup(
+        project.id,
+        project,
+        top.filter((x) => projectOf(x) === project.id),
+      );
+    const loose = projectId ? [] : top.filter((task) => !projectOf(task));
+    if (loose.length > 0) pushGroup("none", null, loose);
     return result;
-  }, [tasks, projects, projectId]);
+  }, [tasks, projects, projectId, closed]);
+
+  const groupKeys = rows.flatMap((row) => (row.kind === "group" ? [`p:${row.key}`] : []));
+  const allClosed = groupKeys.length > 0 && groupKeys.every((key) => closed.has(key));
 
   const visibleMilestones = milestones.filter(
     (m): m is MilestoneMarker & { dueDate: string } =>
@@ -182,11 +279,7 @@ export function GanttChart({
   );
 
   const spans = scheduled.map((task) => scheduleSpan(task)!);
-  for (const row of rows) {
-    const project = row.kind === "group" ? row.project : null;
-    if (project?.startDate && project.targetDate)
-      spans.push({ start: project.startDate, end: project.targetDate });
-  }
+  for (const row of rows) if (row.kind === "group" && row.span) spans.push(row.span);
   for (const m of visibleMilestones) spans.push({ start: m.dueDate, end: m.dueDate });
   const range = timelineWindow(spans, today, minDays[zoom], weekStartsOn);
 
@@ -232,8 +325,9 @@ export function GanttChart({
     if (from === undefined || to === undefined) return [];
     const blocking = taskById.get(dep.blockingTaskId)!;
     const blocked = taskById.get(dep.blockedTaskId)!;
-    const a = scheduleSpan(blocking)!;
-    const b = scheduleSpan(blocked)!;
+    const a = scheduleSpan(blocking);
+    const b = scheduleSpan(blocked);
+    if (!a || !b) return [];
     return [
       {
         key: `${dep.blockingTaskId}-${dep.blockedTaskId}`,
@@ -284,14 +378,40 @@ export function GanttChart({
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={scrollToToday}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground"
-          >
-            <CalendarClock className="size-4" aria-hidden />
-            {t("today")}
-          </button>
+          <div className="flex items-center gap-1">
+            {groupKeys.length > 0 ? (
+              <button
+                type="button"
+                onClick={() =>
+                  setClosed((current) => {
+                    const next = new Set(current);
+                    for (const key of groupKeys) {
+                      if (allClosed) next.delete(key);
+                      else next.add(key);
+                    }
+                    return next;
+                  })
+                }
+                data-testid="gantt-toggle-all"
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+              >
+                {allClosed ? (
+                  <ChevronsUpDown className="size-4" aria-hidden />
+                ) : (
+                  <ChevronsDownUp className="size-4" aria-hidden />
+                )}
+                {allClosed ? t("expandAll") : t("collapseAll")}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={scrollToToday}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+            >
+              <CalendarClock className="size-4" aria-hidden />
+              {t("today")}
+            </button>
+          </div>
         </div>
 
         {!isPending && scheduled.length === 0 ? (
@@ -346,12 +466,13 @@ export function GanttChart({
                       project={project}
                       label={project ? project.name : t("noProject")}
                       linkable={!projectId}
+                      open={row.open}
+                      onToggle={() => toggleRow(`p:${row.key}`)}
                       span={
-                        project?.startDate && project.targetDate
+                        row.span
                           ? {
-                              left: x(project.startDate),
-                              width:
-                                (daysBetween(project.startDate, project.targetDate) + 1) * dayWidth,
+                              left: x(row.span.start),
+                              width: (daysBetween(row.span.start, row.span.end) + 1) * dayWidth,
                             }
                           : null
                       }
@@ -374,11 +495,32 @@ export function GanttChart({
                     <div
                       style={gridRow}
                       data-testid="gantt-row"
+                      data-depth={row.depth}
                       className={cn(
                         "sticky left-0 z-20 col-start-1 flex h-9 min-w-0 items-center gap-2 border-r border-b border-border bg-surface px-3",
+                        row.depth === 1 && "pl-9",
                         task.id === openTaskId && "bg-accent",
                       )}
                     >
+                      {row.childCount > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleRow(task.id)}
+                          aria-expanded={row.open}
+                          aria-label={t(row.open ? "collapseSubtasks" : "expandSubtasks", {
+                            title: task.title,
+                            count: row.childCount,
+                          })}
+                          data-testid="gantt-task-toggle"
+                          className="-ml-1.5 flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+                        >
+                          {row.open ? (
+                            <ChevronDown className="size-3.5" aria-hidden />
+                          ) : (
+                            <ChevronRight className="size-3.5" aria-hidden />
+                          )}
+                        </button>
+                      ) : null}
                       {recurring ? (
                         <Repeat
                           className="size-3.5 shrink-0 text-muted-foreground"
@@ -414,7 +556,9 @@ export function GanttChart({
                       className="relative col-start-2 h-9 border-b border-border/60"
                     >
                       {row.tasks.map((instance) => {
-                        const span = scheduleSpan(instance)!;
+                        const span = scheduleSpan(instance);
+                        // A parent shown only for its subtasks' dates has no bar of its own.
+                        if (!span) return null;
                         const dates =
                           span.start === span.end
                             ? shortDate(span.start)
@@ -576,11 +720,15 @@ function GroupRow({
   linkable,
   span,
   milestones,
+  open,
+  onToggle,
 }: {
   style: CSSProperties;
   project: Project | null;
   label: string;
   linkable: boolean;
+  open: boolean;
+  onToggle: () => void;
   span: { left: number; width: number } | null;
   milestones: { id: string; left: number; label: string; done: boolean }[];
 }) {
@@ -593,6 +741,20 @@ function GroupRow({
         data-testid="gantt-group"
         className="sticky left-0 z-20 col-start-1 flex h-9 min-w-0 items-center gap-2 border-r border-b border-border bg-surface-muted px-3 text-sm font-medium"
       >
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-label={t(open ? "collapseProject" : "expandProject", { name: label })}
+          data-testid="gantt-group-toggle"
+          className="-ml-1.5 flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-surface hover:text-foreground"
+        >
+          {open ? (
+            <ChevronDown className="size-3.5" aria-hidden />
+          ) : (
+            <ChevronRight className="size-3.5" aria-hidden />
+          )}
+        </button>
         <span aria-hidden className={cn("size-2.5 shrink-0 rounded-full", dot)} />
         {project && linkable ? (
           <Link
@@ -612,7 +774,8 @@ function GroupRow({
         {span ? (
           <div
             title={t("projectSpan")}
-            className={cn("absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full opacity-40", dot)}
+            data-testid="gantt-project-span"
+            className={cn("absolute top-1/2 h-2 -translate-y-1/2 rounded-full opacity-50", dot)}
             style={{ left: span.left, width: span.width }}
           />
         ) : null}

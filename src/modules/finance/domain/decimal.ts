@@ -52,6 +52,23 @@ export function mul(a: Dec, b: Dec): Dec {
   return { units: a.units * b.units, scale: a.scale + b.scale };
 }
 
+/** a ÷ b to `scale` decimals, half away from zero. Division by zero throws. */
+export function div(a: Dec, b: Dec, scale = 12): Dec {
+  if (b.units === B0) throw new RangeError("Division by zero");
+  // a/b = (a.units · 10^b.scale) / (b.units · 10^a.scale); scaled up by 10^scale.
+  let numerator = a.units * pow10(b.scale + scale);
+  let denominator = b.units * pow10(a.scale);
+  if (denominator < B0) {
+    numerator = -numerator;
+    denominator = -denominator;
+  }
+  const quotient = numerator / denominator;
+  const remainder = numerator % denominator;
+  const twice = (remainder < B0 ? -remainder : remainder) * B2;
+  const bump = twice >= denominator ? (numerator < B0 ? -B1 : B1) : B0;
+  return { units: quotient + bump, scale };
+}
+
 export function sum(values: readonly Dec[]): Dec {
   return values.reduce((total, v) => add(total, v), ZERO);
 }

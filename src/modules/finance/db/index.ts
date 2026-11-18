@@ -190,38 +190,141 @@ export const financeFxDefaults = pgTable(
 );
 
 /**
- * Investment records (V2): what was bought, when, for how much, and optionally what it is worth
- * now. Cost and current value are kept apart; a record without a current value is never given
- * an estimated one. Amounts are in the record's currency (the base currency when recorded).
+ * Investment accounts (V3): a brokerage, a platform, a savings plan… Holdings and transactions
+ * belong to one account, in the account's currency. `legacy` marks the account the V3 migration
+ * made for each user's V2 records (one per currency); it is an ordinary account otherwise.
+ */
+export const financeInvestmentAccounts = pgTable(
+  "finance_investment_accounts",
+  {
+    id: primaryId(),
+    userId: userId(),
+    name: text("name").notNull(),
+    institution: text("institution"),
+    /** brokerage · retirement · platform · crypto · other */
+    accountType: text("account_type").notNull(),
+    currencyCode: currency("currency_code"),
+    notes: text("notes"),
+    legacy: boolean("legacy").notNull().default(false),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    ...timestamps(),
+  },
+  (t) => [
+    index("finance_investment_accounts_user_idx").on(t.userId),
+    check(
+      "finance_investment_accounts_type_valid",
+      sql`${t.accountType} in ('brokerage', 'retirement', 'platform', 'crypto', 'other')`,
+    ),
+    check("finance_investment_accounts_currency_format", sql`${t.currencyCode} ~ '^[A-Z]{3}$'`),
+  ],
+);
+
+/**
+ * Investment holdings (V2 records, V3 holdings). What a holding is worth comes from its
+ * transactions (units and average cost) and the price the user enters — or, for V2 records
+ * without units, the value entered by hand. Nothing is estimated except "at cost", which is
+ * always labelled. `cost_amount`, `purchase_date` and `quantity` are the V2 figures, kept as they
+ * were; the V3 migration turned each into an opening transaction.
  */
 export const financeInvestments = pgTable(
   "finance_investments",
   {
     id: primaryId(),
     userId: userId(),
+    /** V3: the account it belongs to (set for every record by the migration). */
+    accountId: uuid("account_id").references(() => financeInvestmentAccounts.id, {
+      onDelete: "restrict",
+    }),
     name: text("name").notNull(),
-    /** stock · fund · etf · other */
+    /** stock · fund · etf · bond · crypto · other */
     kind: text("kind").notNull(),
-    /** What was paid (the invested cost). */
-    costAmount: numeric("cost_amount", MONEY).notNull(),
+    ticker: text("ticker"),
+    /** V2: what was paid. Optional from V3 (cost comes from transactions). */
+    costAmount: numeric("cost_amount", MONEY),
     currencyCode: currency("currency_code"),
-    purchaseDate: date("purchase_date").notNull(),
-    /** Units or shares bought (optional). */
+    /** V2: when it was bought. Optional from V3. */
+    purchaseDate: date("purchase_date"),
+    /** V2: units bought (optional). */
     quantity: numeric("quantity", { precision: 24, scale: 8 }),
-    /** What it is worth now, as entered by the user (optional; never estimated). */
+    /** A value entered by hand (V2 "current value"), used when there is no unit price. */
     currentValue: numeric("current_value", MONEY),
+    /** V3: the latest price per unit, entered by the user, and the day it is from. */
+    currentPrice: numeric("current_price", { precision: 24, scale: 8 }),
+    priceDate: date("price_date"),
     notes: text("notes"),
     ...timestamps(),
   },
   (t) => [
     index("finance_investments_user_date_idx").on(t.userId, t.purchaseDate),
-    check("finance_investments_kind_valid", sql`${t.kind} in ('stock', 'fund', 'etf', 'other')`),
-    check("finance_investments_cost_nonnegative", sql`${t.costAmount} >= 0`),
+    index("finance_investments_account_idx").on(t.accountId),
+    check(
+      "finance_investments_kind_valid",
+      sql`${t.kind} in ('stock', 'fund', 'etf', 'bond', 'crypto', 'other')`,
+    ),
+    check(
+      "finance_investments_cost_nonnegative",
+      sql`${t.costAmount} is null or ${t.costAmount} >= 0`,
+    ),
     check(
       "finance_investments_value_nonnegative",
       sql`${t.currentValue} is null or ${t.currentValue} >= 0`,
     ),
     check("finance_investments_quantity_positive", sql`${t.quantity} is null or ${t.quantity} > 0`),
+    check(
+      "finance_investments_price_nonnegative",
+      sql`${t.currentPrice} is null or ${t.currentPrice} >= 0`,
+    ),
     check("finance_investments_currency_format", sql`${t.currencyCode} ~ '^[A-Z]{3}$'`),
+  ],
+);
+
+/**
+ * Investment transactions (V3), one row each. Holdings and account cash are computed from these.
+ * `amount` is the gross amount (units × price for trades), `fee` is extra. `opening` rows were
+ * made by the migration from V2 records: they set up a holding but do not move account cash.
+ */
+export const financeInvestmentTransactions = pgTable(
+  "finance_investment_transactions",
+  {
+    id: primaryId(),
+    userId: userId(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => financeInvestmentAccounts.id, { onDelete: "restrict" }),
+    holdingId: uuid("holding_id").references(() => financeInvestments.id, { onDelete: "cascade" }),
+    /** buy · sell · dividend · deposit · withdrawal · fee */
+    kind: text("kind").notNull(),
+    tradeDate: date("trade_date").notNull(),
+    quantity: numeric("quantity", { precision: 24, scale: 8 }),
+    unitPrice: numeric("unit_price", { precision: 24, scale: 8 }),
+    amount: numeric("amount", MONEY).notNull(),
+    fee: numeric("fee", MONEY).notNull().default("0"),
+    currencyCode: currency("currency_code"),
+    notes: text("notes"),
+    opening: boolean("opening").notNull().default(false),
+    ...timestamps(),
+  },
+  (t) => [
+    index("finance_investment_transactions_account_idx").on(t.accountId, t.tradeDate),
+    index("finance_investment_transactions_holding_idx").on(t.holdingId),
+    check(
+      "finance_investment_transactions_kind_valid",
+      sql`${t.kind} in ('buy', 'sell', 'dividend', 'deposit', 'withdrawal', 'fee')`,
+    ),
+    check(
+      "finance_investment_transactions_holding_fits_kind",
+      sql`(${t.kind} not in ('buy', 'sell') or ${t.holdingId} is not null) and (${t.kind} not in ('deposit', 'withdrawal') or ${t.holdingId} is null)`,
+    ),
+    check(
+      "finance_investment_transactions_sell_quantity",
+      sql`${t.kind} <> 'sell' or ${t.quantity} > 0`,
+    ),
+    check("finance_investment_transactions_amount_nonnegative", sql`${t.amount} >= 0`),
+    check("finance_investment_transactions_fee_nonnegative", sql`${t.fee} >= 0`),
+    check(
+      "finance_investment_transactions_quantity_positive",
+      sql`${t.quantity} is null or ${t.quantity} > 0`,
+    ),
+    check("finance_investment_transactions_currency_format", sql`${t.currencyCode} ~ '^[A-Z]{3}$'`),
   ],
 );

@@ -82,5 +82,34 @@
     "dragOver": "「{title}」位于项目「{project}」上方",
     "dragCancel": "已取消移动「{title}」",
     "instructions": "按空格键拿起任务，用方向键移到项目卡片上，再按空格键放下；按 Esc 取消。"
+  },
+  "board": {
+    "description": "按领域查看项目：每个项目显示状态和根据任务（含子任务）自动计算的进度。展开项目即可按状态拖动它的任务。",
+    "area": "领域",
+    "allAreas": "全部领域",
+    "noArea": "未分配领域",
+    "expandAll": "全部展开",
+    "collapseAll": "全部收起",
+    "empty": "这里还没有项目。",
+    "toProjects": "去全部项目创建",
+    "deadline": "截止 {date}",
+    "openProject": "项目详情",
+    "looseTasks": "不属于任何项目的任务"
+  },
+  "matrix": {
+    "viewLabel": "视图",
+    "views": {
+      "tasks": "任务视图",
+      "projects": "项目视图"
+    },
+    "description": "按项目查看：进度根据任务（含子任务）的实际完成情况计算；每个项目显示其未完成任务在四个象限中的分布。切换视图不会改变任务的分类。",
+    "showClosed": "包括已完成和已取消的项目",
+    "empty": "还没有项目。",
+    "toProjects": "去全部项目创建",
+    "noArea": "未分配领域",
+    "openProject": "项目详情",
+    "openByQuadrant": "未完成任务的象限分布",
+    "quadrantCount": "{quadrant} {count}",
+    "noOpenTasks": "这个项目没有未完成的任务。"
   }
 }

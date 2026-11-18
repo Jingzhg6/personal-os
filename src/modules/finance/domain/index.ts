@@ -20,6 +20,7 @@ import {
 } from "./decimal";
 
 export * from "./decimal";
+export * from "./investments";
 
 /*
  * Personal finance (ADR 0019): manual net-worth tracking. Providers hold accounts; accounts are
@@ -564,40 +565,6 @@ export const saveBatchInput = z.object({
   overwrite: z.boolean().default(false),
 });
 export type SaveBatchInput = z.infer<typeof saveBatchInput>;
-
-export const investmentKinds = ["stock", "fund", "etf", "other"] as const;
-export type InvestmentKind = (typeof investmentKinds)[number];
-
-const optionalDecimal = z.string().trim().max(40).nullable();
-const investmentFields = z.object({
-  name,
-  kind: z.enum(investmentKinds),
-  /** What was paid, in the base currency. */
-  costAmount: z.string().trim().min(1).max(40),
-  purchaseDate: z.iso.date(),
-  quantity: optionalDecimal,
-  /** What it is worth now, as the user knows it; null = not valued (never estimated). */
-  currentValue: optionalDecimal,
-  notes,
-});
-export const createInvestmentInput = investmentFields.partial({
-  quantity: true,
-  currentValue: true,
-  notes: true,
-});
-export const updateInvestmentInput = z.object({ id: z.uuid(), patch: investmentFields.partial() });
-
-export interface FinanceInvestment {
-  id: string;
-  name: string;
-  kind: InvestmentKind;
-  costAmount: Money;
-  currency: string;
-  purchaseDate: string;
-  quantity: string | null;
-  currentValue: Money | null;
-  notes: string | null;
-}
 
 export const historyInput = z.object({ range: z.enum(historyRanges) });
 export const accountHistoryInput = z.object({ id: z.uuid() });

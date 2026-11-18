@@ -63,6 +63,8 @@ const exported: Record<string, string> = {
   finance_snapshots: "finance.snapshots",
   finance_fx_defaults: "finance.fxDefaults",
   finance_investments: "finance.investments",
+  finance_investment_accounts: "finance.investmentAccounts",
+  finance_investment_transactions: "finance.investmentTransactions",
   schedule_blocks: "schedule.blocks",
   automation_rules: "automation.rules",
   automation_executions: "automation.executions",
@@ -212,12 +214,24 @@ async function seed({ api, name }: Ctx) {
     rates: { CNY: "0.1282" },
     overwrite: true,
   });
-  await api.finance.investments.create({
+  const broker = await api.finance.investments.accounts.create({
+    name: `${name}-券商`,
+    accountType: "brokerage",
+    currency: "EUR",
+  });
+  const etf = await api.finance.investments.holdings.create({
+    accountId: broker.id,
     name: `${name}-ETF`,
     kind: "etf",
-    costAmount: "1000.00",
-    purchaseDate: "2026-09-01",
-    currentValue: "1100.00",
+    currentPrice: "110",
+  });
+  await api.finance.investments.transactions.create({
+    accountId: broker.id,
+    holdingId: etf.id,
+    kind: "buy",
+    tradeDate: "2026-09-01",
+    quantity: "10",
+    unitPrice: "100",
   });
   await api.schedule.create({
     taskId: task.id,

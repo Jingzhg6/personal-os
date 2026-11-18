@@ -135,13 +135,12 @@ test("moves an existing task into a project, filters the global board, edits and
   await page.goto(url);
   await expect(row(page, loose)).toBeVisible();
 
-  // Global board filtered to the project.
+  // Area board (V3): the project is a card; opened, it shows its task on the status board.
   await page.goto("/projects/kanban");
-  await page.getByRole("button", { name: "项目", exact: true }).click();
-  await page.getByRole("menuitemcheckbox", { name }).click();
-  await page.keyboard.press("Escape");
-  await expect(page).toHaveURL(/project=/);
-  await expect(page.getByTestId("kanban-card")).toHaveCount(1);
+  const card = page.getByTestId("area-board-project").filter({ hasText: name });
+  await expect(card).toContainText("0/1 个任务");
+  await card.getByTestId("area-board-project-toggle").click();
+  await expect(card.getByTestId("kanban-card")).toHaveCount(1);
 
   // Edit: mark the project completed; it moves to 已结束.
   await page.goto(url);

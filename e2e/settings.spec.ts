@@ -76,7 +76,11 @@ test.describe("profile, time zone and week start", () => {
 
   test("the week start orders weekday pickers and the dashboard week", async ({ page }) => {
     await page.goto("/settings");
-    await page.getByTestId("settings-week-start").selectOption("0");
+    // Until the page has hydrated a selection does not reach the form: select until it does.
+    await expect(async () => {
+      await page.getByTestId("settings-week-start").selectOption("0");
+      await expect(page.getByTestId("settings-save")).toBeEnabled({ timeout: 1000 });
+    }).toPass();
     await page.getByTestId("settings-save").click();
     await expect(page.getByText("设置已保存。")).toBeVisible();
 

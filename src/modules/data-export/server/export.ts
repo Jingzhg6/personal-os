@@ -28,7 +28,9 @@ import {
 import {
   financeAccounts,
   financeFxDefaults,
+  financeInvestmentAccounts,
   financeInvestments,
+  financeInvestmentTransactions,
   financeProviders,
   financeSettings,
   financeSnapshots,
@@ -208,9 +210,17 @@ async function collect(db: DbExecutor, id: string) {
         financeSnapshots.id,
       ]),
       fxDefaults: await owned(financeFxDefaults, [financeFxDefaults.currencyCode]),
+      investmentAccounts: await owned(financeInvestmentAccounts, [
+        financeInvestmentAccounts.createdAt,
+        financeInvestmentAccounts.id,
+      ]),
       investments: await owned(financeInvestments, [
-        financeInvestments.purchaseDate,
+        financeInvestments.createdAt,
         financeInvestments.id,
+      ]),
+      investmentTransactions: await owned(financeInvestmentTransactions, [
+        financeInvestmentTransactions.tradeDate,
+        financeInvestmentTransactions.id,
       ]),
     },
     schedule: {

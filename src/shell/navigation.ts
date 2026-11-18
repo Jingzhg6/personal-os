@@ -87,8 +87,8 @@ export interface NavSection {
   items: NavItem[];
 }
 
-// Order (2026-11): daily work and administration come first, then tasks, personal growth and
-// life, records, finance, and the system. Unbuilt modules stay visible with their phase.
+// Default order (V3): overview, tasks (projects and every task view), work and affairs, personal
+// growth and life, finance, records, system. Users may reorder groups and pages (navLayout).
 export const navigation: NavSection[] = [
   {
     id: "overview",
@@ -108,6 +108,75 @@ export const navigation: NavSection[] = [
         icon: Gauge,
         module: "analytics",
         phase: 3,
+      },
+    ],
+  },
+  {
+    id: "tasks",
+    items: [
+      {
+        id: "allProjects",
+        href: "/projects",
+        icon: FolderKanban,
+        module: "projects",
+        phase: 1,
+        milestone: "M4",
+      },
+      {
+        id: "allTasks",
+        href: "/tasks",
+        icon: ListTodo,
+        module: "tasks",
+        phase: 1,
+        milestone: "M1",
+      },
+      {
+        id: "matrix",
+        href: "/tasks/matrix",
+        icon: Grid2x2,
+        module: "tasks",
+        phase: 1,
+        milestone: "M3",
+      },
+      {
+        id: "gantt",
+        href: "/projects/gantt",
+        icon: ChartGantt,
+        module: "projects",
+        phase: 1,
+        milestone: "M5",
+      },
+      {
+        id: "schedule",
+        href: "/schedule",
+        icon: CalendarClock,
+        module: "calendar",
+        phase: 1,
+        milestone: "M11",
+      },
+      {
+        id: "kanban",
+        href: "/projects/kanban",
+        icon: Columns3,
+        module: "projects",
+        phase: 1,
+        milestone: "M4",
+      },
+      {
+        id: "deadlines",
+        href: "/admin/deadlines",
+        icon: AlarmClock,
+        module: "tasks",
+        phase: 1,
+        milestone: "M2",
+      },
+      {
+        id: "trash",
+        href: "/tasks/trash",
+        icon: Trash2,
+        module: "tasks",
+        phase: 1,
+        milestone: "M2",
       },
     ],
   },
@@ -132,82 +201,12 @@ export const navigation: NavSection[] = [
         milestone: "M2",
       },
       {
-        id: "deadlines",
-        href: "/admin/deadlines",
-        icon: AlarmClock,
-        module: "tasks",
-        phase: 1,
-        milestone: "M2",
-      },
-      {
-        id: "allProjects",
-        href: "/projects",
-        icon: FolderKanban,
-        module: "projects",
-        phase: 1,
-        milestone: "M4",
-      },
-      {
-        id: "kanban",
-        href: "/projects/kanban",
-        icon: Columns3,
-        module: "projects",
-        phase: 1,
-        milestone: "M4",
-      },
-      {
-        id: "gantt",
-        href: "/projects/gantt",
-        icon: ChartGantt,
-        module: "projects",
-        phase: 1,
-        milestone: "M5",
-      },
-      // Development goals (M8) live in 成长; this item opens them.
-      {
         id: "goals",
         href: "/projects/goals",
         icon: Target,
         module: "development",
         phase: 1,
         milestone: "M8",
-      },
-    ],
-  },
-  {
-    id: "tasks",
-    items: [
-      {
-        id: "allTasks",
-        href: "/tasks",
-        icon: ListTodo,
-        module: "tasks",
-        phase: 1,
-        milestone: "M1",
-      },
-      {
-        id: "matrix",
-        href: "/tasks/matrix",
-        icon: Grid2x2,
-        module: "tasks",
-        phase: 1,
-        milestone: "M3",
-      },
-      {
-        id: "schedule",
-        href: "/schedule",
-        icon: CalendarClock,
-        module: "calendar",
-        phase: 1,
-        milestone: "M11",
-      },
-      {
-        id: "trash",
-        href: "/tasks/trash",
-        icon: Trash2,
-        module: "tasks",
-        phase: 1,
-        milestone: "M2",
       },
     ],
   },
@@ -282,12 +281,6 @@ export const navigation: NavSection[] = [
     ],
   },
   {
-    id: "records",
-    items: [
-      { id: "documents", href: "/admin/documents", icon: FileText, module: "documents", phase: 2 },
-    ],
-  },
-  {
     id: "finance",
     items: [
       {
@@ -314,6 +307,12 @@ export const navigation: NavSection[] = [
         phase: 1,
         milestone: "M11",
       },
+    ],
+  },
+  {
+    id: "records",
+    items: [
+      { id: "documents", href: "/admin/documents", icon: FileText, module: "documents", phase: 2 },
     ],
   },
   {
@@ -358,4 +357,46 @@ export function findActiveNavItem(pathname: string): NavItem | null {
     if (matches && (!best || item.href.length > best.href.length)) best = item;
   }
   return best;
+}
+
+export interface NavLayout {
+  sections: string[];
+  items: Record<string, string[]>;
+}
+
+/**
+ * The navigation in a user's saved order: groups first, then pages within each group. Unknown
+ * ids are ignored and anything added since keeps its default place at the end, so a saved layout
+ * never hides a page. Pages never move between groups.
+ */
+export function applyNavLayout(layout: NavLayout | null | undefined): NavSection[] {
+  if (!layout) return navigation;
+  const byId = new Map(navigation.map((s) => [s.id as string, s]));
+  const sectionIds = [
+    ...layout.sections.filter((id, i, all) => byId.has(id) && all.indexOf(id) === i),
+    ...navigation.map((s) => s.id as string).filter((id) => !layout.sections.includes(id)),
+  ];
+  return sectionIds.map((id) => {
+    const section = byId.get(id)!;
+    const saved = layout.items[id] ?? [];
+    const itemById = new Map(section.items.map((item) => [item.id as string, item]));
+    const kept = saved.filter(
+      (itemId, i, all) => itemById.has(itemId) && all.indexOf(itemId) === i,
+    );
+    return {
+      ...section,
+      items: [
+        ...kept.map((itemId) => itemById.get(itemId)!),
+        ...section.items.filter((item) => !kept.includes(item.id)),
+      ],
+    };
+  });
+}
+
+/** The layout of a navigation, for saving. */
+export function layoutOf(sections: readonly NavSection[]): NavLayout {
+  return {
+    sections: sections.map((s) => s.id),
+    items: Object.fromEntries(sections.map((s) => [s.id, s.items.map((i) => i.id)])),
+  };
 }

@@ -24,8 +24,9 @@ import {
   type HistoryRange,
   type Snapshot,
   add,
+  dec,
 } from "../domain";
-import { investmentTotals, listInvestments } from "./investments";
+import { getPortfolio, portfolioSummary } from "./investments";
 import { listSnapshots } from "./snapshots";
 import { getBaseCurrency, listAccounts, listProviders } from "./structure";
 
@@ -69,10 +70,9 @@ export async function getFinanceOverview(db: DbExecutor, userId: string): Promis
   const money = (value: Parameters<typeof toMoney>[0]) => toMoney(value, baseCurrency);
   const positions = positionsAt(accounts, snapshots, date, baseCurrency);
   const totals = totalsOf(positions);
-  const { valueDec, ...investments } = investmentTotals(
-    await listInvestments(db, userId),
-    baseCurrency,
-  );
+  // Investment accounts in the base currency are added once (V3); others are only counted.
+  const investments = portfolioSummary(await getPortfolio(db, userId), baseCurrency);
+  const valueDec = dec(investments.value);
   const dates = [...new Set(snapshots.map((s) => s.valuationDate))].filter((d) => d <= date).sort();
   const last = dates.at(-1) ?? null;
   const previous = dates.at(-2) ?? null;

@@ -11,6 +11,13 @@ export interface UserSettings {
   weekStartsOn: number;
   /** Dashboard panel ids in the user's order; null = the default order. */
   dashboardPanels: string[] | null;
+  /** Sidebar group and page order; null = the default navigation. */
+  navLayout: NavLayout | null;
+}
+
+export interface NavLayout {
+  sections: string[];
+  items: Record<string, string[]>;
 }
 
 export const defaultUserSettings: UserSettings = {
@@ -18,6 +25,7 @@ export const defaultUserSettings: UserSettings = {
   timeZone: null,
   weekStartsOn: 1,
   dashboardPanels: null,
+  navLayout: null,
 };
 
 export function isValidTimeZone(value: string): boolean {
@@ -29,6 +37,8 @@ export function isValidTimeZone(value: string): boolean {
   }
 }
 
+const navId = z.string().regex(/^[a-zA-Z]{1,40}$/);
+
 export const updateUserSettingsInput = z
   .object({
     timeZone: z.string().refine(isValidTimeZone, { message: "Invalid IANA timezone" }),
@@ -36,6 +46,12 @@ export const updateUserSettingsInput = z
     dashboardPanels: z
       .array(z.string().regex(/^[a-zA-Z]{1,40}$/))
       .max(30)
+      .nullable(),
+    navLayout: z
+      .object({
+        sections: z.array(navId).max(20),
+        items: z.record(navId, z.array(navId).max(60)),
+      })
       .nullable(),
   })
   .partial()

@@ -8,8 +8,7 @@ import { createAppEventBus } from "./event-bus";
 import { appRouter } from "./trpc/root";
 
 /*
- * V2 (ADR 0028) through the real routers: investments in the asset totals (cost and value kept
- * apart, unvalued ones at cost, nothing counted twice), the dashboard panel order, and schedule
+ * V2 (ADR 0028) through the real routers: the dashboard panel order, and schedule
  * blocks as views of a task (deleting a block keeps the task; purging the task removes them).
  */
 
@@ -26,80 +25,6 @@ async function setup() {
 
 beforeEach(() => resetDb(db));
 afterAll(() => close());
-
-describe("investments", () => {
-  it("are added to assets and net worth once, at value or else at cost", async () => {
-    const { api } = await setup();
-    await api.finance.setBaseCurrency({ baseCurrency: "EUR" });
-    const etf = await api.finance.investments.create({
-      name: "ETF",
-      kind: "etf",
-      costAmount: "1000.00",
-      purchaseDate: "2026-01-10",
-      quantity: "12.5",
-      currentValue: "1200.50",
-    });
-    await api.finance.investments.create({
-      name: "基金",
-      kind: "fund",
-      costAmount: "300",
-      purchaseDate: "2026-02-01",
-    });
-    const overview = await api.finance.overview();
-    expect(overview.investments).toEqual({
-      count: 2,
-      cost: "1300.00",
-      value: "1500.50",
-      unvalued: 1,
-      otherCurrency: 0,
-    });
-    expect(overview.assets).toBe("1500.50");
-    expect(overview.netWorth).toBe("1500.50");
-
-    // The edit form sends every field back as it was loaded.
-    const [loaded] = await api.finance.investments.list();
-    await api.finance.investments.update({
-      id: etf.id,
-      patch: {
-        name: loaded!.name,
-        kind: loaded!.kind,
-        costAmount: loaded!.costAmount,
-        purchaseDate: loaded!.purchaseDate,
-        quantity: loaded!.quantity,
-        currentValue: "1180.5",
-        notes: null,
-      },
-    });
-    expect(loaded!.quantity).toBe("12.5");
-    await api.finance.investments.update({ id: etf.id, patch: { currentValue: null } });
-    expect((await api.finance.overview()).assets).toBe("1300.00");
-    await api.finance.investments.delete({ id: etf.id });
-    expect((await api.finance.investments.list()).map((i) => i.name)).toEqual(["基金"]);
-  });
-
-  it("reject bad amounts and other users", async () => {
-    const a = await setup();
-    const b = await setup();
-    await expect(
-      a.api.finance.investments.create({
-        name: "x",
-        kind: "stock",
-        costAmount: "-1",
-        purchaseDate: "2026-01-01",
-      }),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
-    const mine = await a.api.finance.investments.create({
-      name: "x",
-      kind: "stock",
-      costAmount: "1",
-      purchaseDate: "2026-01-01",
-    });
-    expect(await b.api.finance.investments.list()).toEqual([]);
-    await expect(b.api.finance.investments.delete({ id: mine.id })).rejects.toMatchObject({
-      code: "NOT_FOUND",
-    });
-  });
-});
 
 describe("dashboard panel order", () => {
   it("is saved per user and reset with null", async () => {

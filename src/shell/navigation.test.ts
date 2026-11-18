@@ -4,6 +4,8 @@ import { sourceMessages } from "@/shared/i18n/messages";
 
 import {
   allNavItems,
+  applyNavLayout,
+  layoutOf,
   findActiveNavItem,
   findNavItem,
   findNavSection,
@@ -27,27 +29,52 @@ describe("navigation", () => {
     }
   });
 
-  it("orders the sections as agreed: work before finance and the system", () => {
+  it("orders the sections as agreed (V3): tasks right after the overview", () => {
     expect(navigation.map((s) => s.id)).toEqual([
       "overview",
-      "work",
       "tasks",
+      "work",
       "life",
-      "records",
       "finance",
+      "records",
       "system",
     ]);
     const items = (id: string) => navigation.find((s) => s.id === id)!.items.map((i) => i.id);
-    expect(items("work")).toEqual(
-      expect.arrayContaining(["work", "adminTasks", "allProjects", "kanban", "gantt", "goals"]),
-    );
-    expect(items("tasks")).toEqual(["allTasks", "matrix", "schedule", "trash"]);
+    expect(items("tasks")).toEqual([
+      "allProjects",
+      "allTasks",
+      "matrix",
+      "gantt",
+      "schedule",
+      "kanban",
+      "deadlines",
+      "trash",
+    ]);
+    expect(items("work")).toEqual(["work", "business", "adminTasks", "goals"]);
     expect(items("life")).toEqual(
       expect.arrayContaining(["learning", "fitness", "skills", "personal", "calendar"]),
     );
     expect(items("records")).toEqual(["documents"]);
     expect(items("finance")).toEqual(["financeOverview", "financeAccounts", "financeInvestments"]);
     expect(items("system")).toEqual(["automationRules", "automationNotifications", "settings"]);
+  });
+
+  it("applies a saved layout without losing or moving pages between groups", () => {
+    const sections = applyNavLayout({
+      sections: ["finance", "unknown", "overview", "finance"],
+      items: { overview: ["productivity", "dashboard", "allTasks"], tasks: ["trash"] },
+    });
+    expect(sections.map((s) => s.id).slice(0, 3)).toEqual(["finance", "overview", "tasks"]);
+    expect(sections).toHaveLength(navigation.length);
+    expect(sections[1]!.items.map((i) => i.id)).toEqual([
+      "productivity",
+      "dashboard",
+      "personalStats",
+    ]);
+    expect(sections[2]!.items[0]!.id).toBe("trash");
+    expect(sections.flatMap((s) => s.items)).toHaveLength(allNavItems.length);
+    expect(applyNavLayout(layoutOf(sections))).toEqual(sections);
+    expect(applyNavLayout(null)).toBe(navigation);
   });
 
   it("assigns a milestone to every Phase 1 view except settings", () => {

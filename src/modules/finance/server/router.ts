@@ -6,14 +6,19 @@ import {
   archiveInput,
   batchDraftInput,
   createAccountInput,
-  createInvestmentInput,
+  archiveInvestmentAccountInput,
+  createHoldingInput,
+  createTransactionInput,
+  investmentAccountInput,
+  updateHoldingInput,
+  updateInvestmentAccountInput,
+  updateTransactionInput,
   createProviderInput,
   historyInput,
   idInput,
   moveInput,
   saveBatchInput,
   updateAccountInput,
-  updateInvestmentInput,
   updateProviderInput,
   updateSettingsInput,
 } from "../domain";
@@ -24,10 +29,16 @@ import {
   getFinanceStructure,
 } from "./read-model";
 import {
-  createInvestment,
-  deleteInvestment,
-  listInvestments,
-  updateInvestment,
+  createHolding,
+  createInvestmentAccount,
+  createTransaction,
+  deleteHolding,
+  deleteTransaction,
+  getPortfolio,
+  setInvestmentAccountArchived,
+  updateHolding,
+  updateInvestmentAccount,
+  updateTransaction,
 } from "./investments";
 import { deleteSnapshot, getBatchDraft, saveBatch } from "./snapshots";
 import {
@@ -99,16 +110,41 @@ export const financeRouter = router({
       .mutation(({ ctx, input }) => deleteAccount(ctx.db, ctx.userId, input.id)),
   }),
   investments: router({
-    list: protectedProcedure.query(({ ctx }) => listInvestments(ctx.db, ctx.userId)),
-    create: protectedProcedure
-      .input(createInvestmentInput)
-      .mutation(({ ctx, input }) => createInvestment(ctx.db, ctx.userId, input)),
-    update: protectedProcedure
-      .input(updateInvestmentInput)
-      .mutation(({ ctx, input }) => updateInvestment(ctx.db, ctx.userId, input)),
-    delete: protectedProcedure
-      .input(idInput)
-      .mutation(({ ctx, input }) => deleteInvestment(ctx.db, ctx.userId, input.id)),
+    /** Accounts with their holdings, transactions and per-currency totals (all computed). */
+    portfolio: protectedProcedure.query(({ ctx }) => getPortfolio(ctx.db, ctx.userId)),
+    accounts: router({
+      create: protectedProcedure
+        .input(investmentAccountInput)
+        .mutation(({ ctx, input }) => createInvestmentAccount(ctx.db, ctx.userId, input)),
+      update: protectedProcedure
+        .input(updateInvestmentAccountInput)
+        .mutation(({ ctx, input }) => updateInvestmentAccount(ctx.db, ctx.userId, input)),
+      setArchived: protectedProcedure
+        .input(archiveInvestmentAccountInput)
+        .mutation(({ ctx, input }) => setInvestmentAccountArchived(ctx.db, ctx.userId, input)),
+    }),
+    holdings: router({
+      create: protectedProcedure
+        .input(createHoldingInput)
+        .mutation(({ ctx, input }) => createHolding(ctx.db, ctx.userId, input)),
+      update: protectedProcedure
+        .input(updateHoldingInput)
+        .mutation(({ ctx, input }) => updateHolding(ctx.db, ctx.userId, input)),
+      delete: protectedProcedure
+        .input(idInput)
+        .mutation(({ ctx, input }) => deleteHolding(ctx.db, ctx.userId, input.id)),
+    }),
+    transactions: router({
+      create: protectedProcedure
+        .input(createTransactionInput)
+        .mutation(({ ctx, input }) => createTransaction(ctx.db, ctx.userId, input)),
+      update: protectedProcedure
+        .input(updateTransactionInput)
+        .mutation(({ ctx, input }) => updateTransaction(ctx.db, ctx.userId, input)),
+      delete: protectedProcedure
+        .input(idInput)
+        .mutation(({ ctx, input }) => deleteTransaction(ctx.db, ctx.userId, input.id)),
+    }),
   }),
   snapshots: router({
     draft: protectedProcedure

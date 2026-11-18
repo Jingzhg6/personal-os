@@ -12,7 +12,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const settings = await getUserSettings(getDb(), user.id);
   return (
     <PreferencesProvider weekStartsOn={settings.weekStartsOn}>
-      <AppShell user={{ name: user.name, email: user.email }}>{children}</AppShell>
+      <AppShell user={{ name: user.name, email: user.email }} navLayout={settings.navLayout}>
+        {children}
+      </AppShell>
     </PreferencesProvider>
   );
 }

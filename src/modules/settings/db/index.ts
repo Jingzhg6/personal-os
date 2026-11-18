@@ -1,4 +1,4 @@
-import { pgTable, smallint, text, uuid } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, smallint, text, uuid } from "drizzle-orm/pg-core";
 
 import { users } from "@/shared/auth/schema";
 import { timestamps } from "@/shared/db/columns";
@@ -13,5 +13,7 @@ export const userSettings = pgTable("user_settings", {
   weekStartsOn: smallint("week_starts_on").notNull().default(1),
   /** Dashboard panel ids in the user's order (V2); null = the default order. */
   dashboardPanels: text("dashboard_panels").array(),
+  /** Sidebar order: { sections: [...], items: { section: [...] } }; null = default (V3). */
+  navLayout: jsonb("nav_layout").$type<{ sections: string[]; items: Record<string, string[]> }>(),
   ...timestamps(),
 });

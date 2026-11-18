@@ -30,11 +30,11 @@ describe("Sidebar", () => {
       .map((h) => h.textContent);
     expect(headings).toEqual([
       "概览",
-      "工作与事务",
       "任务",
+      "工作与事务",
       "个人成长与生活",
-      "资料与记录",
       "财务",
+      "资料与记录",
       "系统与自动化",
     ]);
     expect(within(nav).getByRole("link", { name: /仪表盘/ })).toHaveAttribute("href", "/");

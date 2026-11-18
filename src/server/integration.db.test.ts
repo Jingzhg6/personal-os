@@ -308,8 +308,9 @@ describe("lifecycle", () => {
     await expect(
       api.tasks.update({ id: loose.id, patch: { projectId: project.id } }),
     ).rejects.toMatchObject({ message: "task.subtask_project" });
-    // Counted as progress within the parent, not as a project task of its own.
-    expect((await api.projects.byId({ id: project.id, today: TODAY })).progress.total).toBe(1);
+    // V3: a subtask counts towards the project through its parent (not as a project task of its
+    // own — it carries no project).
+    expect((await api.projects.byId({ id: project.id, today: TODAY })).progress.total).toBe(2);
 
     const promoted = await api.tasks.setParent({ id: loose.id, parentTaskId: null });
     expect(promoted.projectId).toBe(project.id);

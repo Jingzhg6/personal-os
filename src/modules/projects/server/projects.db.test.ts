@@ -80,20 +80,23 @@ describe("projects", () => {
     });
   });
 
-  it("computes progress from top-level tasks, excluding cancelled ones", async () => {
+  it("computes progress from tasks and their subtasks, excluding cancelled and deleted ones", async () => {
     const user = await createSeededUser(db);
     const { projects, tasks } = setup(user.id);
     const project = await projects.create({ name: "网站改版" });
     const a = await tasks.create({ title: "设计", projectId: project.id });
     const b = await tasks.create({ title: "开发", projectId: project.id, dueDate: "2026-10-01" });
     const c = await tasks.create({ title: "取消的", projectId: project.id });
-    await tasks.create({ title: "子任务", parentTaskId: a.id }); // not counted
-    await tasks.complete({ id: a.id });
+    await tasks.create({ title: "子任务", parentTaskId: a.id }); // counted through its parent
+    const gone = await tasks.create({ title: "删掉的", projectId: project.id });
+    await tasks.create({ title: "删掉的子任务", parentTaskId: gone.id });
+    await tasks.delete({ id: gone.id }); // neither it nor its subtask counts
+    await tasks.complete({ id: a.id, includeSubtasks: false });
     const cancelled = (await tasks.statuses.list()).find((s) => s.category === "cancelled")!;
     await tasks.setStatus({ id: c.id, statusId: cancelled.id });
 
     const [listed] = await projects.list({ today: TODAY });
-    expect(listed!.progress).toEqual({ total: 2, completed: 1, overdue: 1 });
+    expect(listed!.progress).toEqual({ total: 3, completed: 1, overdue: 1 });
     expect(b.projectId).toBe(project.id);
   });
 

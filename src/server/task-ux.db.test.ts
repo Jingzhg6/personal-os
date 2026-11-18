@@ -127,8 +127,9 @@ describe("a project's area as the default for its tasks", () => {
     });
     expect(after.subtasks.map((s) => s.id)).toEqual([subtask.id]);
     expect(after.blockedBy.map((b) => b.id)).toEqual([blocker.id]);
+    // The task and its subtask (V3: subtasks count towards the project).
     expect((await api.projects.byId({ id: project.id, today: "2026-11-01" })).progress.total).toBe(
-      1,
+      2,
     );
   });
 

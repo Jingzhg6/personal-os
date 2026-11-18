@@ -21,7 +21,7 @@ export const openProjectStatuses = [
 ] as const satisfies readonly ProjectStatus[];
 
 export interface Progress {
-  /** Countable tasks: top-level, not deleted, not cancelled. */
+  /** Countable items: the project's tasks and their subtasks, not deleted, cancelled or failed. */
   total: number;
   completed: number;
   /** Open tasks whose due date has passed. */

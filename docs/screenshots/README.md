@@ -325,3 +325,18 @@ A demo user (UTC, CNY) with quadrant tasks, a daily series, schedule blocks, inv
 | `06-dashboard-custom-order.png` | `/`                    | Saved panel order (本周 and 最近动态 above XP), drag handle, 恢复默认布局                          |
 | `07-gantt-series.png`           | `/projects/gantt`      | Completed hidden by default; the daily series on one row, one bar per instance                     |
 | `08-mobile-schedule.png`        | `/schedule` (phone)    | iPhone 13: quadrant list above the calendar; no horizontal overflow                                |
+
+## V3 (`v3/`)
+
+A demo user (UTC, CNY) with two active projects and a planned one in 工作, tasks with subtasks, and three investment accounts (CNY brokerage with deposit, buys, a sell and a dividend; a CNY fund platform; a USD account), all made through the app's API.
+
+| File                          | Page                             | Shows                                                                                         |
+| ----------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------- |
+| `01-kanban-area-projects.png` | `/projects/kanban`               | Project cards of 工作 with status, deadline, 2/5 · 40%; 官网改版 opened into its status board |
+| `02-matrix-project-view.png`  | `/tasks/matrix?view=projects`    | 项目视图: progress and open tasks per quadrant; 官网改版 expanded by quadrant                 |
+| `03-gantt-hierarchy.png`      | `/projects/gantt`                | Project bars derived from tasks; 交互设计 with its subtask nested; 全部收起                   |
+| `04-investments-account.png`  | `/finance/investments` (account) | CNY and USD totals apart; 证券账户 A: cash, holdings (price vs 按成本估算), transactions      |
+| `05-investments-overview.png` | `/finance/investments`           | Per-currency totals and account cards                                                         |
+| `06-navigation-customize.png` | `/` (调整顺序)                   | Navigation in reorder mode: drag handles on groups and pages, 完成                            |
+| `07-mobile-kanban.png`        | `/projects/kanban` (phone)       | iPhone 13: project cards stacked; no horizontal overflow                                      |
+| `08-mobile-investments.png`   | `/finance/investments` (phone)   | iPhone 13: totals and account cards; no horizontal overflow                                   |

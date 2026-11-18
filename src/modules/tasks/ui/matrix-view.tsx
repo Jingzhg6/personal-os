@@ -63,7 +63,14 @@ const collisionDetection: CollisionDetection = (args) => {
  * Eisenhower matrix: open tasks (and subtasks) placed by their urgent / important flags.
  * It reads the same task records as every other view; moving a card only updates the flags.
  */
-export function MatrixView({ title }: { title: string }) {
+export function MatrixView({
+  title,
+  headerActions,
+}: {
+  title: string;
+  /** Extra controls in the page header (V3: the task / project view switch). */
+  headerActions?: ReactNode;
+}) {
   const t = useTranslations("tasks.matrix");
   const dndId = useId();
   const today = useToday();
@@ -184,6 +191,7 @@ export function MatrixView({ title }: { title: string }) {
               ? t("description")
               : `${t("summary", { unsorted: byPlacement.unsorted.length })} · ${t("description")}`
           }
+          actions={headerActions}
         />
 
         <FilterBar
