@@ -107,6 +107,9 @@ type Ctx = Awaited<ReturnType<typeof setup>>;
 /** A little of everything, made the way the app makes it. */
 async function seed({ api, name }: Ctx) {
   const today = todayIn("Asia/Shanghai");
+  const tomorrow = new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000)
+    .toISOString()
+    .slice(0, 10);
   const [french] = (await api.character.attributes.list()).filter((a) => a.systemKey);
   const tag = await api.tasks.tags.create({ name: `${name}-标签` });
   const project = await api.projects.create({ name: `${name}-项目` });
@@ -119,7 +122,8 @@ async function seed({ api, name }: Ctx) {
     title: `${name}-任务`,
     projectId: project.id,
     milestoneId: milestone.id,
-    dueDate: today,
+    // Due tomorrow, so completing it is on time (and scores 自制力) whatever the time of day.
+    dueDate: tomorrow,
     dueTime: "18:30",
     priority: 3,
     tagIds: [tag.id],
